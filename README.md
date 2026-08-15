@@ -9,7 +9,7 @@ product. The app runs on one machine, offline, for one person.
 
 | | |
 |---|---|
-| `app/` | The product. Python server, React screens, its own engine and templates. Stands on its own; nothing in it reads anything outside itself |
+| `app/` | The product. Python server, React screens, its own engine and templates. The code reads no project files outside app/. At run time it also uses the settings and key files in the home folder and the jobs folder Mark points it at. Two dev tools reach wider: demo reset finds the repo root, and one styling test reads brand/ |
 | `brand/` | The design system source: components, tokens, and the real logo and photography files |
 | `Start Roy R. Fisher.command` | Double-click to run it on a Mac |
 
@@ -40,7 +40,7 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-109 tests pass.
+292 tests; the ones that need Mark's private material skip on machines without it.
 
 ## What we know is missing
 

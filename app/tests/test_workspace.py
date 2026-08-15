@@ -1,14 +1,11 @@
 """Where the jobs folder is remembered, and how it gets chosen.
 
-Filesystem behaviour runs against real temporary folders. The only thing
-replaced is the operating system's folder window itself: RRF_PICKER_SCRIPT
-swaps in a small Python script that prints the same JSON the real helper
-prints, so these tests can drive everything around the picker without a
-window opening on somebody's screen.
+Real temporary folders throughout, nothing stood in for. Choosing a folder
+is done in the app's own page now, so there is no operating-system window
+here for a test to be unable to click.
 """
 import json
 import sys
-import threading
 from pathlib import Path
 
 import pytest
@@ -30,7 +27,6 @@ def clean(tmp_path, monkeypatch):
     """A settings file of our own, and no override in the environment."""
     monkeypatch.setenv("RRF_SETTINGS_FILE", str(tmp_path / "settings.json"))
     monkeypatch.delenv("RRF_JOBS_HOME", raising=False)
-    monkeypatch.delenv("RRF_PICKER_SCRIPT", raising=False)
     return tmp_path
 
 

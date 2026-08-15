@@ -1,0 +1,419 @@
+import datetime
+import io
+import json
+import sys
+from pathlib import Path
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import Response
+from PIL import Image
+
+import brief
+import busy
+import captions
+import jobs
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
+from photo_pages import exif_order  # noqa: E402
+
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:  # pragma: no cover - HEIC support optional in tests
+    pass
+
+router = APIRouter()
+THUMB_DIR = ".rrf-thumbs"
+THUMB_PX = 1024
+
+
+def manifest_path(job: Path) -> Path:
+    return jobs.photos_dir(job) / "photo-manifest.json"
+
+
+def is_cut(entry: dict) -> bool:
+    """Whether this photo has been cut from the report.
+
+    Absent means included. That is the whole migration story for every
+    manifest already on disk: a job written before this existed reads as all
+    photos included, with nothing to convert and nothing to guess.
+    """
+    return bool(entry.get("cut"))
+
+
+def included(manifest: dict) -> list:
+    """The photos that go in the report, in order.
+
+    One place, used by captions, by the preview and by the build, so those
+    three can never disagree about which photos are in.
+    """
+    return [e for e in manifest.get("photos", []) if not is_cut(e)]
+
+
+def _photo_files_on_disk(job: Path) -> list[Path]:
+    """Every actual photo file sitting in the job's Photos folder right now,
+    confined to that folder and confirmed to be a real file. The appraiser's
+    actual workflow is dropping camera photos straight into the job folder,
+    never through this app's own upload, so the manifest can never be
+    trusted alone to know what's there -- the folder is the source of truth
+    for *which* files exist.
+
+    Skips the thumbnail cache directory and the manifest file itself, and
+    uses the same allowed-extension set `jobs.count_photos` uses so the job
+    card's count and this reconciliation never disagree on what counts as a
+    photo.
+    """
+    photos_dir = jobs.photos_dir(job)
+    if not photos_dir.is_dir():
+        return []
+    skip_names = {THUMB_DIR, manifest_path(job).name}
+    found = []
+    for entry in photos_dir.iterdir():
+        if entry.name in skip_names:
+            continue
+        if entry.suffix.lower() not in jobs.PHOTO_EXTS:
+            continue
+        resolved = _resolve_confined(entry, photos_dir)
+        if resolved is None or not resolved.is_file():
+            continue
+        found.append(resolved)
+    return found
+
+
+def _dir_entry_names(job: Path) -> set:
+    """Bare names of every filesystem entry sitting directly in the Photos
+    folder right now (any type, any extension), used only to decide whether
+    an EXISTING manifest entry's file has been deleted.
+
+    Deliberately not confinement- or extension-filtered: whether a name is
+    *safe* is a separate question, already answered on every write and
+    before every build by `_validate_manifest_shape` (which uses
+    `_resolve_confined` itself). If this helper also filtered out unsafe
+    names, a manifest entry pointing at a symlink that escapes the folder
+    would look "deleted" and get silently dropped here -- laundering it
+    past the security check instead of letting that check reject it with a
+    clear error. This only answers "is a photo still there by this name."
+    """
+    photos_dir = jobs.photos_dir(job)
+    if not photos_dir.is_dir():
+        return set()
+    return {entry.name for entry in photos_dir.iterdir()}
+
+
+def load_manifest(job: Path) -> dict:
+    """Load the manifest and reconcile it against what's actually in the
+    Photos folder before returning it.
+
+    A human's ordering and captions are never reshuffled: existing entries
+    keep their position and wording as long as their file still exists.
+    Files sitting on disk that the manifest doesn't know about are appended
+    at the end, in EXIF capture order, with an empty caption. Entries whose
+    file has been deleted are dropped so a missing photo can't break the
+    build.
+
+    This never writes back to disk -- callers that need the reconciled
+    result persisted (upload, captions) save explicitly after calling this;
+    a plain GET must not have a side effect.
+    """
+    p = manifest_path(job)
+    if p.is_file():
+        manifest = json.loads(p.read_text())
+    else:
+        manifest = {
+            "job": job.name,
+            "context": jobs.brief_context(job),
+            "report_year": datetime.date.today().year,
+            "photos": [],
+        }
+
+    # Which caption style this job writes in. Only ever filled in when absent,
+    # so a style the appraiser picked is never re-guessed from the property type on a
+    # later load. His choice outranks the suggestion, permanently.
+    if not manifest.get("caption_style"):
+        prop_type = brief.read_brief(job)["fields"].get("Property type", "")
+        manifest["caption_style"] = captions.default_style(prop_type)
+
+    on_disk = _photo_files_on_disk(job)
+    still_present = _dir_entry_names(job)
+
+    kept = [entry for entry in manifest.get("photos", [])
+            if isinstance(entry, dict) and entry.get("file") in still_present]
+
+    known = {entry["file"] for entry in kept}
+    new_files = [f for f in on_disk if f.name not in known]
+    for f in exif_order(new_files):
+        kept.append({"file": f.name, "caption": ""})
+
+    manifest["photos"] = kept
+    return manifest
+
+
+def save_manifest(job: Path, manifest: dict):
+    jobs.photos_dir(job).mkdir(parents=True, exist_ok=True)
+    manifest_path(job).write_text(json.dumps(manifest, indent=2))
+
+
+def _resolve_confined(path: Path, base: Path) -> Optional[Path]:
+    """Resolve `path` (following any symlinks) and confirm it still lives
+    inside the resolved `base` directory. Returns the resolved Path if it
+    does, or None if it escapes.
+
+    `Path(...).name` alone only confines the *string* -- it stops a
+    filename from carrying literal '../' or an embedded separator, but it
+    does nothing about a filename that exists on disk as a symlink pointing
+    somewhere else entirely. `Path.resolve()` follows symlinks and
+    normalizes '..' the same way on POSIX and Windows, so comparing the
+    resolved target against the resolved base with `relative_to` catches
+    both attack shapes with one check.
+    """
+    resolved_base = base.resolve()
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(resolved_base)
+    except ValueError:
+        return None
+    return resolved
+
+
+def _is_occupied(p: Path) -> bool:
+    """True if anything already sits at `p`, including a symlink -- broken
+    or not. `Path.exists()` alone follows symlinks and reports False for a
+    *dangling* one (target doesn't exist), which would let `free_name`
+    believe a pre-planted broken symlink's name is free to use. `.name`
+    picks it up regardless of where, or whether, it points.
+    """
+    return p.is_symlink() or p.exists()
+
+
+def free_name(d: Path, name: str) -> str:
+    stem, suffix = Path(name).stem, Path(name).suffix
+    candidate, n = name, 2
+    while _is_occupied(d / candidate):
+        candidate, n = f"{stem} ({n}){suffix}", n + 1
+    return candidate
+
+
+def _confine_write_target(target: Path, photos: Path) -> None:
+    """Defense in depth alongside `_is_occupied`: refuse to write anywhere
+    that doesn't resolve inside the job's Photos folder. `target` should
+    never already exist at this point (`free_name` only hands back
+    unoccupied names, and `_is_occupied` now treats any symlink -- dangling
+    or not -- as occupied), so this is the same containment check `thumb()`
+    applies on the read side, applied here before bytes ever touch disk.
+    """
+    if _resolve_confined(target, photos) is None:
+        raise HTTPException(400, "Upload target escaped the Photos folder.")
+
+
+def store_upload(job: Path, upload: UploadFile) -> str:
+    photos = jobs.photos_dir(job)
+    photos.mkdir(parents=True, exist_ok=True)
+    raw = upload.file.read()
+    # .name confines an untrusted filename (which may carry ../, an absolute
+    # path, or backslash traversal forms) to its final path component only,
+    # so it can never resolve outside this job's Photos folder.
+    name = Path(upload.filename or "photo.jpg").name
+    if name.lower().endswith(".heic"):
+        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        name = Path(name).with_suffix(".jpg").name
+        target = photos / free_name(photos, name)
+        _confine_write_target(target, photos)
+        img.save(target, format="JPEG", quality=92)
+    else:
+        target = photos / free_name(photos, name)
+        _confine_write_target(target, photos)
+        target.write_bytes(raw)
+    return target.name
+
+
+def _job_or_404(name: str) -> Path:
+    home = jobs.jobs_home()
+    if home is None:
+        # Not the same thing as a missing job, and not worth pretending it is.
+        raise HTTPException(400, "No jobs folder chosen yet.")
+    try:
+        job = jobs.resolve_job(home, name)
+    except ValueError:
+        raise HTTPException(404, "Job not found.")
+    if not job.is_dir():
+        raise HTTPException(404, "Job not found.")
+    return job
+
+
+def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
+    """Return a plain-English error if `manifest` isn't shaped like the
+    engine's contract, or if any photo entry's `file` could make the engine
+    (photo_pages.build_photo_docx, which does `photos_dir / entry["file"]`
+    with no checks of its own) read a file outside this job's Photos
+    folder. Returns None when the payload is safe to save.
+
+    Deliberately narrow: this checks exactly the two things that matter for
+    path safety (bare filename, resolves inside Photos/) plus the minimum
+    shape the engine needs (a "photos" list of file-bearing objects) -- it
+    is not a general schema validator.
+    """
+    if not isinstance(manifest, dict):
+        return "Manifest must be a JSON object."
+    photos = manifest.get("photos")
+    if not isinstance(photos, list):
+        return "Manifest 'photos' must be a list."
+    photos_dir = jobs.photos_dir(job)
+    for entry in photos:
+        if not isinstance(entry, dict):
+            return "Each entry in 'photos' must be an object."
+        name = entry.get("file")
+        if not isinstance(name, str) or not name:
+            return "Each photo entry needs a non-empty 'file' name."
+        if name != Path(name).name:
+            return f"Photo file name {name!r} must be a bare filename with no path separators."
+        if _resolve_confined(photos_dir / name, photos_dir) is None:
+            return f"Photo file name {name!r} resolves outside the Photos folder."
+        if "cut" in entry and not isinstance(entry["cut"], bool):
+            return "A photo's 'cut' must be true or false."
+    return None
+
+
+@router.post("/api/jobs/{name}/photos")
+def upload_photos(name: str, files: list[UploadFile]):
+    job = _job_or_404(name)
+    with busy.writing():
+        manifest = load_manifest(job)
+        known = {p["file"] for p in manifest["photos"]}
+        stored = [store_upload(job, f) for f in files]
+        fresh = [n for n in stored if n not in known]
+        ordered = exif_order([jobs.photos_dir(job) / n for n in fresh])
+        manifest["photos"].extend({"file": p.name, "caption": ""} for p in ordered)
+        save_manifest(job, manifest)
+    return manifest
+
+
+@router.get("/api/jobs/{name}/manifest")
+def get_manifest(name: str):
+    return load_manifest(_job_or_404(name))
+
+
+@router.put("/api/jobs/{name}/manifest")
+def put_manifest(name: str, manifest: dict):
+    job = _job_or_404(name)
+    error = _validate_manifest_shape(job, manifest)
+    if error:
+        raise HTTPException(400, error)
+    with busy.writing():
+        save_manifest(job, manifest)
+    return {"ok": True}
+
+
+def _set_cut(job: Path, file: str, cut: bool) -> dict:
+    """Mark one photo cut or bring it back. Touches that one key, nothing else.
+
+    The entry keeps its place in the list, which is what makes bringing it
+    back free: its position was never lost, so there is nothing to restore
+    it to. Bringing back removes the key rather than writing false, so a
+    manifest never accumulates a field that means the default.
+    """
+    path = manifest_path(job)
+    if not path.is_file():
+        raise HTTPException(404, "This job has no photo list yet.")
+    try:
+        manifest = json.loads(path.read_text())
+    except ValueError:
+        raise HTTPException(400, "This job's photo list could not be read.")
+
+    error = _validate_manifest_shape(job, manifest)
+    if error:
+        raise HTTPException(400, error)
+
+    bare = Path(file).name
+    for entry in manifest["photos"]:
+        if entry.get("file") == bare:
+            if cut:
+                entry["cut"] = True
+            else:
+                entry.pop("cut", None)
+            break
+    else:
+        raise HTTPException(404, "That photo is not in this job.")
+
+    with busy.writing():
+        save_manifest(job, manifest)
+    return load_manifest(job)
+
+
+@router.post("/api/jobs/{name}/photos/{file}/cut")
+def cut_photo(name: str, file: str):
+    """Take a photo out of the report. The file on disk is not touched."""
+    return _set_cut(_job_or_404(name), file, True)
+
+
+@router.post("/api/jobs/{name}/photos/{file}/uncut")
+def uncut_photo(name: str, file: str):
+    """Put it back, in the place it always held."""
+    return _set_cut(_job_or_404(name), file, False)
+
+
+@router.post("/api/jobs/{name}/captions/clear")
+def clear_captions(name: str):
+    """Blank every caption in this one job, and change nothing else.
+
+    Reads the manifest file straight off disk rather than through
+    load_manifest, so no reconciliation runs and nothing is added or
+    dropped on the way past. Every other key is written back exactly as it
+    was found, including keys this code does not know about: a manifest
+    that has been round-tripped through the browser carries whatever the
+    API answered with, and `ai_available` has been seen sitting in a real
+    one on disk.
+
+    Deliberately not a delete of the manifest. The manifest also holds the
+    photo order, the caption style the appraiser chose, the report year and the
+    context line, and deleting it would throw all of that away to remove
+    captions.
+    """
+    job = _job_or_404(name)
+    path = manifest_path(job)
+    if not path.is_file():
+        raise HTTPException(400, "There are no captions to clear.")
+
+    try:
+        manifest = json.loads(path.read_text())
+    except ValueError:
+        raise HTTPException(400, "This job's photo list could not be read.")
+
+    error = _validate_manifest_shape(job, manifest)
+    if error:
+        raise HTTPException(400, error)
+
+    cleared = sum(1 for entry in manifest["photos"]
+                  if str(entry.get("caption", "")).strip())
+    if not cleared:
+        raise HTTPException(400, "There are no captions to clear.")
+
+    with busy.writing():
+        for entry in manifest["photos"]:
+            entry["caption"] = ""
+        save_manifest(job, manifest)
+    return {"cleared": cleared, **load_manifest(job)}
+
+
+@router.get("/api/jobs/{name}/thumb/{file}")
+def thumb(name: str, file: str):
+    job = _job_or_404(name)
+    photos_dir = jobs.photos_dir(job)
+    # Path(...).name confines the *string* (../, absolute path, backslash
+    # form all collapse to a bare final component); _resolve_confined then
+    # confines the *real, on-disk* target, so a symlink planted inside
+    # Photos/ that points outside it is caught too -- both is_file() and
+    # Image.open() below follow symlinks, so the string check alone is not
+    # enough.
+    candidate = photos_dir / Path(file).name
+    src = _resolve_confined(candidate, photos_dir)
+    if src is None or not src.is_file():
+        raise HTTPException(404, "Photo not found.")
+    cache = photos_dir / THUMB_DIR
+    cache.mkdir(exist_ok=True)
+    cached = cache / (Path(file).name + ".jpg")
+    if not cached.exists() or cached.stat().st_mtime < src.stat().st_mtime:
+        img = Image.open(src).convert("RGB")
+        img.thumbnail((THUMB_PX, THUMB_PX))
+        img.save(cached, format="JPEG", quality=85)
+    return Response(cached.read_bytes(), media_type="image/jpeg")

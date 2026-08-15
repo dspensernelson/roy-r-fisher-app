@@ -118,7 +118,20 @@ def load_manifest(job: Path) -> dict:
     """
     p = manifest_path(job)
     if p.is_file():
-        manifest = json.loads(p.read_text())
+        # Hand-editable by design, so broken JSON is an expected condition,
+        # not a crash. Same answer _set_cut and clear_captions already give.
+        try:
+            manifest = json.loads(p.read_text())
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="photo-manifest.json is not valid JSON. "
+                       "Fix the file or delete it and try again.")
+        if not isinstance(manifest, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="photo-manifest.json should be a JSON object, "
+                       "not a list or a bare value.")
     else:
         manifest = {
             "job": job.name,

@@ -1,0 +1,56 @@
+# Raw photo directories only (BUILD-ORDER 0.0). Never ignore markdown, scripts, or docx.
+# These are camera/site photo dumps under directories literally named "Photos" (and
+# variants like "Photos 2"). Repo was 13G with these included; ~7.4G of that is here.
+#
+# Written as "contents of Photos folders" rather than "Photos folders", because git
+# cannot re-include a file whose parent DIRECTORY is excluded. The old `**/Photos*/`
+# form silently swallowed 21 GUIDE.md files living inside Photos folders, including
+# the one that ships in the job template, against this file's own "never ignore
+# markdown" rule (found and fixed 2026-08-09).
+**/Photos*/**
+!**/Photos*/GUIDE.md
+
+# macOS Finder noise (untracked 2026-07-07). Never contains project content.
+.DS_Store
+**/.DS_Store
+
+# Python bytecode (Phase 2f, 2026-07-19). Regenerated on every script run; never project content.
+__pycache__/
+**/__pycache__/
+
+# Web app build artifacts (Task 8, 2026-08-09). Installed/built, never project content.
+app/web/node_modules/
+app/web/dist/
+
+# Test-runner cache (2026-08-09). Regenerated on every pytest run; never project content.
+.pytest_cache/
+
+# Mark's demo job folders (copied in 2026-08-12), so development and testing run
+# against real job folders instead of invented ones. They are his working files,
+# never project content, and the app treats them as read-only inputs.
+RRF Demo Jobs/
+
+# The demo testing tool, for this machine only. Never shipped to Mark.
+# .rrf-demo.json turns it on and names the approved paths; without it the reset
+# button does not render and the endpoint answers 404.
+# The baseline is frozen evidence. Staging and rollback are working space and
+# hold nothing after a successful reset.
+.rrf-demo.json
+.rrf-demo-baseline/
+.rrf-demo-staging/
+.rrf-demo-rollback/
+
+# Mark's delivered appraisals and his folder template are his clients' work.
+# They stay on the development machine and are never committed here.
+Report Examples/
+locker/
+archive/
+training/
+testing/
+sandbox/
+
+# Local settings and keys, which live in the home folder, never in a project.
+.rrf-app.env
+.rrf-app.json
+*.env
+!app/web/.env.example

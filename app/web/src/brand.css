@@ -1,0 +1,380 @@
+:root {
+  --ground: #FAF8F4;          /* eggshell page */
+  --box: #343538;             /* dark boxes: cards, rows (site nav charcoal) */
+  --box-hover: #3E3F43;
+  --box-ink: #FFFFFF;
+  --box-muted: #B8B8BC;
+  --ink: #1D1D1F;             /* text on the ground */
+  --ink-muted: #6E6E73;
+  --line: #E3E0D8;
+  --brand: #782028;           /* logo maroon */
+  --brand-hover: #8E2830;
+  --link: #248CC8;
+  --ok-bg: #E8F5EC;
+  --ok-ink: #1E7A3C;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font: 16px/1.55 "Helvetica Neue", Helvetica, Arial, -apple-system, "Segoe UI", sans-serif;
+}
+.masthead { max-width: 1200px; margin: 0 auto; padding: 20px 24px 14px; display: flex; align-items: center; gap: 14px; }
+.wordmark { font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 600; letter-spacing: 0.22em; }
+.tagline { font-size: 11.5px; font-style: italic; color: var(--ink-muted); margin-top: 2px; }
+.bar { background: var(--box); }
+.bar-inner { max-width: 1200px; margin: 0 auto; padding: 11px 24px; display: flex; gap: 8px; color: var(--box-ink); font-size: 14px; font-weight: 500; }
+.bar-inner button { background: none; border: none; color: var(--box-ink); font: inherit; opacity: 0.85; cursor: pointer; padding: 0 4px; }
+.bar-inner button:hover { opacity: 1; text-decoration: underline; }
+.bar-inner .bar-right { margin-left: auto; }
+.bar-inner .bar-right.here { opacity: 1; text-decoration: underline; }
+
+/* Actions sit on the title's row, so the content he came to see starts
+   straight underneath rather than below a bar of buttons. */
+.title-row { display: flex; align-items: baseline; gap: 20px; }
+.title-row h1 { flex: 1; }
+.title-actions { display: flex; align-items: baseline; gap: 16px; }
+.title-actions .linky { margin-left: 0; }
+
+/* Testing only. Never rendered without an explicit demo configuration, and
+   never present in anything delivered to Mark. */
+.reset-demo { margin-left: auto; align-self: center; background: none; color: var(--ink-muted);
+  border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 12.5px;
+  padding: 6px 12px; cursor: pointer; }
+.reset-demo:hover { color: var(--ink); border-color: var(--ink-muted); }
+.reset-demo:disabled { opacity: 0.5; cursor: default; }
+
+/* Walking his folders, in the page rather than in a window that can hide. */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 14px 0 6px; }
+.crumb { background: none; border: none; font: inherit; font-size: 13px; color: var(--link);
+  cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+.crumb:hover { text-decoration: underline; }
+.crumb-sep { color: var(--ink-muted); font-size: 13px; }
+.picker { border: 1px solid var(--line); border-radius: 6px; background: #FFFFFF;
+  max-width: 720px; max-height: 340px; overflow-y: auto; }
+/* The active-job list has to hold five hundred names without becoming a page
+   that scrolls forever, so it keeps its own box and its own scrollbar. */
+.picker.tall { max-height: 460px; }
+.picker-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--line); font: inherit;
+  font-size: 14px; padding: 9px 14px; cursor: pointer; color: var(--ink); }
+.picker-row:last-child { border-bottom: none; }
+.picker-row:hover { background: #F6F4EF; }
+.picker-row.up { color: var(--ink-muted); }
+.picker-icon { color: var(--ink-muted); font-size: 11px; width: 12px; }
+.picker-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-empty { padding: 14px; margin: 0; color: var(--ink-muted); font-size: 14px; }
+.picker-row.pick .tick { width: 16px; color: var(--brand); font-weight: 700; }
+.picker-row.pick.on { background: #F4EFEF; }
+.picker-row.pick.on .picker-name { font-weight: 700; }
+/* Search and the running count stay put while the list scrolls under them. */
+.picker-head { display: flex; align-items: center; gap: 14px; max-width: 720px;
+  position: sticky; top: 0; background: var(--ground); padding: 10px 0; z-index: 2; }
+.find { flex: 1 1 auto; font: inherit; font-size: 14px; padding: 8px 11px;
+  border: 1.5px solid var(--line); border-radius: 4px; background: #FFFFFF; color: var(--ink); }
+.find:focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
+.picker-head .count { font-size: 12.5px; color: var(--ink-muted); white-space: nowrap;
+  margin-left: auto; }
+.picker-head .linky { white-space: nowrap; }
+.linky.inline { margin-left: 0; font-size: inherit; }
+.linky:disabled { color: var(--ink-muted); opacity: 0.55; cursor: default;
+  text-decoration: none; }
+.linky:disabled:hover { text-decoration: none; }
+
+/* A job card opens on click and carries its own small menu. */
+.card { position: relative; }
+.card-open { display: block; width: 100%; text-align: left; background: none; border: none;
+  font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.card-more { position: absolute; top: 8px; right: 10px; background: none; border: none;
+  color: var(--box-muted); font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+  padding: 2px 6px; border-radius: 3px; }
+.card-more:hover { color: var(--box-ink); background: rgba(255,255,255,0.12); }
+.card-menu { position: absolute; top: 30px; right: 8px; background: #FFFFFF;
+  border: 1px solid var(--line); border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+  z-index: 5; min-width: 150px; }
+.card-menu button { display: block; width: 100%; text-align: left; background: none;
+  border: none; font: inherit; font-size: 13.5px; color: var(--ink); padding: 9px 13px;
+  cursor: pointer; }
+.card-menu button:hover { background: #F6F4EF; }
+
+/* Cutting a photo takes it out of the report and nothing else. The link sits
+   under its own tile so it can never be mistaken for a delete. */
+.cut-link { margin-left: 0; margin-top: 6px; font-size: 12px; }
+.cut-section { margin-top: 34px; border-top: 1px solid var(--line); padding-top: 14px; }
+.cut-head { background: none; border: none; font: inherit; font-size: 15px; font-weight: 700;
+  color: var(--ink); cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.cut-head:hover { color: var(--brand); }
+.cut-caret { color: var(--ink-muted); font-size: 11px; width: 10px; }
+/* Dimmed, because these are out of the report, but still legible: he has to
+   be able to read a caption to decide whether to bring the photo back. */
+.grid figure.is-cut img { opacity: 0.55; }
+.cut-caption { font-size: 12.5px; color: var(--ink); margin: 6px 0 0; line-height: 1.4; }
+.cut-caption.empty { color: var(--ink-muted); font-style: italic; }
+
+/* A question asked inside an action, before anything irreversible happens. */
+.confirm { background: #FFFFFF; border: 1px solid var(--line); border-left: 3px solid var(--brand);
+  border-radius: 6px; padding: 16px 18px; max-width: 720px; font-size: 14.5px; }
+
+/* Folder names read back off his disk, spelled exactly as they are there. */
+.found-list { margin: 0 0 14px; padding-left: 22px; font-size: 14.5px; line-height: 1.7; }
+.found-list li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+
+/* Settings: one card per thing you can set, plainly labelled on or off. */
+.setting { background: #FFFFFF; border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; max-width: 720px; }
+.setting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.setting-head h2 { font-size: 17px; font-weight: 700; margin: 0; }
+.lamp { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; }
+.lamp.on { background: var(--ok-bg); color: var(--ok-ink); }
+.lamp.off { background: #EFEDE7; color: var(--ink-muted); }
+.setting-body { font-size: 14.5px; color: var(--ink); line-height: 1.55; margin: 0 0 14px; max-width: 62ch; }
+.setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.setting-fine { font-size: 12.5px; color: var(--ink-muted); margin: 18px 0 0; max-width: 62ch; }
+.key-label { display: block; font-size: 12px; color: var(--ink-muted); margin-bottom: 5px; }
+.setting .field input {
+  width: 100%; background: #FFFFFF; color: var(--ink); font: inherit; font-size: 15px;
+  border: 1.5px solid var(--line); border-radius: 4px; padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.setting .field input:focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
+.setting .field { display: block; margin-bottom: 14px; }
+/* 1200 rather than 960: the job screen sets what has arrived beside what the
+   report needs, and the whole point of that screen is comparing the two. At
+   960 the columns get too narrow to read a folder's missing list on one line. */
+.frame { max-width: 1200px; margin: 0 auto; padding: 6px 24px 80px; }
+h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
+.sub { color: var(--ink-muted); margin: 0 0 26px; font-size: 15px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.card {
+  text-align: left; cursor: pointer; background: var(--box); color: var(--box-ink);
+  border: 1px solid var(--box); border-top: 3px solid var(--brand); border-radius: 6px;
+  padding: 18px 16px 14px; font: inherit;
+}
+.card:hover { background: var(--box-hover); }
+.card .city { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #D99AA0; font-weight: 700; }
+.card .addr { font-size: 18px; font-weight: 600; margin: 3px 0 8px; line-height: 1.3; }
+.card .meta { font-size: 13px; color: var(--box-muted); font-variant-numeric: tabular-nums; }
+.card.new { background: transparent; color: var(--link); border: 1.5px dashed var(--line); display: flex; align-items: center; justify-content: center; min-height: 120px; font-weight: 600; }
+.rows { display: flex; flex-direction: column; gap: 10px; }
+.row {
+  display: flex; align-items: center; gap: 14px; text-align: left; font: inherit;
+  background: var(--box); color: var(--box-ink); border: none; border-left: 4px solid transparent;
+  border-radius: 6px; padding: 16px 18px;
+}
+.row.live { border-left-color: var(--brand); cursor: pointer; }
+.row.live:hover { background: var(--box-hover); }
+.row.soon { opacity: 0.55; }
+.row .name { font-weight: 700; }
+.row .desc { color: var(--box-muted); font-size: 14px; }
+.chip { margin-left: auto; font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: #4A4B50; color: var(--box-muted); }
+.row.live .chip { background: var(--brand); color: #fff; }
+.button {
+  background: var(--brand); color: #fff; border: none; border-radius: 6px;
+  font: 700 16px/1 inherit; padding: 15px 28px; cursor: pointer;
+}
+.button:hover { background: var(--brand-hover); }
+.button[disabled] { opacity: 0.5; cursor: default; }
+/* A control that cannot be used stops looking like a control that can. Half
+   opacity alone still reads as a blue button he ought to be able to press. */
+.button.is-off, .button.secondary.is-off, .button.is-off:hover {
+  background: #EDEAE3; color: var(--ink-muted); box-shadow: none; opacity: 1;
+}
+.drop { border: 2px dashed var(--link); background: #FFFFFF; border-radius: 6px; padding: 26px; text-align: center; color: var(--ink-muted); margin-bottom: 22px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
+.grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; display: block; }
+.grid textarea {
+  width: 100%; margin-top: 8px; font: 14px/1.45 inherit; color: var(--ink);
+  border: none; border-bottom: 1px solid var(--line); background: none;
+  padding: 4px 2px; resize: vertical; overflow: hidden; min-height: 44px;
+}
+.grid textarea:focus { outline: none; border-bottom-color: var(--link); }
+.done { margin-top: 18px; background: var(--ok-bg); color: var(--ok-ink); border-radius: 6px; padding: 14px 18px; font-size: 15px; }
+.error { margin-top: 18px; background: #FBEAEA; color: #8E2830; border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
+
+/* The job screen: what has arrived on the left, the report on the right.
+   Side by side because the screen exists to be compared, not scrolled. */
+/* Not an even split. The left rows carry a folder's whole missing list and
+   wrap badly when squeezed; the right rows carry a section name and little
+   else. Width goes where the words are. */
+.bands { display: grid; grid-template-columns: 1.45fr 1fr; gap: 30px; align-items: start; }
+@media (max-width: 900px) { .bands { grid-template-columns: 1fr; gap: 8px; } }
+.band-head {
+  display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px;
+  padding-bottom: 7px; border-bottom: 2px solid var(--line);
+}
+.band-head h2 { font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700; margin: 0; }
+.band-head .note { font-size: 12.5px; color: var(--ink-muted); }
+.band-note { font-size: 12.5px; color: var(--ink-muted); margin: 0 0 9px; }
+.linky { background: none; border: none; color: var(--link); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; margin-left: auto; }
+.linky:hover { text-decoration: underline; }
+
+.folder { background: var(--box); border-radius: 5px; padding: 11px 14px; margin-bottom: 6px; }
+.folder .top { display: flex; align-items: baseline; gap: 10px; }
+.folder .name { font-size: 14px; font-weight: 700; color: var(--box-ink); }
+.folder .count { font-size: 12px; color: var(--box-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.folder .line { font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+.folder .has { color: #7FCF9B; }
+.folder .needs { color: #F0B95E; }
+.folder .quiet { color: var(--box-muted); font-style: italic; }
+
+.section-row {
+  background: var(--box); border-radius: 5px; padding: 8px 12px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px;
+  border-left: 4px solid transparent;
+}
+.section-row .num {
+  font-size: 11px; color: var(--box-muted); font-variant-numeric: tabular-nums;
+  min-width: 17px; text-align: right; flex: none;
+}
+.section-row .name { font-size: 13.5px; font-weight: 600; color: var(--box-ink); }
+.section-row .state { font-size: 11.5px; color: var(--box-muted); display: block; font-weight: 400; margin-top: 1px; }
+.section-row .chip { margin-left: auto; }
+/* The existing `.row.live .chip` rule cannot reach these rows, so the live
+   section row needs its own line or its Open chip stays grey. */
+.section-row.live { border-left-color: var(--brand); cursor: pointer; width: 100%; text-align: left; font: inherit; border-top: none; border-right: none; border-bottom: none; }
+.section-row.live:hover { background: var(--box-hover); }
+.section-row.live .chip { background: var(--brand); color: #fff; }
+.section-row.soon { opacity: 0.5; }
+.empty-note { background: transparent; border: 1.5px dashed var(--line); border-radius: 5px; padding: 18px 16px; text-align: center; }
+.empty-note .name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.empty-note .state { font-size: 12.5px; color: var(--ink-muted); margin-top: 4px; }
+
+/* Title on the left, the things you can do on the right, one row, nothing
+   below it but the work itself. */
+.screen-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap; margin: 26px 0 20px;
+}
+.screen-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; padding-top: 4px; }
+.action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.screen-actions .button { padding: 11px 20px; font-size: 15px; }
+.button.secondary { background: var(--link); }
+.button.secondary:hover { background: #1F7AB0; }
+
+/* Something moves while the model is looking at the photos. */
+.working { display: flex; align-items: center; gap: 10px; }
+.working-text { font-size: 12.5px; color: var(--ink-muted); }
+.loading-bar { width: 190px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.loading-bar span { display: block; width: 38%; height: 100%; background: var(--brand); border-radius: 2px;
+  animation: sweep 1.15s ease-in-out infinite; }
+@keyframes sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(370%); } }
+.drag-hint {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
+  background: var(--box); color: var(--box-ink); padding: 12px 22px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; box-shadow: 0 6px 24px rgba(0,0,0,0.25); pointer-events: none;
+}
+
+/* A step, not a parked option. Asked when he clicks the thing it affects. */
+.sheet-back {
+  position: fixed; inset: 0; background: rgba(29,29,31,0.55);
+  display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
+}
+.sheet {
+  background: var(--ground); border-radius: 8px; padding: 26px 26px 20px;
+  max-width: 840px; width: 100%; box-shadow: 0 18px 60px rgba(0,0,0,0.3);
+  max-height: calc(100vh - 48px); overflow-y: auto;
+}
+.sheet h2 { font-size: 21px; font-weight: 700; margin: 0 0 4px; }
+/* Stays put while the page preview scrolls behind it, so the button he came
+   here to press is never below the fold. */
+.sheet-foot {
+  display: flex; align-items: center; gap: 16px; margin-top: 18px;
+  position: sticky; bottom: -20px; background: var(--ground);
+  padding: 14px 0 16px; border-top: 1px solid var(--line);
+}
+
+/* Two named styles. The label on top, the badge under it in green so it
+   reads as a note about the button rather than part of the button's name. */
+/* A segmented control across the whole caption column: two equal halves,
+   short, the way a control in an app looks rather than a pair of buttons. */
+.toggle { display: flex; width: 100%; background: #EDEAE3; border-radius: 6px; padding: 3px; gap: 3px; }
+/* Headroom for the recommendation caption, reserved by the control itself so
+   nothing above it has to know. The design system's segmented control does
+   the same, at the same 20px. */
+.toggle:has(.toggle-flag) { margin-top: 20px; }
+.toggle button {
+  position: relative;
+  flex: 1 1 0; min-width: 0;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-muted);
+  background: none; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;
+  display: flex; align-items: baseline; justify-content: center; gap: 7px; line-height: 1.2;
+}
+.toggle button:hover { color: var(--ink); }
+.toggle button.on { background: #FFFFFF; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+/* The recommendation sits ABOVE the option it names, as a ruled caption over
+   the box, not as a second word inside the label. Lifted out of the flow so it
+   cannot widen the button or push the label off centre. The design system's
+   .rrf-seg__flag is the same treatment; this is the app's copy of it until the
+   design system is adopted wholesale. */
+.toggle-flag {
+  position: absolute; left: 0; right: 0; top: -19px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ok-ink); font-weight: 700; pointer-events: none;
+}
+.toggle-flag::before, .toggle-flag::after {
+  content: ""; flex: 1 1 auto; height: 1px; background: var(--ok-ink); opacity: 0.45;
+}
+
+/* One printed page as a real table: photo cells, a rule, caption cells. */
+.page-preview {
+  display: grid; grid-template-columns: 230px 1fr;
+  background: #FFFFFF; border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+}
+.cell-photo { padding: 12px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid #F0EDE6; }
+.cell-caption {
+  padding: 14px 20px; border-bottom: 1px solid #F0EDE6;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; font-size: 15px; color: var(--ink); line-height: 1.45;
+}
+.cell-photo.head, .cell-caption.head { background: #FAF8F4; padding-top: 7px; padding-bottom: 7px; }
+.cell-caption.head { padding-left: 12px; padding-right: 12px; }
+.page-preview > :nth-last-child(-n+2) { border-bottom: none; }
+.cell-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; display: block; }
+.cell-caption em { color: var(--ink-muted); font-style: italic; }
+.cell-caption.waiting { gap: 12px; min-height: 150px; }
+.cell-caption.waiting p { margin: 0; font-size: 13px; color: var(--ink-muted); }
+
+.keep-note {
+  margin: 0 auto 0 0; font-size: 12.5px; font-weight: 600; color: var(--brand);
+}
+
+/* Two ways into a new job. Pick the road first, then get the form. */
+.roads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; max-width: 800px; }
+.road {
+  display: flex; flex-direction: column; gap: 8px; text-align: left; font: inherit; cursor: pointer;
+  background: #FFFFFF; border: 1.5px solid var(--line); border-top: 3px solid var(--brand);
+  border-radius: 6px; padding: 20px 20px 18px; position: relative;
+}
+.road:hover { border-color: var(--link); border-top-color: var(--brand); }
+.road-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+.road-body { font-size: 14px; color: var(--ink-muted); line-height: 1.5; }
+.road-soon { font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700;
+  color: var(--ink-muted); background: #EFEDE7; padding: 3px 9px; border-radius: 999px; align-self: flex-start; }
+.panel-note { font-size: 12.5px; color: var(--box-muted); margin: 12px 0 0; }
+
+/* Intake and the section picker */
+.panel { background: var(--box); border-radius: 6px; padding: 18px 18px 16px; margin-bottom: 14px; }
+.panel h2 { font-size: 11px; letter-spacing: 0.09em; color: #D99AA0; font-weight: 700; margin: 0 0 12px; text-transform: uppercase; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.field label { display: block; font-size: 12px; color: var(--box-muted); margin-bottom: 4px; }
+.field input, .field select {
+  width: 100%; background: #26272A; color: var(--box-ink); font: inherit; font-size: 14px;
+  border: none; border-bottom: 2px solid var(--brand); border-radius: 3px 3px 0 0; padding: 8px 10px;
+}
+.field input:focus, .field select:focus { outline: 2px solid var(--link); outline-offset: 1px; }
+.choice { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.choice button { font: inherit; font-size: 14px; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+.choice .on { background: var(--brand); color: #fff; border: 1px solid var(--brand); font-weight: 600; }
+.namebox {
+  background: #26272A; color: var(--box-ink); font: inherit; font-size: 14px; width: 100%;
+  border: none; border-bottom: 2px solid var(--link); padding: 8px 10px; border-radius: 3px 3px 0 0;
+}
+.checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 16px; }
+.check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--box-ink); padding: 5px 2px; cursor: pointer; }
+.check input { width: 15px; height: 15px; accent-color: var(--brand); cursor: pointer; }
+.check.off { color: var(--box-muted); }
+.warn {
+  background: #4A3B22; color: #F5D9A8; border-left: 4px solid #F0B95E;
+  padding: 11px 14px; border-radius: 0 4px 4px 0; margin-bottom: 14px; font-size: 13.5px;
+}

@@ -1,0 +1,26 @@
+/* Roy R. Fisher — radius, border, elevation. Three radii and a pill, down
+   from seven. The red rules are identity and selection, never affordance: a
+   3px rule on top marks a card as the firm's own; a 4px rule on the left
+   marks which row in a list is available. The word in the row is what says
+   it can be pressed. */
+:root{
+  --radius-sm:4px;      /* fields, inner tiles */
+  --radius-md:6px;      /* cards, buttons, panels */
+  --radius-lg:8px;      /* the overlay sheet */
+  --radius-pill:999px;
+
+  --border-hair:1px solid var(--hairline);
+  --border-field:1.5px solid var(--hairline);
+  --border-dashed:1.5px dashed var(--hairline);
+  --rule-open:3px solid var(--rrf-red);   /* card top: the firm's line */
+  --rule-live:4px solid var(--rrf-red);   /* row left: which row is available */
+  --rule-band:2px solid var(--hairline);  /* band head underline */
+  --rule-page:3px;                        /* the letterhead rule at the very top */
+
+  --shadow-raised:0 1px 3px rgba(35,31,32,0.12);
+  --shadow-float:0 6px 24px rgba(35,31,32,0.25);
+  --shadow-sheet:0 18px 60px rgba(35,31,32,0.30);
+  --scrim:rgba(35,31,32,0.55);
+  --focus-outline:2px solid var(--link);
+  --focus-offset:1px;
+}

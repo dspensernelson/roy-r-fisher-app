@@ -1,0 +1,7 @@
+/* Minimal reset. Consumers get the ground, the working type, and link
+   colours; everything else comes from the components. */
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-page);color:var(--text-primary);font:var(--text-base)/var(--leading-body) var(--font-sans);-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}
+a:hover{color:var(--link-hover);text-decoration:underline}
+:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-offset)}

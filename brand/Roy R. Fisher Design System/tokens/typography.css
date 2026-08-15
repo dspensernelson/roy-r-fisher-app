@@ -1,0 +1,37 @@
+/* Roy R. Fisher — type. No webfonts: the app runs locally on Mark's Windows
+   machine and must render identically offline, so both stacks are resident
+   faces. Segoe UI leads the sans stack — it is native on his machine, warmer
+   than Helvetica, and holds up better in long dense lists. Serif is for the
+   wordmark and for anything standing in for the printed report. */
+:root{
+  --font-sans:"Segoe UI","Helvetica Neue",Helvetica,Arial,-apple-system,sans-serif;
+  --font-serif:Georgia,"Times New Roman",Times,serif;
+  --font-report:"Times New Roman",Times,serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  /* Scale — eight steps, replacing the app's 15 ad-hoc sizes */
+  --text-micro:11px;   /* uppercase labels, row numbers */
+  --text-fine:12px;    /* field labels, fine print */
+  --text-small:13px;   /* dense ledger rows, meta */
+  --text-body:14px;    /* the app's working size */
+  --text-base:16px;    /* prose, primary buttons */
+  --text-lead:18px;    /* card headline */
+  --text-title:21px;   /* dialog title, wordmark */
+  --text-page:28px;    /* screen title */
+
+  --leading-tight:1.25;
+  --leading-snug:1.4;
+  --leading-body:1.55;
+
+  --weight-regular:400;
+  --weight-medium:500;
+  --weight-semibold:600;
+  --weight-bold:700;
+
+  --track-wordmark:0.22em;
+  --track-label:0.09em;
+  --track-eyebrow:0.12em;
+
+  --measure-prose:62ch;
+  --measure-caption:46ch;
+}

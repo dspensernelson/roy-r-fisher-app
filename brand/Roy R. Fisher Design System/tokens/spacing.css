@@ -1,0 +1,23 @@
+/* Roy R. Fisher — spacing. A 4px grid with one 2px hair step, replacing the
+   app's 22 ad-hoc values. Layout widths are measured, not chosen: 1200 exists
+   because the job screen compares two columns of wrapping text. */
+:root{
+  --space-hair:2px;
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-7:32px;
+  --space-8:48px;
+  --space-9:64px;
+
+  --gutter-page:24px;
+  --width-frame:1200px;      /* the job screen's comparison needs it */
+  --width-column:720px;      /* settings cards, single-column forms */
+  --width-sheet:840px;       /* the caption overlay */
+  --split-job:1.45fr 1fr; /* @kind other */ /* words go where the wrapping is */
+  --row-gap-ledger:6px;
+  --card-gap:16px;
+}

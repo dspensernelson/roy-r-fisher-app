@@ -1,0 +1,246 @@
+/* Roy R. Fisher component styles. Every value comes from a token; the only
+   literals here are the ones a token would obscure (grid templates, aspect
+   ratios). Class prefix: rrf-. */
+
+/* ---- Brand: masthead ---------------------------------------------------- */
+/* The letterhead's rule, across the top of every screen. The one signature. */
+.rrf-topline{height:var(--rule-page);background:var(--accent)}
+.rrf-masthead{max-width:var(--width-frame);margin:0 auto;padding:var(--space-5) var(--gutter-page) var(--space-3);display:flex;align-items:center;gap:var(--space-3)}
+.rrf-masthead__mark{height:40px;width:auto;display:block}
+.rrf-wordmark{font-family:var(--font-serif);font-size:var(--text-title);font-weight:var(--weight-semibold);letter-spacing:var(--track-wordmark);color:var(--ink);line-height:var(--leading-tight)}
+.rrf-tagline{font-size:var(--text-fine);font-style:italic;color:var(--text-secondary);margin-top:var(--space-hair)}
+.rrf-wordmark--sm{font-size:var(--text-base);letter-spacing:var(--track-eyebrow)}
+
+/* ---- Layout ------------------------------------------------------------- */
+.rrf-frame{max-width:var(--width-frame);margin:0 auto;padding:var(--space-2) var(--gutter-page) var(--space-9)}
+.rrf-crumbbar{background:var(--surface-ledger)}
+.rrf-crumbbar__inner{max-width:var(--width-frame);margin:0 auto;padding:var(--space-3) var(--gutter-page);display:flex;align-items:center;gap:var(--space-2);color:var(--text-on-ledger);font-size:var(--text-body);font-weight:var(--weight-medium)}
+.rrf-crumb{background:none;border:none;color:var(--text-on-ledger);font:inherit;opacity:.85;cursor:pointer;padding:0 var(--space-1);border-radius:var(--radius-sm);transition:opacity var(--dur-fast) var(--ease-standard)}
+.rrf-crumb:hover{opacity:1;text-decoration:underline}
+.rrf-crumb[aria-current="page"]{opacity:1;text-decoration:underline;cursor:default}
+.rrf-crumb--tail{opacity:1;cursor:default}
+.rrf-crumb-sep{opacity:.5}
+.rrf-crumbbar__right{margin-left:auto}
+.rrf-screenhead{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-5);flex-wrap:wrap;margin:var(--space-6) 0 var(--space-5)}
+.rrf-title{font-size:var(--text-page);font-weight:var(--weight-bold);margin:0;line-height:var(--leading-tight);letter-spacing:-0.01em}
+.rrf-sub{color:var(--text-secondary);font-size:var(--text-base);margin:var(--space-1) 0 0;max-width:var(--measure-prose)}
+.rrf-screenhead__actions{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-2);padding-top:var(--space-1)}
+.rrf-screenhead--stack .rrf-screenhead__actions{align-items:flex-start}
+.rrf-actionrow{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+.rrf-bandhead{display:flex;align-items:baseline;gap:var(--space-3);margin:0 0 var(--space-3);padding-bottom:var(--space-2);border-bottom:var(--rule-band)}
+.rrf-bandhead__title{font-size:var(--text-small);letter-spacing:var(--track-label);text-transform:uppercase;font-weight:var(--weight-bold);margin:0;color:var(--ink)}
+.rrf-bandhead__note{font-size:var(--text-fine);color:var(--text-secondary)}
+.rrf-bandhead .rrf-link{margin-left:auto}
+.rrf-bands{display:grid;grid-template-columns:var(--split-job);gap:var(--space-7);align-items:start}
+@media (max-width:900px){.rrf-bands{grid-template-columns:1fr;gap:var(--space-4)}}
+
+/* ---- Actions ------------------------------------------------------------ */
+.rrf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);font-family:var(--font-sans);font-size:var(--text-base);font-weight:var(--weight-bold);line-height:1;border:1px solid transparent;border-radius:var(--radius-md);padding:var(--space-4) var(--space-6);cursor:pointer;transition:background var(--dur-fast) var(--ease-standard),transform var(--dur-instant) var(--ease-standard)}
+.rrf-btn--primary{background:var(--accent);color:var(--paper)}
+.rrf-btn--primary:hover:not(:disabled){background:var(--accent-hover)}
+.rrf-btn--primary:active:not(:disabled){background:var(--rrf-red-press)}
+.rrf-btn--secondary{background:var(--link);color:var(--paper)}
+.rrf-btn--secondary:hover:not(:disabled){background:var(--link-hover)}
+.rrf-btn--quiet{background:var(--paper);color:var(--ink);border-color:var(--hairline-strong)}
+.rrf-btn--quiet:hover:not(:disabled){background:var(--paper-sunk)}
+.rrf-btn--sm{font-size:var(--text-body);padding:var(--space-3) var(--space-5)}
+.rrf-btn:disabled{opacity:.45;cursor:default}
+.rrf-btn:active:not(:disabled){transform:translateY(1px)}
+.rrf-link{background:none;border:none;color:var(--link);font-family:var(--font-sans);font-size:var(--text-fine);cursor:pointer;padding:0;text-align:left}
+.rrf-link:hover{color:var(--link-hover);text-decoration:underline}
+.rrf-link--body{font-size:var(--text-body)}
+/* Legible, not invisible: a disabled action he cannot read is a disabled
+   action he cannot understand. --ink-faint was 2.91:1 here. */
+.rrf-link:disabled{color:var(--text-secondary);cursor:default;text-decoration:none}
+.rrf-seg{display:flex;width:100%;background:var(--paper-sunk);border-radius:var(--radius-md);padding:3px;gap:3px}
+/* A flagged option needs headroom: the flag sits above the box, not inside it. */
+.rrf-seg:has(.rrf-seg__flag){margin-top:20px}
+.rrf-seg__btn{position:relative;flex:1 1 0;min-width:0;font-family:var(--font-sans);font-size:var(--text-small);font-weight:var(--weight-semibold);color:var(--text-secondary);background:none;border:none;border-radius:var(--radius-sm);padding:var(--space-1) var(--space-3);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:var(--leading-tight);transition:color var(--dur-fast) var(--ease-standard)}
+.rrf-seg__btn:hover{color:var(--ink)}
+.rrf-seg__btn.is-on{background:var(--paper);color:var(--accent);box-shadow:var(--shadow-raised)}
+/* The recommendation is a caption over the option it recommends — above and
+   slightly outside the control, ruled either side so it reads as a label on
+   the box rather than a second word in the button. */
+.rrf-seg__flag{position:absolute;left:0;right:0;top:-19px;display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:var(--track-label);text-transform:uppercase;color:var(--ok-ink);font-weight:var(--weight-bold);pointer-events:none}
+.rrf-seg__flag::before,.rrf-seg__flag::after{content:"";flex:1 1 auto;height:1px;background:var(--ok-ink);opacity:.45}
+/* Anything on --surface-quiet uses --ink-on-quiet. The body grey is 4.33:1 on
+   that tint — under AA at the small bold sizes these pills use — so the
+   pairing is retired system-wide rather than per-component. */
+.rrf-chip{font-size:var(--text-fine);font-weight:var(--weight-semibold);padding:3px var(--space-3);border-radius:var(--radius-pill);background:var(--surface-quiet);color:var(--ink-on-quiet);white-space:nowrap;border:1.5px solid transparent}
+/* Not a red pill: red is spent on the letterhead band and the primary button.
+   The row's red left mark already says which row this is. */
+.rrf-chip--live{background:var(--paper);color:var(--link);border-color:var(--link)}
+.rrf-chip--quiet{background:var(--surface-quiet);color:var(--ink-on-quiet)}
+.rrf-chip--done{background:var(--ok-bg);color:var(--ok-ink)}
+.rrf-chip--needs{background:var(--needs-bg);color:var(--text-needs)}
+.rrf-lamp{display:inline-block;font-size:var(--text-micro);letter-spacing:var(--track-label);text-transform:uppercase;font-weight:var(--weight-bold);padding:3px var(--space-3);border-radius:var(--radius-pill)}
+.rrf-lamp--on{background:var(--ok-bg);color:var(--ok-ink)}
+.rrf-lamp--off{background:var(--surface-quiet);color:var(--ink-on-quiet)}
+.rrf-lamp--busy{background:var(--surface-quiet);color:var(--ink-on-quiet)}
+
+/* ---- Surfaces ----------------------------------------------------------- */
+.rrf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--card-gap)}
+.rrf-jobcard{text-align:left;cursor:pointer;background:var(--surface-card);color:var(--ink);border:var(--border-hair);border-top:var(--rule-open);border-radius:var(--radius-md);padding:var(--space-5) var(--space-4) var(--space-4);font-family:var(--font-sans);display:block;width:100%;transition:box-shadow var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard)}
+.rrf-jobcard:hover{box-shadow:var(--shadow-raised);border-color:var(--hairline-strong);border-top-color:var(--accent)}
+.rrf-jobcard__city{font-size:var(--text-micro);letter-spacing:var(--track-eyebrow);text-transform:uppercase;color:var(--accent);font-weight:var(--weight-bold)}
+.rrf-jobcard__addr{font-size:var(--text-lead);font-weight:var(--weight-semibold);margin:3px 0 var(--space-2);line-height:var(--leading-tight)}
+.rrf-jobcard__meta{font-size:var(--text-small);color:var(--text-secondary);font-variant-numeric:tabular-nums;display:flex;gap:var(--space-2);align-items:center}
+/* Each card carries the one thing to do next, and how far along the report is,
+   so the grid answers "which job needs me" without opening any of them. */
+.rrf-jobcard__next{display:flex;align-items:flex-start;gap:var(--space-2);margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--hairline);font-size:var(--text-fine);color:var(--ink);line-height:var(--leading-snug);text-wrap:pretty}
+.rrf-jobcard__next .rrf-icon{margin-top:1px;color:var(--text-secondary)}
+.rrf-jobcard__next--waiting{color:var(--text-needs)}
+.rrf-jobcard__next--waiting .rrf-icon{color:var(--text-needs)}
+.rrf-jobcard__next--done{color:var(--text-has)}
+.rrf-jobcard__next--done .rrf-icon{color:var(--text-has)}
+.rrf-jobcard__far{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3);font-size:var(--text-micro);color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.rrf-jobcard__bar{flex:1 1 auto;height:4px;border-radius:2px;background:var(--paper-sunk);overflow:hidden}
+.rrf-jobcard__bar span{display:block;height:100%;border-radius:2px;background:var(--accent)}
+.rrf-jobcard__bar--done span{background:var(--ok-ink)}
+.rrf-jobcard--new{background:transparent;color:var(--link);border:var(--border-dashed);border-top:var(--border-dashed);display:flex;align-items:center;justify-content:center;min-height:120px;font-weight:var(--weight-semibold);font-size:var(--text-base)}
+.rrf-jobcard--new:hover{background:var(--paper);border-color:var(--link)}
+.rrf-roads{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--card-gap);max-width:800px}
+.rrf-roadcard{display:flex;flex-direction:column;gap:var(--space-2);text-align:left;font-family:var(--font-sans);cursor:pointer;background:var(--surface-card);border:var(--border-field);border-top:var(--rule-open);border-radius:var(--radius-md);padding:var(--space-5) var(--space-5) var(--space-4);transition:border-color var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard)}
+.rrf-roadcard:hover:not(:disabled){border-color:var(--link);border-top-color:var(--accent);box-shadow:var(--shadow-raised)}
+.rrf-roadcard:disabled{cursor:default;opacity:.7}
+.rrf-roadcard__title{font-size:var(--text-lead);font-weight:var(--weight-bold);color:var(--ink)}
+.rrf-roadcard__body{font-size:var(--text-body);color:var(--text-secondary);line-height:var(--leading-snug)}
+.rrf-tag-soon{font-size:var(--text-micro);letter-spacing:var(--track-label);text-transform:uppercase;font-weight:var(--weight-bold);color:var(--ink-on-quiet);background:var(--surface-quiet);padding:3px var(--space-2);border-radius:var(--radius-pill);align-self:flex-start}
+.rrf-settingcard{background:var(--surface-card);border:var(--border-hair);border-radius:var(--radius-md);padding:var(--space-5) var(--space-6);max-width:var(--width-column)}
+.rrf-settingcard__head{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.rrf-settingcard__head h2{font-size:var(--text-lead);font-weight:var(--weight-bold);margin:0}
+.rrf-settingcard__body{font-size:var(--text-body);color:var(--ink);line-height:var(--leading-body);margin:0 0 var(--space-3);max-width:var(--measure-prose)}
+.rrf-settingcard__fine{font-size:var(--text-fine);color:var(--text-secondary);margin:var(--space-5) 0 0;max-width:var(--measure-prose)}
+.rrf-panel{background:var(--surface-card);border:var(--border-hair);border-radius:var(--radius-md);padding:var(--space-5) var(--space-5) var(--space-4);margin-bottom:var(--space-4)}
+.rrf-panel__label{font-size:var(--text-micro);letter-spacing:var(--track-label);color:var(--ink);font-weight:var(--weight-bold);margin:0 0 var(--space-3);padding-bottom:var(--space-2);border-bottom:var(--rule-band);text-transform:uppercase}
+.rrf-panel__note{font-size:var(--text-fine);color:var(--text-secondary);margin:var(--space-3) 0 0;max-width:var(--measure-prose)}
+.rrf-emptynote{background:transparent;border:var(--border-dashed);border-radius:var(--radius-md);padding:var(--space-5) var(--space-4);text-align:center}
+.rrf-emptynote__name{font-size:var(--text-body);font-weight:var(--weight-semibold);color:var(--ink)}
+.rrf-emptynote__state{font-size:var(--text-fine);color:var(--text-secondary);margin-top:var(--space-1)}
+
+/* ---- Forms -------------------------------------------------------------- */
+.rrf-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--space-3)}
+.rrf-field{display:block}
+.rrf-field__label{display:block;font-size:var(--text-fine);margin-bottom:var(--space-1);color:var(--text-secondary)}
+/* A field is the same object as a row: paper, hairline, 6px. One tone; the app
+   has no dark fields. */
+.rrf-field__input{width:100%;font-family:var(--font-sans);font-size:var(--text-body);background:var(--paper);color:var(--ink);border:var(--border-hair);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.rrf-field__input::placeholder{color:var(--text-placeholder);opacity:1}
+.rrf-field__hint{font-size:var(--text-fine);color:var(--text-secondary);margin-top:var(--space-1)}
+.rrf-field.is-mono .rrf-field__input{font-family:var(--font-mono)}
+.rrf-field.is-derived .rrf-field__input{border-color:var(--link)}
+.rrf-field__input:focus{outline:var(--focus-outline);outline-offset:var(--focus-offset);border-color:var(--link)}
+.rrf-field.is-error .rrf-field__input{border-color:var(--accent)}
+.rrf-field.is-error .rrf-field__hint{color:var(--error-ink)}
+.rrf-field__input:disabled{opacity:.5;cursor:default}
+.rrf-checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--space-1) var(--space-4)}
+.rrf-check{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-body);color:var(--ink);padding:var(--space-1) var(--space-hair);cursor:pointer}
+/* Ink, not red: a tick is a state, and fifteen red ticks would spend the
+   budget the letterhead band and the primary button are meant to have. */
+.rrf-check input{width:15px;height:15px;accent-color:var(--ink);cursor:pointer;flex:none}
+.rrf-check.is-off{color:var(--text-secondary)}
+.rrf-dropzone{border:2px dashed var(--link);background:var(--paper);border-radius:var(--radius-md);padding:var(--space-7) var(--space-6);text-align:center;color:var(--text-secondary);font-size:var(--text-body);line-height:var(--leading-body)}
+.rrf-dropzone strong{color:var(--ink)}
+.rrf-dropzone.is-over{background:var(--ok-bg);border-color:var(--ok-ink)}
+
+/* ---- Feedback ----------------------------------------------------------- */
+/* Tinted ground from option A, glyph from option B: the colour makes it
+   impossible to miss, the glyph says which kind of message it is without
+   relying on the colour alone. */
+.rrf-banner{display:flex;align-items:flex-start;gap:var(--space-3);border-radius:var(--radius-md);padding:var(--space-3) var(--space-5);font-size:var(--text-base);line-height:var(--leading-body)}
+.rrf-banner>.rrf-icon{margin-top:2px;width:18px;height:18px}
+.rrf-banner__text{min-width:0}
+.rrf-banner--done{background:var(--ok-bg);color:var(--ok-ink)}
+.rrf-banner--error{background:var(--error-bg);color:var(--error-ink);white-space:pre-wrap}
+.rrf-banner--warn{background:var(--needs-bg);color:var(--text-needs)}
+.rrf-banner--note{background:var(--paper);color:var(--ink);border:var(--border-hair);font-size:var(--text-body)}
+.rrf-working{display:flex;align-items:center;gap:var(--space-3)}
+.rrf-working__text{font-size:var(--text-fine);color:var(--text-secondary)}
+.rrf-sweep{width:190px;height:4px;background:var(--hairline);border-radius:2px;overflow:hidden;flex:none}
+.rrf-sweep span{display:block;width:38%;height:100%;background:var(--accent);border-radius:2px;animation:rrf-sweep var(--dur-sweep) ease-in-out infinite}
+.rrf-draghint{position:fixed;left:50%;bottom:var(--space-7);transform:translateX(-50%);background:var(--surface-ledger);color:var(--text-on-ledger);padding:var(--space-3) var(--space-6);border-radius:var(--radius-pill);font-size:var(--text-body);font-weight:var(--weight-semibold);box-shadow:var(--shadow-float);pointer-events:none;z-index:60;animation:rrf-fade-in var(--dur-calm) var(--ease-standard)}
+
+/* ---- Job rows ------------------------------------------------------------ */
+.rrf-folder{background:var(--surface-card);border:var(--border-hair);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--row-gap-ledger)}
+.rrf-folder__top{display:flex;align-items:baseline;gap:var(--space-3)}
+.rrf-folder__name{font-size:var(--text-body);font-weight:var(--weight-bold);color:var(--ink);display:flex;align-items:center;gap:var(--space-2)}
+.rrf-folder__count{font-size:var(--text-fine);color:var(--text-secondary);margin-left:auto;font-variant-numeric:tabular-nums}
+.rrf-folder__line{font-size:var(--text-fine);margin-top:3px;line-height:var(--leading-snug);display:flex;align-items:flex-start;gap:5px}
+.rrf-folder__line .rrf-icon{width:13px;height:13px;margin-top:2px}
+.rrf-folder__line--has{color:var(--text-has)}
+.rrf-folder__line--needs{color:var(--text-needs)}
+.rrf-folder__line--quiet{color:var(--text-secondary);font-style:italic}
+.rrf-sectionrow{background:var(--surface-card);border:var(--border-hair);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);margin-bottom:var(--space-1);display:flex;align-items:center;gap:var(--space-3);border-left:4px solid transparent;width:100%;text-align:left;font-family:var(--font-sans)}
+.rrf-sectionrow__num{font-size:var(--text-micro);color:var(--text-secondary);font-variant-numeric:tabular-nums;min-width:17px;text-align:right;flex:none}
+.rrf-sectionrow__name{font-size:var(--text-small);font-weight:var(--weight-semibold);color:var(--ink)}
+.rrf-sectionrow__state{font-size:var(--text-micro);color:var(--text-secondary);display:block;font-weight:var(--weight-regular);margin-top:1px}
+.rrf-sectionrow__state--needs,.rrf-sectionrow__state--has{display:flex;align-items:center;gap:5px}
+.rrf-sectionrow__state--needs{color:var(--text-needs)}
+.rrf-sectionrow__state--has{color:var(--text-has)}
+.rrf-sectionrow__state .rrf-icon{width:13px;height:13px}
+.rrf-sectionrow .rrf-chip{margin-left:auto}
+.rrf-sectionrow--live{border-left:var(--rule-live);cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-standard)}
+.rrf-sectionrow--live:hover{box-shadow:var(--shadow-raised)}
+.rrf-sectionrow--soon{color:var(--text-secondary)}
+.rrf-sectionrow--soon .rrf-sectionrow__name{color:var(--text-secondary);font-weight:var(--weight-regular)}
+.rrf-sectionrow--done{border-left-color:var(--ok-ink)}
+
+/* ---- Photos ------------------------------------------------------------- */
+.rrf-photogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-5)}
+/* Photo and caption are one card, the same object as a row: the grid then
+   reads as a set of things rather than a set of pictures. */
+.rrf-phototile{margin:0;display:flex;flex-direction:column;background:var(--surface-card);border:var(--border-hair);border-radius:var(--radius-md);overflow:hidden}
+.rrf-phototile img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--paper-sunk)}
+.rrf-phototile.is-dragging{opacity:.4}
+/* The caption is a box, not a line, and it grows. The old app wrote
+   'font:14px/1.45 inherit', which is invalid and dropped the whole
+   declaration, so captions fell back to the browser's 13.33px monospace;
+   and overflow:hidden clipped pre-filled captions. Both are fixed here. */
+.rrf-phototile__caption{width:100%;font-family:var(--font-sans);font-size:var(--text-body);line-height:var(--leading-snug);color:var(--ink);border:none;border-top:var(--border-hair);background:none;padding:var(--space-2) var(--space-3);resize:vertical;overflow:auto;min-height:52px;field-sizing:content}
+.rrf-phototile__caption::placeholder{color:var(--text-placeholder);opacity:1}
+.rrf-phototile__caption:focus{outline:none;background:var(--paper-sunk)}
+.rrf-phototile__caption:disabled{color:var(--text-secondary);cursor:default}
+.rrf-pagepreview{display:grid;grid-template-columns:230px 1fr;background:var(--paper);border:var(--border-hair);border-radius:var(--radius-md);overflow:hidden}
+.rrf-pagepreview__photo{padding:var(--space-3) var(--space-4);border-right:1px solid var(--hairline);border-bottom:1px solid var(--paper-sunk)}
+.rrf-pagepreview__photo img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:3px;display:block;background:var(--paper-sunk)}
+.rrf-pagepreview__caption{padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--paper-sunk);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-family:var(--font-report);font-size:var(--text-base);color:var(--ink);line-height:var(--leading-snug);max-width:none}
+.rrf-pagepreview__caption em{color:var(--text-secondary);font-style:italic}
+.rrf-pagepreview__photo.is-head,.rrf-pagepreview__caption.is-head{background:var(--eggshell);padding-top:var(--space-2);padding-bottom:var(--space-2)}
+.rrf-pagepreview__caption.is-head{padding-left:var(--space-3);padding-right:var(--space-3)}
+.rrf-pagepreview__caption.is-waiting{gap:var(--space-3);min-height:150px}
+.rrf-pagepreview__caption.is-waiting p{margin:0;font-family:var(--font-sans);font-size:var(--text-small);color:var(--text-secondary)}
+.rrf-pagepreview>:nth-last-child(-n+2){border-bottom:none}
+
+/* ---- Overlay ------------------------------------------------------------ */
+.rrf-sheet-back{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:var(--space-6);z-index:50;animation:rrf-fade-in var(--dur-calm) var(--ease-standard)}
+.rrf-sheet{background:var(--surface-page);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-6) var(--space-5);max-width:var(--width-sheet);width:100%;box-shadow:var(--shadow-sheet);max-height:calc(100vh - var(--space-8));overflow-y:auto}
+.rrf-sheet__title{font-size:var(--text-title);font-weight:var(--weight-bold);margin:0 0 var(--space-1)}
+.rrf-sheet__sub{color:var(--text-secondary);font-size:var(--text-body);margin:0 0 var(--space-4);max-width:var(--measure-prose)}
+.rrf-sheet__foot{display:flex;align-items:center;gap:var(--space-4);margin-top:var(--space-5);position:sticky;bottom:calc(var(--space-5) * -1);background:var(--surface-page);padding:var(--space-3) 0 var(--space-4);border-top:var(--border-hair)}
+.rrf-sheet__keep{margin:0 auto 0 0;font-size:var(--text-fine);font-weight:var(--weight-semibold);color:var(--accent)}
+
+/* ---- Icons ---------------------------------------------------------------- */
+/* Lucide, 8 glyphs, stroke 1.75. Never the only label for an action. */
+.rrf-icon{width:16px;height:16px;flex:none;display:inline-block;vertical-align:-2px;color:currentColor}
+.rrf-icon--lg{width:20px;height:20px}
+.rrf-icon--quiet{color:var(--text-secondary)}
+.rrf-icon--needs{color:var(--text-needs)}
+.rrf-icon--has{color:var(--text-has)}
+
+/* ---- Worklist (the job screen) ------------------------------------------ */
+.rrf-worklist{display:flex;flex-direction:column;gap:var(--space-1)}
+.rrf-task{display:flex;align-items:center;gap:var(--space-3);width:100%;text-align:left;font-family:var(--font-sans);background:var(--surface-card);border:var(--border-hair);border-left:4px solid var(--hairline);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-standard)}
+/* Only the first task carries the red rule. Six of them would be wallpaper,
+   and the group heading already says these are all doable. */
+.rrf-task--next{border-left:var(--rule-live)}
+.rrf-task:hover{box-shadow:var(--shadow-raised)}
+.rrf-task__body{min-width:0;flex:1 1 auto}
+.rrf-task__name{display:block;font-size:var(--text-base);font-weight:var(--weight-semibold);color:var(--ink);line-height:var(--leading-snug)}
+.rrf-task__why{display:block;font-size:var(--text-fine);color:var(--text-secondary);margin-top:2px;line-height:var(--leading-snug)}
+.rrf-task--done{border-left-color:var(--has);cursor:default}
+.rrf-task--done .rrf-task__name{font-weight:var(--weight-regular);color:var(--text-secondary)}
+.rrf-task .rrf-chip{margin-left:auto}
+.rrf-subhead{font-size:var(--text-micro);letter-spacing:var(--track-label);text-transform:uppercase;font-weight:var(--weight-bold);color:var(--text-secondary);margin:var(--space-6) 0 var(--space-2)}
+.rrf-subhead:first-child{margin-top:0}
+.rrf-progress{display:flex;align-items:baseline;gap:var(--space-3);font-size:var(--text-fine);color:var(--text-secondary)}
+.rrf-progress b{font-size:var(--text-body);color:var(--ink);font-variant-numeric:tabular-nums}

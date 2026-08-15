@@ -1,0 +1,74 @@
+/* Roy R. Fisher — colour. Values measured from the delivered report corpus
+   and from the working app surfaces. Do not substitute #782028, #7A222E or
+   #702930: those are the wrong red, the website's degraded logo, and an
+   incidental button widget. */
+:root{
+  /* Brand */
+  --rrf-red:#8C0C04;
+  --rrf-red-hover:#B30F05;
+  --rrf-red-press:#6E0903;
+  --rrf-red-tint:#FBEAEA;
+  --rrf-ink:#231F20;
+
+  /* Ground and paper */
+  --eggshell:#FAF8F4;
+  --paper:#FFFFFF;
+  --paper-sunk:#F4F1EA;
+  --hairline:#E3E0D8;
+  --hairline-strong:#D4CFC3;
+
+  /* Ledger (the charcoal surface) */
+  --charcoal:#343538;
+  --charcoal-hover:#3E3F43;
+  --charcoal-sunk:#26272A;
+  --charcoal-line:#4A4B50;
+
+  /* Text */
+  --ink:#231F20;
+  --ink-muted:#6E6E73;
+  --on-charcoal:#FFFFFF;
+  --on-charcoal-muted:#B8B8BC;
+  --on-charcoal-accent:#E2928D;
+
+  /* Action / link. The old app put links on charcoal, where #248CC8 read at
+     4.6:1. Everything is paper now, where that same blue is only 3.5:1 — below
+     AA — so the working blue is darkened and the original is kept for dark
+     grounds only. Measured on #FFFFFF and on the eggshell ground. */
+  --link:#1B6C99;          /* 5.02:1 on white, 4.83:1 on eggshell */
+  --link-hover:#14536F;    /* 7.35:1 on white */
+  --link-on-dark:#248CC8;  /* 4.60:1 on the charcoal crumb bar */
+
+  /* State — the pale pair reads on charcoal, the ink pair on paper */
+  --has:#7FCF9B;
+  --needs:#F0B95E;
+  --has-ink:#1E7A3C;
+  --needs-ink:#8A5200;
+  --ok-bg:#E8F5EC;
+  --ok-ink:#1E7A3C;
+  --needs-bg:#FBF1E0;
+  --error-bg:#FBEAEA;
+  --error-ink:#8C0C04;
+  --quiet-bg:#EFEDE7;
+  --ink-on-quiet:#4E4E53;   /* text on --quiet-bg: 7.03:1. The body grey is 4.33:1
+                               there, so never pair --text-secondary with this tint. */
+
+  /* Semantic aliases — prefer these in components */
+  --surface-page:var(--eggshell);
+  --surface-card:var(--paper);
+  --surface-ledger:var(--charcoal);
+  --surface-ledger-hover:var(--charcoal-hover);
+  --surface-field-dark:var(--charcoal-sunk);
+  --surface-quiet:var(--quiet-bg);
+  --text-primary:var(--ink);
+  --text-secondary:var(--ink-muted);
+  --text-placeholder:var(--ink-muted);  /* 5.07:1 on paper; placeholders are not exempt from AA */
+  --text-on-ledger:var(--on-charcoal);
+  --text-on-ledger-secondary:var(--on-charcoal-muted);
+  --label-on-ledger:var(--on-charcoal-accent);
+  --text-has:var(--has-ink);
+  --text-needs:var(--needs-ink);
+  --accent:var(--rrf-red);
+  --accent-hover:var(--rrf-red-hover);
+  --border-hairline:var(--hairline);
+  --focus-ring:var(--link);
+}

@@ -13,8 +13,10 @@ when it does not fit rather than following it off a cliff.
   appraisals. They are his clients' work and they are the evidence behind
   every format decision.
 - **Never move, print, or copy a key or a password.** The app's own key stays
-  on the server: never printed, never logged, never sent to the browser. The
-  screen is told whether captions are available and nothing more.
+  on the server: never printed and never logged. The browser may receive only
+  whether captions are available and, on the Settings screen alone, the key's
+  final four characters so Mark can distinguish one key from another. No other
+  key material may reach the browser, an endpoint response, a log, or an error.
 - **Never state a fact the app cannot observe.** The output is a signed
   appraisal report. A blank costs Mark ten seconds. A confident wrong answer
   reaches a client and nobody can tell it from his own writing. Name the
@@ -70,9 +72,13 @@ action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see
 starts immediately.
 
-**Test against real files.** A stand-in never surprises you; it only confirms
-what you already believed, and it cannot show you that a real folder name has
-a quote mark in it. Three things are stood in for, and only these three:
+**Test the claim with the right evidence.** Valid synthetic files and temporary
+folders may test narrow mechanics such as parsing, error handling, naming,
+confinement, and non-overwrite behavior. They prove only that mechanic. They
+may not support claims about Mark's real folder structures, documents, layouts,
+reports, or workflow. Those claims require the real corpus.
+
+Three external conditions may be stood in for:
 
 - the Anthropic model, so a test run costs nothing, needs no internet, and
   gives the same answer twice
@@ -81,7 +87,8 @@ a quote mark in it. Three things are stood in for, and only these three:
 - a fake project folder for the demo-reset tests, so a test of "replace this
   folder" can never be pointed at the real one
 
-Everything else runs on real folders and real files.
+Product acceptance and claims about Mark's work run on real folders and real
+files.
 
 ## Working style
 
@@ -92,8 +99,10 @@ Big or hard-to-reverse moves get a question first. Routine work inside an
 agreed plan does not.
 
 Each slice of work gets its own branch, so unfinished work can be thrown away
-cleanly and the working branch always runs. No pull request ceremony: Spenser
-sees the change and says yes before anything is committed.
+cleanly and the working branch always runs. Once Spenser approves the slice
+plan, local commits on that slice branch are allowed as recovery checkpoints.
+Nothing is pushed, opened as a pull request, merged, treated as accepted, or
+delivered without Spenser seeing the change and saying yes.
 
 While a slice is still being understood there is no plan document, because we
 are finding the edges. Once its shape is known, write one.

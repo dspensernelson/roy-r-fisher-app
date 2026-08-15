@@ -111,3 +111,25 @@ def test_other_settings_in_the_file_survive_a_key_change(client, tmp_path):
     text = (tmp_path / "key.env").read_text()
     assert "RRF_JOBS_HOME=/somewhere/else" in text
     assert "old" not in text
+
+
+def test_save_key_replaces_an_export_form_line(tmp_path, monkeypatch):
+    key_file = tmp_path / "key.env"
+    key_file.write_text("export ANTHROPIC_API_KEY=OLDKEY\n")
+    monkeypatch.setenv("RRF_KEY_FILE", str(key_file))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    settings.save_key("NEWKEY")
+    # Simulate the next start: the live env var save_key sets is gone.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert settings.stored_key() == "NEWKEY"
+    assert "OLDKEY" not in key_file.read_text()
+
+
+def test_remove_key_removes_an_export_form_line(tmp_path, monkeypatch):
+    key_file = tmp_path / "key.env"
+    key_file.write_text("export ANTHROPIC_API_KEY=OLDKEY\nOTHER=keep me\n")
+    monkeypatch.setenv("RRF_KEY_FILE", str(key_file))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    settings.remove_key()
+    assert settings.stored_key() == ""
+    assert "OTHER=keep me" in key_file.read_text()

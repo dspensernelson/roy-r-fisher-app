@@ -3,6 +3,32 @@
 Spenser's rules. Edit this file and the rules change. Nothing else governs how
 Claude behaves on this project.
 
+Two kinds of thing are in here. **Never** is a short list with no judgement in
+it. Everything under **How we work** is judgement, and Claude should say so
+when it does not fit rather than following it off a cliff.
+
+## Never
+
+- **Never write anything into `Report Examples/`.** Those are Mark's delivered
+  appraisals. They are his clients' work and they are the evidence behind
+  every format decision.
+- **Never move, print, or copy a key or a password.** The app's own key stays
+  on the server: never printed, never logged, never sent to the browser. The
+  screen is told whether captions are available and nothing more.
+- **Never state a fact the app cannot observe.** The output is a signed
+  appraisal report. A blank costs Mark ten seconds. A confident wrong answer
+  reaches a client and nobody can tell it from his own writing. Name the
+  tempting unobservable facts in any prompt and forbid them, with the reason.
+- **Never create a markdown file, doc, or note without asking first.** This
+  includes scratch files. When the thing he asked for is text he will read,
+  put it in the chat.
+- **Never touch one of Mark's real folders to record something the app knows.**
+  Active, closed, a nickname, a status: all of it is the app's own note,
+  stored outside his folders. Nothing the app records ever renames, moves,
+  edits, archives or deletes a folder of his.
+- **Never guess at a folder's name.** The exact name on disk is the job's
+  identity. If we need to know what he calls it, ask him.
+
 ## Talking to Spenser
 
 Main point first. Short sentences. Common words. Say what you found, what it
@@ -17,16 +43,6 @@ Mark's own caption style.
 Before asking him to decide about any document, open it and say what is
 actually in it. He did not write most of the documents in this repo and should
 not have to guess at their contents.
-
-## Files
-
-Never create a markdown file, doc, or note without asking first. This includes
-scratch files. When the thing he asked for is text he will read, put it in the
-chat.
-
-Never write anything into `Report Examples/`.
-
-Never move, print, or copy a key or a password.
 
 ## Deciding things
 
@@ -44,19 +60,28 @@ was written out instead of pointed at. Brand facts live in
 
 ## The app itself
 
-**It must run on Mark's Windows PC.** Pure Python in the product path. No
-Mac-only calls, no absolute paths. It has to keep running on Spenser's Mac too.
+**It must run on Mark's Windows PC.** On his machine, nothing but Python runs.
+No shell script, no Node, no Mac-only call. Every extra thing the app needs is
+another thing that can break on his computer and another thing somebody has to
+install for him. It has to keep running on Spenser's Mac too.
 
 **A click leads to a step.** A choice that shapes an action lives inside that
 action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see
 starts immediately.
 
-**The app never states a fact it cannot observe.** The output is a signed
-appraisal report. A blank costs Mark ten seconds. A confident wrong answer
-reaches a client and nobody can tell it from his own writing. Name the
-tempting unobservable facts in any prompt and forbid them, with the reason.
-Verify against real inputs, never mocks. A mock cannot fabricate.
+**Test against real files.** A stand-in never surprises you; it only confirms
+what you already believed, and it cannot show you that a real folder name has
+a quote mark in it. Three things are stood in for, and only these three:
+
+- the Anthropic model, so a test run costs nothing, needs no internet, and
+  gives the same answer twice
+- the answer to "are we on Windows", so drive letters and a drive that fails
+  can be tested without a Windows machine
+- a fake project folder for the demo-reset tests, so a test of "replace this
+  folder" can never be pointed at the real one
+
+Everything else runs on real folders and real files.
 
 ## Working style
 
@@ -66,4 +91,16 @@ files. Do not skip the debrief.
 Big or hard-to-reverse moves get a question first. Routine work inside an
 agreed plan does not.
 
-There is deliberately no plan document. We find the edges as we go.
+Each slice of work gets its own branch, so unfinished work can be thrown away
+cleanly and the working branch always runs. No pull request ceremony: Spenser
+sees the change and says yes before anything is committed.
+
+While a slice is still being understood there is no plan document, because we
+are finding the edges. Once its shape is known, write one.
+
+## Not for Mark
+
+`Reset demo` puts the demo job folders back to a known state so the same test
+can be run from the beginning over and over. It is Spenser's testing tool. It
+only appears on a machine explicitly configured for it, and it comes out of
+anything Mark receives.

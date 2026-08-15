@@ -377,7 +377,7 @@ git commit -m "fix: readiness scan no longer counts the thumbnail cache as photo
 
 ### Task 5: Pin the requirements
 
-`app/server/requirements.txt` is eleven bare names. These are the versions installed and tested on Spenser's Mac as of 2026-08-15; pinning them means a future install on any machine gets the combination that 285 tests have actually run against.
+`app/server/requirements.txt` is eleven bare names. These are the versions installed on Spenser's Mac as of 2026-08-15; pinning them means a future install on any machine gets the same combination of versions the current full suite was run green against.
 
 **Files:**
 - Modify: `app/server/requirements.txt` (full rewrite)

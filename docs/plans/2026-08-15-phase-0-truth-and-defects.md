@@ -478,231 +478,167 @@ git commit -m "docs: README states the measured test count and the two outside r
 
 ---
 
-### Task 7: The readiness panel stops discarding and stops overclaiming
 
-> **BLOCKED.** This task may not start. It is blocked on Spenser's row-by-row
-> review of the 19-row `REQUIREMENTS` mapping in
-> `app/engine/readiness_scan.py`, and on his answers to the two open questions
-> named below. The 19 rows were put to him in chat on 2026-08-15 and no
-> verdicts have been recorded yet. No code, test, or screen change in this
-> task may be written before every row has a verdict. Nothing in this task
-> may be inferred, guessed, or filled in on his behalf.
+### Task 7: Show every folder honestly, and let the appraiser say what a file is
 
-Today `scan.folder_rows` builds rows only for the eight predefined folders in `jobs.MARK_FOLDERS` and silently drops any requirement whose folder is not among them (the `continue` at `app/server/scan.py:43-44` discards the Improvements and Transcript information checks entirely). The screen then prints "Nothing this report needs comes from here" on empty rows (`JobHome.jsx:52`), a claim nothing has proven. Required behavior (Spenser, 2026-08-15): rows come from the folders actually on disk, by exact name; no requirement is ever silently discarded; no unproven claim is shown; folders without a reviewed mapping show only observable facts (name, file count); and the mapping table is reviewed row by row before the app may say "Has" or "Still needs" from it.
+Replaces the earlier Task 7, which was withdrawn by product review on 2026-08-16. The withdrawn version treated a likely filename as a requirement and mixed "a file is present" with "the information is usable". Nothing in this task reads `readiness_scan.REQUIREMENTS`, and the 19-row mapping review is no longer a gate on it. That table and its CLI stay exactly as they are, unused by the screen, waiting for the later information-needs slice.
 
-**Two further requirements, both unresolved and both blocking:**
+**Goal:** Replace the eight guessed folder rows with every folder actually on disk, let the appraiser open any folder and see the files inside it, and let him confirm what a file is, with the app storing that answer outside his folders and never touching his files.
 
-1. **A requirement the chosen report shape does not need is not a thing the
-   job is missing.** Before the screen may say "Still needs" about any
-   requirement, it must account for whether the selected report shape
-   actually calls for it. A rent roll is not missing from an appraisal whose
-   shape has no Income Approach. The applicability rules do not exist yet and
-   this plan does not invent them: which shapes need which requirements is
-   Spenser's to state, and the row-by-row review is where it gets stated. If
-   the rules are not settled, "Still needs" is not available and the row shows
-   only observable facts.
+**Before.** the appraiser opens a job. He sees eight fixed rows. A folder he made himself is invisible. He cannot see a single filename. A row says "Has deed" because a file somewhere under a path containing "subject information" had "deed" in its name. He cannot correct any of it.
 
-2. **File detection must use exact folder identity, not substring matching
-   across the full path.** Today `readiness_scan.in_folder` tests
-   `folder.lower() in str(p.parent).lower()`, which matches anywhere in the
-   whole path. A folder named `Maps` therefore also matches a job whose name
-   contains "maps", and `Comps` matches a path containing "comps" at any
-   depth. Detection must instead resolve the named folder as an exact
-   top-level folder of the job, and count files inside it including its
-   legitimate descendants. A file two levels down inside `Maps/` still belongs
-   to `Maps`. A file in an unrelated folder whose path happens to contain the
-   word does not.
+**After.** He sees "Typical folders" and "Other folders found", each folder by its exact name on disk with a file count. He clicks `Maps` and sees the files in it, including one in a subfolder, which says where it sits. Beside each file is a Classify action. He classifies `plat 2025 final.pdf` as "Plat map" and the row says so. If he renames that file in Explorer, the app says the source is gone rather than still claiming a plat map.
+
+**Product decisions, settled 2026-08-16. Do not reopen these.**
+
+1. The classification list is the nine options in Step 3, exactly. No Building sketch, no Flood map, no free text, nothing else in this slice.
+2. Files sitting directly in the job folder appear under "Loose files in the job folder" and may be classified under the same rules as any other file.
+3. Size and modification date are recorded when the appraiser confirms. If the source at that path later differs, the screen says it changed and stops presenting the classification as currently confirmed.
+4. The words "Has" and "Still needs" appear nowhere in this slice. The screen may state what files were observed, what the appraiser classified, and whether a classified source is present, changed, or missing.
+5. Classifications live outside the appraiser's folders, in the app-owned file named in Step 2. `photo-manifest.json` stays a narrow existing exception and that precedent is not widened.
 
 **Files:**
-- Modify: `app/server/scan.py:33-57` (`folder_rows`)
-- Modify: `app/server/main.py:325-328` (the scan route)
-- Modify: `app/engine/readiness_scan.py:15-35` (`REQUIREMENTS`, only as the review directs)
-- Modify: `app/web/src/screens/JobHome.jsx:43-55` (the folder band)
-- Test: Create `app/tests/test_scan_rows_truth.py`
+- Create: `app/server/inventory.py`, `app/server/classify.py`
+- Create: `app/tests/test_inventory.py`, `app/tests/test_classify.py`, `app/tests/test_file_safety.py`
+- Modify: `app/server/main.py` (three new routes; delete the `/scan` route)
+- Modify: `app/web/src/api.js`, `app/web/src/screens/JobHome.jsx`, `app/web/src/styles.css`
+- Modify: `app/tests/test_scan.py` (delete the six `folder_rows` tests, keep the four engine and CLI tests)
+- Delete: `app/server/scan.py`
+- Unchanged: `app/engine/readiness_scan.py`
 
-**Interfaces:**
-- Consumes: `readiness_scan.scan_job(job)` unchanged; `readiness_scan.REQUIREMENTS` as reviewed.
-- Produces: `scan.folder_rows(job: Path) -> dict` now returns `{"folders": [row, ...], "unplaced": [{"note": str, "expected_folder": str}, ...]}` instead of a bare list. Row shape (`folder`, `count`, `here`, `needs`, `status`) is unchanged. The route returns that dict directly, so the response gains an `unplaced` key.
+**File safety, the hard line.** The implementation may read directory names, filenames, relative paths, sizes, and modification dates. It may not open or read file contents, modify, rename, move, or delete a source file, create anything inside the appraiser's job folders, follow a symlink outside the job, or infer a classification from a filename. If `test_file_safety.py` fails, stop and report. It is never weakened.
 
-- [ ] **Step 1: Goal conversation and the row-by-row mapping review. STOP here.**
+- [ ] **Step 1: Inventory, tests first**
 
-This is a gate, not a formality. Post in chat to Spenser: the one-sentence goal ("Make the readiness panel show only what is true: every real folder, every requirement, no unproven claims"), then every row of `REQUIREMENTS` from `app/engine/readiness_scan.py`, one line each, showing section, folder, patterns, and note. Ask for a verdict per row: keep, correct (with his wording), or remove. Do not proceed until every row has a verdict. Then edit `REQUIREMENTS` to match the verdicts exactly and add a comment above the table: `# Reviewed row by row by Spenser on <date of review>.` Surviving rows are the only mapping the app may use to say "Has" or "Still needs".
+Create `app/tests/test_inventory.py`, then `app/server/inventory.py` to satisfy it.
 
-**Status: the 19 rows were put to Spenser in chat on 2026-08-15. No verdicts have been recorded. This step is open and the task is blocked behind it.**
+Folder identity is exact. `inventory` calls `job.iterdir()`, keeps entries where `is_dir()` is true, and the folder's identity is that entry's exact `name`. There is no case folding, no substring test, and no path-string matching anywhere in the module. This is what replaces `readiness_scan.in_folder`'s `folder.lower() in str(p.parent).lower()`, which matched a job whose own path contained the folder's name.
 
-The same review must also settle the two requirements named in this task's header. On report-shape applicability, ask him which requirements each report shape actually needs, and record his answer as his words. Do not draft a shape-to-requirement mapping for him to approve: an invented mapping that he skims and waves through is exactly the confident wrong answer this app must never produce. If he does not settle it, the screen says nothing about "Still needs" and shows observable facts only.
+Behavior per entry kind:
 
-- [ ] **Step 2: Write the failing tests**
+| Kind | Behavior |
+|---|---|
+| Nested file, `Maps/2025/plat.pdf` | Belongs to `Maps`. Reports `within` as `2025` |
+| Hidden entry, name starts with `.` | Not listed. Same as `workspace.child_folder_names` already does |
+| `.DS_Store`, `Thumbs.db`, `desktop.ini` | Not listed. Reuse `workspace.NOISE` |
+| `.rrf-thumbs` | Not listed, both as hidden and by name |
+| `photo-manifest.json` | Listed. It is a real file in his folder |
+| Symlink or shortcut, file or folder | Detected with `is_symlink()` **before** any traversal, listed by name with `kind` of `shortcut`, never followed, never traversed, no Classify action |
+| Path resolving outside the job | Not listed. Reuse `photos._resolve_confined` |
+| Loose file at the job root | Returned in `root_files` |
+| Folder with many files | Count is always true; the list is capped at 200 with a truncation flag, copying `workspace.NAME_LIMIT` |
+| Unreadable folder | Listed, flagged unreadable, never reported as empty |
 
-Create `app/tests/test_scan_rows_truth.py`:
+Run: `python3 -m pytest app/tests/test_inventory.py -v`
 
-```python
-"""Two truths the readiness panel must keep: every folder on disk appears
-by its exact name, and no requirement is ever silently discarded."""
-import sys
-from pathlib import Path
+- [ ] **Step 2: Classification storage, tests first**
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "app" / "server"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
-import scan  # noqa: E402
-import readiness_scan  # noqa: E402
+Create `app/tests/test_classify.py`, then `app/server/classify.py`.
 
+Storage is `~/.rrf-classifications.json`, overridable by `RRF_CLASSIFY_FILE` for tests, copying the pattern already proven by `RRF_KEY_FILE` and `RRF_SETTINGS_FILE`. It sits in the home folder because HOW-WE-WORK's Never list says app knowledge never goes into the appraiser's folders.
 
-def test_every_disk_folder_appears_by_exact_name(tmp_path):
-    (tmp_path / "Legal").mkdir()
-    (tmp_path / "Legal" / "easement.pdf").write_bytes(b"x")
-    (tmp_path / "Photos").mkdir()
-    result = scan.folder_rows(tmp_path)
-    names = [r["folder"] for r in result["folders"]]
-    assert "Legal" in names and "Photos" in names
-    legal = next(r for r in result["folders"] if r["folder"] == "Legal")
-    assert legal["count"] == 1
-    # No reviewed mapping names Legal, so it may claim nothing.
-    assert legal["here"] == [] and legal["needs"] == []
-
-
-def test_no_pattern_requirement_is_ever_discarded(tmp_path):
-    # A job with only a Photos folder: most requirements have nowhere to
-    # land. Every one of them must still come back, placed or unplaced.
-    (tmp_path / "Photos").mkdir()
-    result = scan.folder_rows(tmp_path)
-    shown = set()
-    for row in result["folders"]:
-        shown.update(row["here"])
-        shown.update(row["needs"])
-    shown.update(u["note"] for u in result["unplaced"])
-    expected = {note for (_s, _f, pats, note)
-                in readiness_scan.REQUIREMENTS if pats}
-    assert expected <= shown
+```json
+{
+  "jobs": {
+    "/Users/mark/Jobs/DAVENPORT_215 E 37th Street - 2026": {
+      "Maps/plat 2025 final.pdf": {
+        "label": "Plat map",
+        "confirmed_at": "2026-08-16",
+        "size": 284113,
+        "mtime": 1755300000.0
+      }
+    }
+  }
+}
 ```
 
-- [ ] **Step 3: Run them to verify they fail**
+The job key is the resolved absolute path of the job folder, the same keying `workspace.save_active_jobs` uses. The file key is the path relative to the job root in POSIX form, so one record works on both machines. Nothing is written into, renamed on, or read out of the appraiser's folders to make this work.
 
-Run: `python3 -m pytest app/tests/test_scan_rows_truth.py -v`
-Expected: 2 FAILED. Today `folder_rows` returns a list, so both tests fail on the return shape before reaching the real assertions.
+The write must be safe. A failed write may not destroy existing classifications, so write to a temporary file in the same folder and replace atomically. Updating one job preserves every other job and every unrelated file record in it, the way `workspace.save_folder` already leaves every other key alone.
 
-- [ ] **Step 4: Rewrite `folder_rows`**
+Verdict on a classified file, computed by reading the directory only:
 
-Replace the body of `folder_rows` in `app/server/scan.py` with:
+- `present`: the relative path exists and size and mtime match what was recorded
+- `changed`: it exists but size or mtime differ
+- `missing`: nothing is at that path
 
-```python
-def folder_rows(job: Path) -> dict:
-    """Every folder actually on disk, by exact name, plus every requirement
-    that could not be placed on one of them.
+Run: `python3 -m pytest app/tests/test_classify.py -v`
 
-    Nothing is discarded: a requirement either lands on a folder row or
-    comes back in unplaced. A folder with no reviewed mapping shows only
-    what is observable, its name and file count, and claims nothing.
-    """
-    result = scan_job(job)
-    on_disk = [p.name for p in sorted(job.iterdir())
-               if p.is_dir() and not p.name.startswith(".")]
-    ordered = ([n for n in jobs.MARK_FOLDERS if n in on_disk]
-               + [n for n in on_disk if n not in jobs.MARK_FOLDERS])
-    rows = {name: {"folder": name, "count": _count_files(job / name),
-                   "here": [], "needs": []}
-            for name in ordered}
+- [ ] **Step 3: The approved classification registry**
 
-    unplaced = []
-    for checks in result["sections"].values():
-        for check in checks:
-            placed = False
-            for folder in check["folder"].split("|"):
-                row = rows.get(folder)
-                if row is None:
-                    continue
-                bucket = "here" if check["hits"] else "needs"
-                if check["note"] not in row[bucket]:
-                    row[bucket].append(check["note"])
-                placed = True
-            if not placed:
-                unplaced.append({"note": check["note"],
-                                 "expected_folder": check["folder"]})
+Nine options, approved by Spenser on 2026-08-16, in `classify.py` as a module constant:
 
-    for folder, (label, count_of) in COUNTED.items():
-        row = rows.get(folder)
-        if row is None:
-            continue
-        row["here" if count_of(result) else "needs"].append(label)
+| Option | Why it is on the list |
+|---|---|
+| Engagement letter | Defines the assignment; Phase 4 reads it into the intake form |
+| Deed | Standard intake document in every report shape in the corpus |
+| Assessor or tax record | Same |
+| Subject photograph | Photo pages are the only section that builds today |
+| Plat map | First of the image-page family, the next section family to build |
+| Neighborhood map | Same family |
+| Aerial photo | Same family |
+| Comparable sale document | The Sales approach needs these identified |
+| Valuation workbook | Phase 1 reads the `.xlsm` for grids and needs it pointed at |
 
-    for row in rows.values():
-        row["status"] = "waiting" if row["needs"] else "ready"
-    return {"folders": [rows[n] for n in ordered], "unplaced": unplaced}
+Anything outside this list is refused with a 400. No free text.
+
+- [ ] **Step 4: API routes, tests first**
+
+`GET /api/jobs/{name}/folders` returns:
+
+```json
+{
+  "typical": [{"folder": "Maps", "count": 4, "unreadable": false,
+               "truncated": false, "files": []}],
+  "other": [],
+  "root_files": [],
+  "missing_classifications": []
+}
 ```
 
-In `app/server/main.py`, the scan route currently returns `{"folders": scan.folder_rows(...)}`. Change it to return the dict directly:
+A file entry:
 
-```python
-    @app.get("/api/jobs/{name}/scan")
-    def scan_job_folders(name: str):
-        # folder_rows already returns {"folders": ..., "unplaced": ...}
-        return scan.folder_rows(photos_routes._job_or_404(name))
+```json
+{"name": "plat 2025 final.pdf", "rel": "Maps/2025/plat 2025 final.pdf",
+ "within": "2025", "kind": "file",
+ "classification": {"label": "Plat map", "state": "present"}}
 ```
 
-- [ ] **Step 5: Run the new tests, then the whole suite**
+`classification` is `null` when unclassified. Files are returned inline: a job holds tens of files, and one request keeps rows from flickering as they open.
 
-Run: `python3 -m pytest app/tests/test_scan_rows_truth.py -v` then `python3 -m pytest app/tests -q`
-Expected: the new tests pass. If an existing test fails because it pinned the old behavior (rows for folders not on disk, requirements silently dropped, the bare-list return shape), update that test to the new contract; those tests were pinning the defect. Any other failure is a real break: stop and fix it.
+**A classified file is never silently dropped.** If its source is gone but its folder still exists, it appears in that folder's list with `kind` of `missing` and state `missing`. If its folder is gone too, it appears in `missing_classifications` so the record is always reachable and removable.
 
-- [ ] **Step 6: Change the screen**
+`PUT /api/jobs/{name}/classification`, body `{"file": "...", "label": "..."}`. Creates or replaces; Change classification is the same call with a different label. 400 on a label outside the registry. 404 when the file is not in the job's current inventory, so no record can exist for a file the app has not just observed.
 
-In `app/web/src/screens/JobHome.jsx`:
+`DELETE /api/jobs/{name}/classification`, body `{"file": "..."}`. Removes the app's record only. Touches nothing in the appraiser's folders. Works on a missing source, which is how he clears a stale record.
 
-First, keep both pieces of the scan result. Change the load line:
+Both use `photos._job_or_404` unchanged.
 
-```jsx
-      .then(([d, s]) => { setDetail(d); setFolders(s.folders); setUnplaced(s.unplaced); })
-```
+Run: `python3 -m pytest app/tests/test_inventory.py app/tests/test_classify.py app/tests/test_file_safety.py -v`
 
-and add the state hook beside the others:
+- [ ] **Step 5: Delete the old screen scan path**
 
-```jsx
-  const [unplaced, setUnplaced] = useState([]);
-```
+Delete `app/server/scan.py`, the `/api/jobs/{name}/scan` route in `main.py`, `scanJob` in `api.js`, and the six `folder_rows` tests in `test_scan.py`. Keep the four tests covering `readiness_scan` and its CLI.
 
-Second, delete the unproven claim. Remove these three lines entirely:
+Leaving a live endpoint that manufactures "Has" from filenames is how it comes back.
 
-```jsx
-              {f.here.length === 0 && f.needs.length === 0 && (
-                <div className="line quiet">Nothing this report needs comes from here</div>
-              )}
-```
+Run: `python3 -m pytest app/tests -q`. Expected green. A failure outside those six tests is a real break: stop and report.
 
-A row with nothing to say shows its name and count, which are observable, and says nothing else.
+- [ ] **Step 6: The screen, then rebuild**
 
-Third, directly after the `{(folders || []).map(...)}` block's closing, add the unplaced block:
+In `JobHome.jsx`, the folder band becomes three sections: "Typical folders", "Other folders found", "Loose files in the job folder", plus a "Classified files whose source is missing" area when that list is not empty. Every folder shows its exact disk name and file count, collapsed, and expands to its file list. A nested file shows where it sits. A shortcut is named and marked, with no Classify action.
 
-```jsx
-          {(unplaced || []).length > 0 && (
-            <div className="folder">
-              <div className="top">
-                <span className="name">Also checked for, no folder to look in</span>
-              </div>
-              {unplaced.map((u) => (
-                <div className="line needs" key={u.note}>
-                  {u.note} (looks in a folder named {u.expected_folder.split("|").join(" or ")})
-                </div>
-              ))}
-            </div>
-          )}
-```
+Delete the line "Nothing this report needs comes from here" and replace it with nothing. A row with nothing to say shows its name and count.
 
-Every word there is observable: what the scan looks for and where it looks. No claim about what the report needs.
+The words "Has" and "Still needs" appear nowhere.
 
-- [ ] **Step 7: Rebuild the web bundle and look at it**
+Run: `cd app/web && npm run build && cd ../..`, then start the app and open a real demo job.
 
-Run: `cd app/web && npm run build && cd ../..`
-Then start the app (`python3 app/run_app.py`), open a demo job, and check with your own eyes: every real folder listed by exact name, no "Nothing this report needs comes from here" anywhere, and the unplaced block present when the job lacks an expected folder.
+- [ ] **Step 7: The small screen stop**
 
-- [ ] **Step 8: Commit, then request the small screen stop**
+Commit, then STOP and ask Spenser to click through. Report the branch, every new commit with its purpose, the focused test result, the full-suite result, the exact files changed, confirmation that his job files were byte-for-byte unchanged, the command to open the app, any difference between this plan and what was built, and anything still unproven.
 
-```bash
-git add app/server/scan.py app/server/main.py app/engine/readiness_scan.py app/web/src/screens/JobHome.jsx app/tests/test_scan_rows_truth.py
-git commit -m "fix: readiness panel shows real folders, drops no requirement, claims nothing unproven"
-```
-
-Then STOP and ask Spenser to click through the job screen. This is the small screen stop; his notes fold into this task before the slice closes.
-
+Task 8 does not begin until he has reviewed the working screen.
 ---
 
 ### Task 8: Close the slice

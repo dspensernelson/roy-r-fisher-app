@@ -709,9 +709,35 @@ Then STOP and ask Spenser to click through the job screen. This is the small scr
 
 - [ ] **Step 1: Run the full suite one last time**
 
+Every test file this phase adds must already be in place, Task 7's included. This is the last measurement of the phase and the one the README will state.
+
 Run: `python3 -m pytest app/tests -q`
-Expected: zero failures. Record the exact summary line.
+Expected: zero failures. Record the exact summary line, both the passed count and the skipped count.
 
-- [ ] **Step 2: Report to Spenser and stop**
+- [ ] **Step 2: Make the README count match that result**
 
-Post in chat: the branch name, the seven commits, the final test summary line, the outcome of the Task 7 mapping review and screen stop, and anything found along the way that this plan did not predict. Nothing is pushed or merged; that is Spenser's call after review.
+Task 6 corrects the README's test count partway through this phase, and every task after Task 6 adds more tests. So the sentence Task 6 wrote is stale by the time the phase closes. This step exists to catch that, and without it the phase ends having reintroduced the exact defect Task 6 was written to fix.
+
+Open `README.md` and read the test-count sentence. The number in it must equal passed plus skipped from Step 1. If it does not, correct it now to the Step 1 numbers.
+
+Then verify rather than assume. Run `python3 -m pytest app/tests -q` once more and check the sentence in the file against that summary line. The phase does not close on a README number nobody has just checked against a real suite result.
+
+If the sentence changed, commit it:
+
+```bash
+git add README.md
+git commit -m "docs: README states the final measured test count for the phase"
+```
+
+- [ ] **Step 3: Report to Spenser and stop**
+
+Post in chat:
+
+- the branch name
+- every commit on this branch since its branch point, in order, each with its short hash and what it did. List what is actually there, however many that is. This plan states no commit count, because documentation checkpoints change it.
+- the final test summary line from Step 1
+- whether the README sentence needed correcting in Step 2, and what it says now
+- the outcome of the Task 7 mapping review and the small screen stop
+- anything found along the way that this plan did not predict
+
+Nothing is pushed or merged; that is Spenser's call after review.

@@ -1,33 +1,148 @@
 import React, { useEffect, useState } from "react";
-import { jobDetail, scanJob } from "../api.js";
+import {
+  jobDetail, jobFolders, classificationLabels,
+  setClassification, clearClassification,
+} from "../api.js";
 
 // The only section the app can build today. Everything else is listed so the
 // report's real shape is visible, and says plainly that it is not ready yet.
 const BUILDABLE = "Subject Photographs";
 
-function list(words) {
-  if (words.length <= 2) return words.join(" and ");
-  return `${words.slice(0, -1).join(", ")}, and ${words[words.length - 1]}`;
+// What a folder row is allowed to say about itself. A shortcut is not opened
+// and an unreadable folder is not guessed at, so neither gets a file count.
+function folderNote(f) {
+  if (f.kind === "shortcut") return "shortcut, not opened";
+  if (f.unreadable) return "could not be read";
+  return `${f.count} ${f.count === 1 ? "file" : "files"}`;
+}
+
+function FileRow({ file, labels, onPick, onClear, busy }) {
+  const [picking, setPicking] = useState(false);
+  const chosen = file.classification;
+  const gone = file.kind === "missing";
+  const link = file.kind === "shortcut";
+
+  return (
+    <div className="file">
+      <div className="file-top">
+        <span className={gone ? "file-name gone" : "file-name"}>{file.name}</span>
+        {file.within && <span className="file-where">in {file.within}</span>}
+        {link && <span className="file-where">shortcut, not read</span>}
+
+        {chosen && (
+          <span className="file-said">
+            {chosen.label}
+            {chosen.state === "present" && ", confirmed by you"}
+            {chosen.state === "changed" && ", but this file has changed since you confirmed it"}
+            {chosen.state === "missing" && ", but this file is no longer in the folder"}
+          </span>
+        )}
+
+        {!link && (
+          <span className="file-acts">
+            {!gone && (
+              <button className="linky" disabled={busy}
+                      onClick={() => setPicking(!picking)}>
+                {chosen ? "Change" : "Classify"}
+              </button>
+            )}
+            {chosen && (
+              <button className="linky" disabled={busy}
+                      onClick={() => { setPicking(false); onClear(file.rel); }}>
+                Remove
+              </button>
+            )}
+          </span>
+        )}
+      </div>
+
+      {/* The choice lives inside the action, asked when he clicks it, rather
+          than parked on the page beside it. */}
+      {picking && (
+        <div className="say-what">
+          {labels.map((label) => (
+            <button key={label} disabled={busy}
+                    onClick={() => { setPicking(false); onPick(file.rel, label); }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FolderRow({ f, open, onToggle, labels, onPick, onClear, busy }) {
+  const openable = f.kind !== "shortcut" && !f.unreadable && f.files.length > 0;
+  return (
+    <div className="folder">
+      <div className="top">
+        {openable ? (
+          <button className="folder-open" onClick={() => onToggle(f.folder)}>
+            <span className="caret">{open ? "▾" : "▸"}</span>
+            <span className="name">{f.folder}</span>
+          </button>
+        ) : (
+          <span className="name">{f.folder}</span>
+        )}
+        <span className="count">{folderNote(f)}</span>
+      </div>
+      {open && f.files.map((file) => (
+        <FileRow key={file.rel} file={file} labels={labels}
+                 onPick={onPick} onClear={onClear} busy={busy} />
+      ))}
+    </div>
+  );
 }
 
 export default function JobHome({ job, onOpenPhotos, onEditSections }) {
   const [detail, setDetail] = useState(null);
-  const [folders, setFolders] = useState(null);
+  const [found, setFound] = useState(null);
+  const [labels, setLabels] = useState([]);
+  const [open, setOpen] = useState({});
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  const reachError = "Could not reach the app's server. Close this tab and start the app again.";
 
   useEffect(() => {
     setError(null);
     setDetail(null);
-    Promise.all([jobDetail(job), scanJob(job)])
-      .then(([d, s]) => { setDetail(d); setFolders(s.folders); })
-      .catch(() => setError("Could not reach the app's server. Close this tab and start the app again."));
+    Promise.all([jobDetail(job), jobFolders(job), classificationLabels()])
+      .then(([d, f, l]) => { setDetail(d); setFound(f); setLabels(l.labels); })
+      .catch(() => setError(reachError));
   }, [job]);
 
+  function refresh() {
+    return jobFolders(job).then(setFound);
+  }
+
+  function pick(file, label) {
+    setBusy(true);
+    setClassification(job, file, label)
+      .then(refresh)
+      .catch((e) => setError(e.message || reachError))
+      .finally(() => setBusy(false));
+  }
+
+  function clear(file) {
+    setBusy(true);
+    clearClassification(job, file)
+      .then(refresh)
+      .catch((e) => setError(e.message || reachError))
+      .finally(() => setBusy(false));
+  }
+
+  function toggle(name) {
+    setOpen((was) => ({ ...was, [name]: !was[name] }));
+  }
+
   if (error) return (<><h1>{job}</h1><div className="error">{error}</div></>);
-  if (!detail) return <p className="sub">Loading...</p>;
+  if (!detail || !found) return <p className="sub">Loading...</p>;
 
   const sections = detail.sections || [];
   const heading = [detail.context, detail.engagement].filter(Boolean).join(" · ");
+  const rowProps = { labels, onPick: pick, onClear: clear, busy };
 
   return (
     <>
@@ -37,22 +152,52 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
       <div className="bands">
         <div>
           <div className="band-head">
-            <h2>What has arrived</h2>
+            <h2>What is in your folders</h2>
             <span className="note">read from your folders just now</span>
           </div>
-          {(folders || []).map((f) => (
-            <div className="folder" key={f.folder}>
-              <div className="top">
-                <span className="name">{f.folder}</span>
-                <span className="count">{f.count} {f.count === 1 ? "file" : "files"}</span>
-              </div>
-              {f.here.length > 0 && <div className="line has">Has {list(f.here)}</div>}
-              {f.needs.length > 0 && <div className="line needs">Still needs {list(f.needs)}</div>}
-              {f.here.length === 0 && f.needs.length === 0 && (
-                <div className="line quiet">Nothing this report needs comes from here</div>
-              )}
-            </div>
+
+          {found.typical.map((f) => (
+            <FolderRow key={f.folder} f={f} open={!!open[f.folder]}
+                       onToggle={toggle} {...rowProps} />
           ))}
+
+          {found.other.length > 0 && (
+            <>
+              <div className="band-head sub-head"><h2>Other folders found</h2></div>
+              {found.other.map((f) => (
+                <FolderRow key={f.folder} f={f} open={!!open[f.folder]}
+                           onToggle={toggle} {...rowProps} />
+              ))}
+            </>
+          )}
+
+          {/* Neither of these is a folder, so neither sits under the folder
+              headings and neither collapses. They are short, and the second
+              one is the only place a record whose folder has gone can be
+              reached at all. */}
+          {found.root_files.length > 0 && (
+            <>
+              <div className="band-head sub-head"><h2>Loose files in the job folder</h2></div>
+              <div className="folder">
+                {found.root_files.map((file) => (
+                  <FileRow key={file.rel} file={file} {...rowProps} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {found.missing_classifications.length > 0 && (
+            <>
+              <div className="band-head sub-head">
+                <h2>Classified files whose source is missing</h2>
+              </div>
+              <div className="folder">
+                {found.missing_classifications.map((file) => (
+                  <FileRow key={file.rel} file={file} {...rowProps} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div>

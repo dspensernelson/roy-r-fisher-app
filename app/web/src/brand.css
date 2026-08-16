@@ -378,3 +378,24 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   background: #4A3B22; color: #F5D9A8; border-left: 4px solid #F0B95E;
   padding: 11px 14px; border-radius: 0 4px 4px 0; margin-bottom: 14px; font-size: 13.5px;
 }
+
+/* The job screen's folder rows, opened to show the files inside them. Every
+   word here is something the app observed: a name off the disk, a count, and
+   what Mark himself confirmed. Nothing is inferred from a filename. */
+.band-head.sub-head { margin-top: 16px; }
+.folder-open { background: none; border: 0; padding: 0; cursor: pointer; display: flex; align-items: baseline; gap: 7px; font: inherit; color: inherit; }
+.folder-open .caret { font-size: 10px; color: var(--box-muted); }
+.file { border-top: 1px solid rgba(255, 255, 255, 0.07); padding: 7px 0 5px 17px; }
+.file:first-of-type { margin-top: 7px; }
+.file-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.file-name { font-size: 13px; color: var(--box-ink); }
+.file-name.gone { text-decoration: line-through; color: var(--box-muted); }
+.file-where { font-size: 11.5px; color: var(--box-muted); }
+.file-said { font-size: 12px; color: #7FCF9B; }
+.file-acts { margin-left: auto; display: flex; gap: 12px; }
+/* Named for what it is rather than `.picker`, which the folder-browsing
+   screen already owns and paints white. Light text on white is unreadable,
+   and the clash was invisible until the menu was opened on a real job. */
+.say-what { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 3px 0; }
+.say-what button { font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.22); background: transparent; color: var(--box-ink); cursor: pointer; }
+.say-what button:hover { border-color: var(--brand); background: rgba(255, 255, 255, 0.06); }

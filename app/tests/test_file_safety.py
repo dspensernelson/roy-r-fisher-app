@@ -123,3 +123,31 @@ def test_a_shortcut_out_of_the_job_is_never_opened_or_followed(tmp_path, job):
     with pytest.raises(LookupError):
         classify.set_label(job, "Maps/borrowed.pdf", "Plat map")
     assert fingerprint(tmp_path) == outside_before
+
+
+def test_driving_the_real_endpoints_changes_nothing_in_the_job(job):
+    """The same proof again, through the routes the screen actually calls."""
+    from fastapi.testclient import TestClient
+    from main import create_app
+
+    client = TestClient(create_app())
+    name = job.name
+    before = fingerprint(job)
+
+    client.get("/api/jobs/{}/folders".format(name))
+    client.put("/api/jobs/{}/classification".format(name),
+               json={"file": "Maps/plat 2025 final.pdf", "label": "Plat map"})
+    client.put("/api/jobs/{}/classification".format(name),
+               json={"file": "Valuation.xlsm", "label": "Valuation workbook"})
+    client.put("/api/jobs/{}/classification".format(name),
+               json={"file": "Maps/plat 2025 final.pdf", "label": "Aerial photo"})
+    client.put("/api/jobs/{}/classification".format(name),
+               json={"file": "Maps/plat 2025 final.pdf", "label": "nonsense"})
+    client.put("/api/jobs/{}/classification".format(name),
+               json={"file": "Photos/.rrf-thumbs/IMG_5100.jpg.jpg",
+                     "label": "Subject photograph"})
+    client.request("DELETE", "/api/jobs/{}/classification".format(name),
+                   json={"file": "Valuation.xlsm"})
+    client.get("/api/jobs/{}/folders".format(name))
+
+    assert fingerprint(job) == before

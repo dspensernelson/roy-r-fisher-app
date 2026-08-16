@@ -8,13 +8,16 @@ source is present, it changed, or it is gone.
 Synthetic folders here prove these mechanics and nothing else.
 """
 import json
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "app" / "server"))
 import classify  # noqa: E402
+from main import create_app  # noqa: E402
 
 
 @pytest.fixture
@@ -164,3 +167,159 @@ def test_an_unreadable_store_is_never_repaired_or_guessed_at(store, tmp_path):
     job = make_job(tmp_path)
     store.write_text("{ not json")
     assert classify.for_job(job) == {}
+
+
+# --- The screen's side of it: the three routes ------------------------------
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    """A real job under a real jobs home, with the store pointed somewhere
+    safe. Returns the client and the job folder."""
+    monkeypatch.setenv("RRF_CLASSIFY_FILE", str(tmp_path / "answers.json"))
+    home = tmp_path / "home"
+    monkeypatch.setenv("RRF_JOBS_HOME", str(home))
+    job = home / "JOB1"
+    (job / "Maps").mkdir(parents=True)
+    (job / "Photos").mkdir()
+    (job / "Maps" / "plat.pdf").write_bytes(b"a plat")
+    (job / "Site Visit").mkdir()
+    (job / "Site Visit" / "notes.pdf").write_bytes(b"notes")
+    (job / "Valuation.xlsm").write_bytes(b"PK")
+    return TestClient(create_app()), job
+
+
+def test_the_folders_route_shows_typical_other_and_loose_files(client):
+    c, job = client
+    body = c.get("/api/jobs/JOB1/folders").json()
+    assert [r["folder"] for r in body["typical"]] == ["Maps", "Photos"]
+    assert [r["folder"] for r in body["other"]] == ["Site Visit"]
+    assert [f["name"] for f in body["root_files"]] == ["Valuation.xlsm"]
+    assert body["missing_classifications"] == []
+
+
+def test_an_unknown_job_is_a_404(client):
+    c, _ = client
+    assert c.get("/api/jobs/NOPE/folders").status_code == 404
+
+
+def test_a_file_starts_unclassified_and_says_so(client):
+    c, _ = client
+    body = c.get("/api/jobs/JOB1/folders").json()
+    maps = [r for r in body["typical"] if r["folder"] == "Maps"][0]
+    assert maps["files"][0]["classification"] is None
+
+
+def test_classifying_a_file_shows_beside_it_as_present(client):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/classification",
+              json={"file": "Maps/plat.pdf", "label": "Plat map"})
+    assert r.status_code == 200
+    body = c.get("/api/jobs/JOB1/folders").json()
+    maps = [x for x in body["typical"] if x["folder"] == "Maps"][0]
+    assert maps["files"][0]["classification"] == {"label": "Plat map",
+                                                  "state": "present"}
+
+
+def test_a_loose_file_can_be_classified_too(client):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/classification",
+              json={"file": "Valuation.xlsm", "label": "Valuation workbook"})
+    assert r.status_code == 200
+    body = c.get("/api/jobs/JOB1/folders").json()
+    assert body["root_files"][0]["classification"]["label"] == "Valuation workbook"
+
+
+def test_a_file_in_a_folder_the_app_did_not_expect_can_be_classified(client):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/classification",
+              json={"file": "Site Visit/notes.pdf", "label": "Deed"})
+    assert r.status_code == 200
+    body = c.get("/api/jobs/JOB1/folders").json()
+    other = body["other"][0]
+    assert other["files"][0]["classification"]["label"] == "Deed"
+
+
+def test_a_label_off_the_list_is_refused_by_the_route(client):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/classification",
+              json={"file": "Maps/plat.pdf", "label": "Building sketch"})
+    assert r.status_code == 400
+    assert c.get("/api/jobs/JOB1/folders").json()["typical"][0]["files"][0][
+        "classification"] is None
+
+
+def test_a_file_the_app_has_not_observed_is_refused_by_the_route(client):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/classification",
+              json={"file": "Maps/imaginary.pdf", "label": "Plat map"})
+    assert r.status_code == 404
+
+
+def test_changing_and_then_removing_a_classification(client):
+    c, _ = client
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Maps/plat.pdf", "label": "Plat map"})
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Maps/plat.pdf", "label": "Neighborhood map"})
+    maps = c.get("/api/jobs/JOB1/folders").json()["typical"][0]
+    assert maps["files"][0]["classification"]["label"] == "Neighborhood map"
+
+    r = c.request("DELETE", "/api/jobs/JOB1/classification",
+                  json={"file": "Maps/plat.pdf"})
+    assert r.status_code == 200
+    maps = c.get("/api/jobs/JOB1/folders").json()["typical"][0]
+    assert maps["files"][0]["classification"] is None
+
+
+def test_a_changed_source_stops_reading_as_confirmed(client):
+    c, job = client
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Maps/plat.pdf", "label": "Plat map"})
+    (job / "Maps" / "plat.pdf").write_bytes(b"a completely different document")
+    maps = c.get("/api/jobs/JOB1/folders").json()["typical"][0]
+    assert maps["files"][0]["classification"]["state"] == "changed"
+
+
+def test_a_renamed_source_stays_visible_in_its_folder(client):
+    """The record is never silently dropped just because the file moved."""
+    c, job = client
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Maps/plat.pdf", "label": "Plat map"})
+    (job / "Maps" / "plat.pdf").rename(job / "Maps" / "plat final.pdf")
+    maps = [r for r in c.get("/api/jobs/JOB1/folders").json()["typical"]
+            if r["folder"] == "Maps"][0]
+    gone = [f for f in maps["files"] if f["kind"] == "missing"]
+    assert len(gone) == 1
+    assert gone[0]["rel"] == "Maps/plat.pdf"
+    assert gone[0]["classification"] == {"label": "Plat map", "state": "missing"}
+    # The count is what was observed, so the vanished file is not counted.
+    assert maps["count"] == 1
+
+
+def test_a_record_whose_whole_folder_is_gone_is_still_reachable(client):
+    c, job = client
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Site Visit/notes.pdf", "label": "Deed"})
+    shutil.rmtree(job / "Site Visit")
+    body = c.get("/api/jobs/JOB1/folders").json()
+    assert [r["folder"] for r in body["other"]] == []
+    assert body["missing_classifications"] == [
+        {"name": "notes.pdf", "rel": "Site Visit/notes.pdf", "within": "",
+         "kind": "missing",
+         "classification": {"label": "Deed", "state": "missing"}}]
+
+
+def test_a_stale_record_can_be_cleared_after_its_file_is_gone(client):
+    c, job = client
+    c.put("/api/jobs/JOB1/classification",
+          json={"file": "Site Visit/notes.pdf", "label": "Deed"})
+    shutil.rmtree(job / "Site Visit")
+    r = c.request("DELETE", "/api/jobs/JOB1/classification",
+                  json={"file": "Site Visit/notes.pdf"})
+    assert r.status_code == 200
+    assert c.get("/api/jobs/JOB1/folders").json()["missing_classifications"] == []
+
+
+def test_the_route_offers_the_nine_labels_and_no_others(client):
+    c, _ = client
+    assert c.get("/api/classifications").json()["labels"] == list(classify.LABELS)

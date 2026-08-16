@@ -143,6 +143,59 @@ def remove_label(job: Path, rel: str) -> None:
     _write(data)
 
 
+def attach(job: Path, listing: dict) -> dict:
+    """Put Mark's answers beside the files, and never lose one.
+
+    A record whose file has gone still comes back: inside its folder while
+    that folder is still there, and in missing_classifications once it is
+    not. An answer he gave is his. The app does not quietly forget it
+    because something moved, and it does not go on claiming the file is
+    there either.
+
+    A missing file is never counted. The count on a folder row stays what
+    the app actually observed in it.
+    """
+    records = for_job(job)
+    placed = set()
+
+    def decorate(entry: dict) -> None:
+        record = records.get(entry["rel"])
+        if record is None:
+            entry["classification"] = None
+            return
+        entry["classification"] = {"label": record["label"],
+                                   "state": state_of(job, entry["rel"], record)}
+        placed.add(entry["rel"])
+
+    rows = listing["typical"] + listing["other"]
+    for row in rows:
+        for entry in row["files"]:
+            decorate(entry)
+    for entry in listing["root_files"]:
+        decorate(entry)
+
+    by_folder = {row["folder"]: row for row in rows}
+    homeless = []
+    for rel in sorted(records):
+        # Past the display cap is not the same as gone, so ask the disk.
+        if rel in placed or inventory.holds(job, rel):
+            continue
+        parts = rel.split("/")
+        entry = {"name": parts[-1], "rel": rel,
+                 "within": "/".join(parts[1:-1]), "kind": "missing",
+                 "classification": {"label": records[rel]["label"],
+                                    "state": "missing"}}
+        if len(parts) == 1:
+            listing["root_files"].append(entry)
+        elif parts[0] in by_folder:
+            by_folder[parts[0]]["files"].append(entry)
+        else:
+            homeless.append(entry)
+
+    listing["missing_classifications"] = homeless
+    return listing
+
+
 def state_of(job: Path, rel: str, record: Optional[dict] = None) -> str:
     """present, changed, or missing. Nothing else, and never a guess.
 

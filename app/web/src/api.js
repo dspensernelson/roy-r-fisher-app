@@ -12,7 +12,12 @@ export const putManifest = (name, m) =>
 export const draftCaptions = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/captions`, { method: "POST" }).then(j);
 export const build = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/build`, { method: "POST" }).then(j);
 export const thumbUrl = (name, file) => `/api/jobs/${encodeURIComponent(name)}/thumb/${encodeURIComponent(file)}`;
-export const scanJob = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/scan`).then(j);
+export const jobFolders = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/folders`).then(j);
+export const classificationLabels = () => fetch("/api/classifications").then(j);
+export const setClassification = (name, file, label) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/classification`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file, label }) }).then(j);
+export const clearClassification = (name, file) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/classification`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file }) }).then(j);
 export const captionStyles = () => fetch("/api/caption-styles").then(j);
 export const proposeName = (body) =>
   fetch("/api/intake/propose-name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);

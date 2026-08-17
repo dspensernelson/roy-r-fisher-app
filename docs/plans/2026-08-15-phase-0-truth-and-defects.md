@@ -33,7 +33,7 @@ An old launcher wrote the key as `export ANTHROPIC_API_KEY=...`. The reader (`st
 - Consumes: `settings.stored_key()`, `settings._lines()`, `settings._write()`, `settings.KEY_NAME` as they exist today.
 - Produces: `settings._is_key_line(line: str) -> bool`, module-private. `save_key` and `remove_key` keep their exact signatures and behavior contracts.
 
-- [ ] **Step 1: Write the two failing tests**
+- [x] **Step 1: Write the two failing tests**
 
 Append to `app/tests/test_settings.py` (it already has `import settings` and uses `monkeypatch`; match its style):
 
@@ -60,12 +60,12 @@ def test_remove_key_removes_an_export_form_line(tmp_path, monkeypatch):
     assert "OTHER=keep me" in key_file.read_text()
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m pytest app/tests/test_settings.py -q -k export_form`
 Expected: 2 FAILED. The save test fails on `stored_key() == "NEWKEY"` (returns `OLDKEY`), the remove test on `stored_key() == ""`.
 
-- [ ] **Step 3: Implement the fix**
+- [x] **Step 3: Implement the fix**
 
 In `app/server/settings.py`, add this helper directly above `save_key`, and change both functions' filters to use it:
 
@@ -96,12 +96,12 @@ def remove_key() -> None:
     os.environ.pop(KEY_NAME, None)
 ```
 
-- [ ] **Step 4: Run the settings tests, then the whole suite**
+- [x] **Step 4: Run the settings tests, then the whole suite**
 
 Run: `python3 -m pytest app/tests/test_settings.py -q` then `python3 -m pytest app/tests -q`
 Expected: all pass (skips are fine), zero failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/server/settings.py app/tests/test_settings.py
@@ -121,7 +121,7 @@ Every build test points at the private corpus copy of `Photo.docx` and skips on 
 - Consumes: `photo_pages.build_photo_docx(manifest_path, template_path) -> Path` from `app/engine/photo_pages.py`.
 - Produces: nothing other tasks use.
 
-- [ ] **Step 1: Write the test file**
+- [x] **Step 1: Write the test file**
 
 Create `app/tests/test_shipped_template.py` with exactly this content:
 
@@ -178,14 +178,14 @@ def test_shipped_template_builds_photo_pages(tmp_path):
     assert len(d.inline_shapes) == 5   # one image per photo
 ```
 
-- [ ] **Step 2: Run it, then the whole suite**
+- [x] **Step 2: Run it, then the whole suite**
 
 Run: `python3 -m pytest app/tests/test_shipped_template.py -v`
 Expected: 2 PASSED, 0 skipped. If the furniture test fails, STOP and report to Spenser: it means the shipped template differs from the measured contract, which is a finding, not a test to loosen.
 Then run: `python3 -m pytest app/tests -q`
 Expected: green, zero failures.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tests/test_shipped_template.py
@@ -206,7 +206,7 @@ git commit -m "test: the shipped Photo.docx is finally under test"
 - Consumes: `photos.load_manifest(job: Path) -> dict`, `photos.manifest_path(job)`.
 - Produces: `load_manifest` now raises `fastapi.HTTPException(status_code=400)` on malformed JSON or a non-object top level. Its two callers (`photos.py` GET manifest, `main.py` build) inherit the 400 via FastAPI's exception handling; the tests here prove the function contract, not the routes. Other failure kinds (permissions, I/O) are out of scope and still raise.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `app/tests/test_manifest_errors.py`:
 
@@ -245,12 +245,12 @@ def test_list_shaped_manifest_is_a_400_not_a_crash(tmp_path):
     assert "photo-manifest.json" in err.value.detail
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m pytest app/tests/test_manifest_errors.py -v`
 Expected: 2 FAILED. The first with `json.decoder.JSONDecodeError`, the second with `AttributeError` (or a later crash), neither an `HTTPException`.
 
-- [ ] **Step 3: Implement the fix**
+- [x] **Step 3: Implement the fix**
 
 In `app/server/photos.py::load_manifest`, the current reading branch is:
 
@@ -283,12 +283,12 @@ Replace that branch with:
 
 `HTTPException` is already imported at the top of `photos.py`. Change nothing else in the function.
 
-- [ ] **Step 4: Run the new tests, then the whole suite**
+- [x] **Step 4: Run the new tests, then the whole suite**
 
 Run: `python3 -m pytest app/tests/test_manifest_errors.py -v` then `python3 -m pytest app/tests -q`
 Expected: 2 PASSED; suite green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/server/photos.py app/tests/test_manifest_errors.py
@@ -309,7 +309,7 @@ git commit -m "fix: load_manifest answers 400 on a malformed manifest instead of
 - Consumes: `readiness_scan.scan_job(job) -> dict` with `result["photos"]["usable"]`.
 - Produces: `_index` no longer returns anything from the thumbnail cache. Signature unchanged. The mechanism is stated once, in Step 3, and not restated here.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `app/tests/test_scan_excludes_thumbs.py`:
 
@@ -337,12 +337,12 @@ def test_thumbnail_cache_never_counts_as_photos(tmp_path):
 
 If `scan_job` fails because the bare folder is missing something it expects, create the empty folder the error names inside `tmp_path` and re-run. Do not weaken the assertion.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `python3 -m pytest app/tests/test_scan_excludes_thumbs.py -v`
 Expected: FAIL with `usable == 2`.
 
-- [ ] **Step 3: Implement the fix**
+- [x] **Step 3: Implement the fix**
 
 In `app/engine/readiness_scan.py`, `_index` currently returns:
 
@@ -361,12 +361,12 @@ Change it to:
             and not any(x in str(p.parent).lower() for x in EXCLUDE)]
 ```
 
-- [ ] **Step 4: Run the new test, then the whole suite**
+- [x] **Step 4: Run the new test, then the whole suite**
 
 Run: `python3 -m pytest app/tests/test_scan_excludes_thumbs.py -v` then `python3 -m pytest app/tests -q`
 Expected: PASS; suite green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/engine/readiness_scan.py app/tests/test_scan_excludes_thumbs.py
@@ -386,7 +386,7 @@ git commit -m "fix: readiness scan no longer counts the thumbnail cache as photo
 - Consumes: nothing.
 - Produces: a pinned requirements file later packaging work will rely on.
 
-- [ ] **Step 1: Rewrite the file**
+- [x] **Step 1: Rewrite the file**
 
 Replace the entire content of `app/server/requirements.txt` with:
 
@@ -410,12 +410,12 @@ pytest==8.4.2
 httpx==0.28.1
 ```
 
-- [ ] **Step 2: Verify the pins match reality**
+- [x] **Step 2: Verify the pins match reality**
 
 Run: `python3 -m pip freeze | grep -iE "^(fastapi|uvicorn|python-multipart|pillow|pillow_heif|anthropic|pydantic|python-docx|pypdf|pytest|httpx)="`
 Expected: every version in the file appears in the output (pip prints `pillow_heif`; the install name `pillow-heif` in the file is correct).
 
-- [ ] **Step 3: Prove the file installs clean and the suite passes on it**
+- [x] **Step 3: Prove the file installs clean and the suite passes on it**
 
 Build a fresh environment in the session scratchpad (never inside the repo) and run the suite from it:
 
@@ -426,7 +426,7 @@ python3 -m venv "$SCRATCHPAD/pin-check" && "$SCRATCHPAD/pin-check/bin/pip" insta
 (`$SCRATCHPAD` is your session's scratchpad directory; substitute its real path.)
 Expected: install succeeds and the suite is green, zero failures. This proves the pinned file reproduces a working environment on this platform; Windows installation is proven later, in the Phase 1 acceptance slice.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/server/requirements.txt
@@ -446,14 +446,14 @@ Two stated facts are false. "109 tests pass" is stale; the suite collects 285. A
 - Consumes: nothing.
 - Produces: nothing.
 
-- [ ] **Step 1: Measure the real test numbers**
+- [x] **Step 1: Measure the real test numbers**
 
 This step runs only after every test file Phase 0 adds is in place, so the number the README states is the number the finished slice actually has. If any Phase 0 task is still to come, the count measured now is not the count to write; measure again at the end of the slice and correct the line before the slice closes.
 
 Run: `python3 -m pytest app/tests -q | tail -2`
 Note the passed and skipped counts from the summary line. The number to write is passed plus skipped. Use that measured number. This plan states no test count anywhere, on purpose: a number written into a plan is stale the moment a test is added, which is the defect this task exists to fix.
 
-- [ ] **Step 2: Correct the two lines**
+- [x] **Step 2: Correct the two lines**
 
 In `README.md`:
 
@@ -469,7 +469,7 @@ In the root table, replace the `app/` row text `Stands on its own; nothing in it
 The code reads no project files outside app/. At run time it also uses the settings and key files in the home folder and the jobs folder the appraiser points it at. Two dev tools reach wider: demo reset finds the repo root, and one styling test reads brand/
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
@@ -508,7 +508,7 @@ Replaces the earlier Task 7, which was withdrawn by product review on 2026-08-16
 
 **File safety, the hard line.** The implementation may read directory names, filenames, relative paths, sizes, and modification dates. It may not open or read file contents, modify, rename, move, or delete a source file, create anything inside the appraiser's job folders, follow a symlink outside the job, or infer a classification from a filename. If `test_file_safety.py` fails, stop and report. It is never weakened.
 
-- [ ] **Step 1: Inventory, tests first**
+- [x] **Step 1: Inventory, tests first**
 
 Create `app/tests/test_inventory.py`, then `app/server/inventory.py` to satisfy it.
 
@@ -531,7 +531,7 @@ Behavior per entry kind:
 
 Run: `python3 -m pytest app/tests/test_inventory.py -v`
 
-- [ ] **Step 2: Classification storage, tests first**
+- [x] **Step 2: Classification storage, tests first**
 
 Create `app/tests/test_classify.py`, then `app/server/classify.py`.
 
@@ -564,7 +564,7 @@ Verdict on a classified file, computed by reading the directory only:
 
 Run: `python3 -m pytest app/tests/test_classify.py -v`
 
-- [ ] **Step 3: The approved classification registry**
+- [x] **Step 3: The approved classification registry**
 
 Nine options, approved by Spenser on 2026-08-16, in `classify.py` as a module constant:
 
@@ -582,7 +582,7 @@ Nine options, approved by Spenser on 2026-08-16, in `classify.py` as a module co
 
 Anything outside this list is refused with a 400. No free text.
 
-- [ ] **Step 4: API routes, tests first**
+- [x] **Step 4: API routes, tests first**
 
 `GET /api/jobs/{name}/folders` returns:
 
@@ -616,7 +616,7 @@ Both use `photos._job_or_404` unchanged.
 
 Run: `python3 -m pytest app/tests/test_inventory.py app/tests/test_classify.py app/tests/test_file_safety.py -v`
 
-- [ ] **Step 5: Delete the old screen scan path**
+- [x] **Step 5: Delete the old screen scan path**
 
 Delete `app/server/scan.py`, the `/api/jobs/{name}/scan` route in `main.py`, `scanJob` in `api.js`, and the six `folder_rows` tests in `test_scan.py`. Keep the four tests covering `readiness_scan` and its CLI.
 
@@ -624,7 +624,7 @@ Leaving a live endpoint that manufactures "Has" from filenames is how it comes b
 
 Run: `python3 -m pytest app/tests -q`. Expected green. A failure outside those six tests is a real break: stop and report.
 
-- [ ] **Step 6: The screen, then rebuild**
+- [x] **Step 6: The screen, then rebuild**
 
 In `JobHome.jsx`, the folder band becomes three sections: "Typical folders", "Other folders found", "Loose files in the job folder", plus a "Classified files whose source is missing" area when that list is not empty. Every folder shows its exact disk name and file count, collapsed, and expands to its file list. A nested file shows where it sits. A shortcut is named and marked, with no Classify action.
 
@@ -634,7 +634,7 @@ The words "Has" and "Still needs" appear nowhere.
 
 Run: `cd app/web && npm run build && cd ../..`, then start the app and open a real demo job.
 
-- [ ] **Step 7: The small screen stop**
+- [x] **Step 7: The small screen stop**
 
 Commit, then STOP and ask Spenser to click through. Report the branch, every new commit with its purpose, the focused test result, the full-suite result, the exact files changed, confirmation that his job files were byte-for-byte unchanged, the command to open the app, any difference between this plan and what was built, and anything still unproven.
 
@@ -643,14 +643,14 @@ Task 8 does not begin until he has reviewed the working screen.
 
 ### Task 8: Close the slice
 
-- [ ] **Step 1: Run the full suite one last time**
+- [x] **Step 1: Run the full suite one last time**
 
 Every test file this phase adds must already be in place, Task 7's included. This is the last measurement of the phase and the one the README will state.
 
 Run: `python3 -m pytest app/tests -q`
 Expected: zero failures. Record the exact summary line, both the passed count and the skipped count.
 
-- [ ] **Step 2: Make the README count match that result**
+- [x] **Step 2: Make the README count match that result**
 
 Task 6 corrects the README's test count partway through this phase, and every task after Task 6 adds more tests. So the sentence Task 6 wrote is stale by the time the phase closes. This step exists to catch that, and without it the phase ends having reintroduced the exact defect Task 6 was written to fix.
 
@@ -665,7 +665,7 @@ git add README.md
 git commit -m "docs: README states the final measured test count for the phase"
 ```
 
-- [ ] **Step 3: Report to Spenser and stop**
+- [x] **Step 3: Report to Spenser and stop**
 
 Post in chat:
 
@@ -677,3 +677,57 @@ Post in chat:
 - anything found along the way that this plan did not predict
 
 Nothing is pushed or merged; that is Spenser's call after review.
+
+---
+
+## Closeout record (2026-08-17)
+
+Written at the close of the phase. Every step above is checked, and this
+section is the evidence behind those checks.
+
+**The final suite.** `python3 -m pytest app/tests -q` was run twice from the
+repo root and gave the same answer both times: 320 passed, 15 skipped, zero
+failures. Total 335.
+
+**The README.** Its test-count sentence said 292, which was stale, exactly
+the way Task 8 Step 2 predicted it would be. It now reads "335 tests; the
+ones that need the appraiser's private material skip on machines without it." That
+number was checked against a suite run made after the edit, not before it.
+
+**Task 7's small screen stop.** Spenser clicked through the working job
+screen and passed it. The 19-row mapping review is not a gate on this task;
+the rewritten Task 7 withdrew it, and `readiness_scan.REQUIREMENTS` and its
+CLI stay in place unused, waiting for the later information-needs slice.
+
+**File safety.** `test_file_safety.py` passes, together with
+`test_inventory.py` and `test_classify.py`: 49 passed, zero failures. No
+source file of the appraiser's is opened, modified, renamed, moved, or deleted, and
+nothing is written inside his job folders.
+
+**The pinned requirements really install.** Task 5 Step 3 was proved from a
+clean virtual environment built in the session scratchpad, never inside the
+repo. The install succeeded and the suite ran 320 passed, 15 skipped from
+it, matching the repo environment exactly.
+
+**One difference between this plan and what was built.** Task 7 Step 6 named
+three headings, the first "Typical folders". The screen instead heads that
+band "What is in your folders" and lists the typical folders directly under
+it. The typical and other split is real, and "Other folders found", "Loose
+files in the job folder", and "Classified files whose source is missing" are
+all present, so the structure matches. Only the first heading's wording
+differs, and Spenser reviewed the screen as built.
+
+**Still unproven, carried out of this phase.**
+
+- Nothing here has ever run on Windows. Every measurement in this phase was
+  taken on Spenser's Mac, so the pinned requirements are proven to install
+  on this platform only.
+- The red-state observations in Tasks 1, 3, and 4 (running each new test to
+  watch it fail before the fix) were made in the earlier sessions that wrote
+  them, and are not re-observable now. What is verifiable today is that each
+  fix and each test is in the tree and the suite is green.
+- 15 tests skip on this machine. They are the ones that need the appraiser's private
+  material, and they have never run here.
+- The design system is still not adopted. The screens run the old stylesheet
+  with the wrong red. That is the standing item on the first large stop, not
+  a Phase 0 defect.

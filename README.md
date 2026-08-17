@@ -40,7 +40,7 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-292 tests; the ones that need the appraiser's private material skip on machines without it.
+335 tests; the ones that need the appraiser's private material skip on machines without it.
 
 ## What we know is missing
 

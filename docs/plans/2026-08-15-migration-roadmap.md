@@ -60,19 +60,30 @@ to be.
   captions (live and proven), prose sections from dictation, reading the
   engagement letter, sorting dropped documents. A first version where prose
   sections come out as structured blanks is acceptable.
-- **The key is Spenser's for now, Mark's eventually.** Mechanism undecided.
-  A consumer Claude or ChatGPT subscription does not give API access; that
-  fact is settled and should not be relitigated.
+- **The key is Spenser's for now, Mark's eventually.** A consumer Claude or
+  ChatGPT subscription does not give API access; that fact is settled and
+  should not be relitigated. The mechanism was undecided when this was
+  written. It is decided for the Windows Photo Pilot only, on 2026-08-17:
+  Mark enters his own key himself, on the Settings screen, on his machine,
+  and no key ships inside the package. Outside the pilot the longer-term
+  arrangement is still open.
 - **Templates are manufactured per section**: cloned from a donor report,
   stripped of client content, passed by the leak scanner, read by Claude,
   glanced at by Spenser, then committed. `app/templates/Photo.docx` is the
-  precedent.
+  precedent. One exception is on the way, recorded 2026-08-17: where Mark
+  supplies a template he intends to follow, that file governs and the
+  section is not manufactured from a donor. Description of Improvements is
+  the first.
 - **The old system is retired.** Nothing in the locker runs for real work.
   It is a read-only quarry (paths below).
 - **Spenser is the only user until handoff.** Mark receives one handoff of
   many working capabilities, not a drip. Working line for the handoff bundle:
   everything through Phase 3. Packaging for Windows is a final phase, not an
-  early one.
+  early one. One bounded exception was approved on 2026-08-17: the Windows
+  Photo Pilot below reaches Mark before that bundle. It is a proof on his
+  own machine, not the handoff. It does not move the handoff line, it does
+  not stand in for the Phase 1 Windows Office proof, and it is not Phase 5
+  packaging.
 - **Setup on Mark's machine is screen share only.** Assume nobody is at his
   keyboard. Everything he touches must be one action.
 - **The Windows delivery spine is proven inside Phase 1, before Phase 2
@@ -99,6 +110,59 @@ to be.
   that mechanic. Claims about Mark's real folders, documents, layouts,
   reports, or workflow require the real corpus. Approved 2026-08-15; the
   matching HOW-WE-WORK.md wording is in place.
+
+## Decisions on record (2026-08-17, Spenser, in chat)
+
+Four more decisions, recorded the same way as the ones above. Where one of
+them changes something written on 2026-08-15, the older bullet has been
+amended in place, so this file holds one answer and never two.
+
+- **Mark receives an early Windows Photo Pilot, before the handoff bundle.**
+  This is the named exception to "one handoff, not a drip", and it is
+  bounded. The pilot exists to prove five things on Mark's real Windows
+  computer: that the app installs, that it starts, that he can select a job
+  folder, that he can set up AI captioning behind the guards below, and that
+  it produces Subject Photograph pages. It does not replace the Phase 1
+  Windows Office proof. It does not replace the later complete handoff of
+  everything through Phase 3. It does not replace Phase 5 final packaging.
+  Nothing outside the five things named here is in it.
+
+- **AI captioning is in the pilot, guarded.** The guards are the product,
+  not decoration, and they hold together:
+  - Mark enters the API key himself, locally, on the Settings screen.
+  - No API key ships inside the package.
+  - Only whether a key is available, and the key's final four characters,
+    reach Settings. That is the 2026-08-15 last-four decision, unchanged.
+  - AI runs only after an explicit action by Mark. Nothing captions on open.
+  - The screen states how many photos will be sent before he acts.
+  - Captions are previewed before anything is built.
+  - Request size, retries, and spending are bounded.
+  - Captions typed by hand always remain available.
+  - AI receives only the selected photos and the approved job context.
+  - AI receives no general filesystem access.
+  - AI cannot move, rename, edit, or delete a source file.
+
+  This is an approved product direction. It is not authorization to build it
+  in any session that has not been handed that work.
+
+- **The photo output is named `City_Address Photos (Complete).docx`.** City
+  and address come from confirmed job information, and neither is ever
+  guessed. The confirmed values are converted into a Windows-safe filename.
+  An existing output is never overwritten: a name already in use produces a
+  newly numbered copy instead. That is the three-classes-of-file rule above
+  applied to this one output, not a new rule. Not implemented yet, and not
+  by the session that recorded it.
+
+- **A newer Description of Improvements template is coming from Mark**, and
+  he intends to follow it from here on. Once received, that template is the
+  governing source of truth for that section's structure, wording, order,
+  fields, and formatting. The file he sends is preserved unchanged.
+  Historical delivered reports remain supporting evidence for data
+  variations and edge cases, and a historical majority pattern may not
+  overrule the new template. This is the one place where measuring the
+  corpus yields to a stated instruction from Mark, and it yields for this
+  section only. No Description of Improvements implementation plan is
+  approved until the actual template has been received and inspected.
 
 ## The working rhythm (stops are scheduled, not hoped for)
 
@@ -133,7 +197,10 @@ backend (COM, pywin32) is proven by the thin acceptance slice named in the
 decisions above: launch from embedded Python, read one workbook untouched,
 render one grid, place it in one Word file, produce one PDF. Phase 1 is
 not complete until that slice passes, and Phase 2's Office-dependent work
-does not start before it does. Unrelated Mac work may continue.
+does not start before it does. Unrelated Mac work may continue. The Windows
+Photo Pilot does not satisfy any part of this proof: photo pages need no
+Office at all, so a pilot that works on Mark's PC says nothing about Excel,
+Word, or PDF through COM.
 
 **Phase 2: cheap width.** The image-page family (aerial, neighborhood map,
 plat map, sketch, comp map) and the four boilerplate sections whose
@@ -172,7 +239,9 @@ sitting next to its delivered report. One job cannot validate the system;
 one job per shape can validate each shape. Then packaging:
 one zip with the app, the built interface, and Python's embeddable Windows
 distribution, so Mark's whole experience is unzip once, double-click a
-shortcut forever.
+shortcut forever. The Windows Photo Pilot ships a bounded early package to
+prove installation and startup. Final packaging is still this phase, and the
+pilot does not close it.
 
 ## The quarry: what the locker gives each phase
 
@@ -182,7 +251,7 @@ only. Read-only. Take copies, adapt freely, never write back.
 | Locker source | Becomes |
 |---|---|
 | `shop/system/sections/*.md` (14 recipes) | Per-section build specs and QA checklists, as code and data |
-| `shop/data/section-rulebook.md` | The measured standard behind every layout decision |
+| `shop/data/section-rulebook.md` | The measured standard behind every layout decision, except where Mark supplies a governing template for a section (see 2026-08-17) |
 | `shop/data/conventions.md`, `shop/data/reference/boilerplate-texts.md` | App data files, like `app/data/engagement-matrix.md` already is |
 | `shop/data/donors/donor-ledger.md` | The map of which delivered report donates each section's furniture |
 | `shop/system/scripts/xlsm_digest.py` | The workbook reader. Quarry input, not a drop-in: 180 lines, pure openpyxl, but it hardcodes its sheet list and writes its digest beside the workbook; output ownership moves to the app |
@@ -199,7 +268,10 @@ only. Read-only. Take copies, adapt freely, never write back.
   not hoped for: the Phase 1 acceptance slice proves the delivery spine on
   Windows before Phase 2 builds Office-dependent sections on top of it.
   What remains after that slice is version drift and full packaging, both
-  closed in Phase 5.
+  closed in Phase 5. The Windows Photo Pilot lands earlier and takes a
+  smaller bite out of this risk: it proves installation, startup, folder
+  selection, guarded AI setup, and photo pages on Mark's machine, and
+  nothing about Office.
 - **Template manufacturing touches client material every time.** The gate is
   mechanical scan, Claude read, Spenser glance. No shortcut.
 - **Mark is hard to manage and setup is remote.** Anything that needs two

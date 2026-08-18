@@ -317,12 +317,28 @@ of the affected parts does not start until they are answered. Everything else
 in the plan is unblocked.
 
 **Question 1: where do the confirmed city and address come from?**
-This is the blocking one. The app does not store them today. `create_job`
-takes city and street, uses them to propose a folder name, and discards both
-(`jobs.py:55-61,114-131`). `job-brief.md` holds a single free-text "Property
-address" with no separate city. The folder name encodes `CITY_Address`, but
-reading them back out of it is inference from a name, which the locked
-behavior forbids and which HOW-WE-WORK forbids separately.
+
+*Corrected 2026-08-17, after Spenser caught an error in the first version of
+this section. The first version said the app discards city and street. That
+was wrong, and the correction changes the answer.*
+
+What is actually true. Intake requires both values and refuses without them
+(`main.py:219-226`). It then writes them into `job-brief.md` itself, joined in
+a known order, street then city then state (`main.py:240-243`). So a job the
+app made records "5675 Forest, Bettendorf, Iowa" in a field the app wrote and
+can read back. The folder name carries the same two values a second time, as
+`BETTENDORF_5675 Forest - 2026`, which is literally `City_Address`.
+
+So the values are present twice, not absent. The real edge is narrower than
+the first version claimed: `read_brief` is deliberately tolerant of briefs
+written by hand or by the older onboarding skill (`brief.py:48-53`), so an
+older or hand-written brief may not follow that order, or may not carry a
+city at all.
+
+Reading the engagement letter would be the natural source and is not
+available: it is offered on the New Job screen but not built (`README.md`,
+`NewJob.jsx:60`), and it is Phase 4 work. Waiting for it would put the pilot
+behind Phase 4.
 
 **Question 2: what is the ceiling on one captioning run?**
 This sets Mark's worst-case spend per click. It needs a number for photos per

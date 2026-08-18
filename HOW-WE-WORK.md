@@ -107,6 +107,15 @@ delivered without Spenser seeing the change and saying yes.
 While a slice is still being understood there is no plan document, because we
 are finding the edges. Once its shape is known, write one.
 
+## Approval
+
+After every Builder report, Codex gives Spenser a three-part executive brief.
+Recommendations remain proposals until Spenser explicitly approves them. Codex
+does not provide the next Builder instruction until Spenser approves the next
+action. Any new product behavior, spending, privacy, file handling, delivery,
+permission, or scope decision requires explicit approval. The Builder must
+separate completed work, proposals, and decisions needed from Spenser.
+
 ## Not for Mark
 
 `Reset demo` puts the demo job folders back to a known state so the same test

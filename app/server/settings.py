@@ -117,12 +117,27 @@ def check_key(key: str) -> None:
         raise BadKey("that key does not have access") from exc
 
 
+def _is_key_line(line: str) -> bool:
+    """True when this line sets the key in any form stored_key accepts.
+
+    save and remove must recognise every form stored_key does. Before this
+    helper they matched only `ANTHROPIC_API_KEY=...`, so an old
+    `export ANTHROPIC_API_KEY=...` line survived a save, and on the next
+    start the old key won while the screen showed the new key's last four.
+    """
+    text = line.strip()
+    if text.startswith("export "):
+        text = text[len("export "):].lstrip()
+    name, sep, _ = text.partition("=")
+    return bool(sep) and name.strip() == KEY_NAME
+
+
 def save_key(key: str) -> None:
-    kept = [line for line in _lines() if not line.startswith(f"{KEY_NAME}=")]
+    kept = [line for line in _lines() if not _is_key_line(line)]
     _write(kept + [f"{KEY_NAME}={key}"])
     os.environ[KEY_NAME] = key          # live, so nothing needs restarting
 
 
 def remove_key() -> None:
-    _write([line for line in _lines() if not line.startswith(f"{KEY_NAME}=")])
+    _write([line for line in _lines() if not _is_key_line(line)])
     os.environ.pop(KEY_NAME, None)

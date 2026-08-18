@@ -45,6 +45,7 @@ def _index(job: Path):
     """
     return [p for p in job.rglob("*")
             if p.is_file() and p.name not in (".DS_Store", "Thumbs.db", "desktop.ini")
+            and ".rrf-thumbs" not in p.parts
             and not any(x in str(p.parent).lower() for x in EXCLUDE)]
 
 

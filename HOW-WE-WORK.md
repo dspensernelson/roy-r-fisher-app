@@ -109,12 +109,44 @@ are finding the edges. Once its shape is known, write one.
 
 ## Approval
 
-After every Builder report, Codex gives Spenser a three-part executive brief.
-Recommendations remain proposals until Spenser explicitly approves them. Codex
-does not provide the next Builder instruction until Spenser approves the next
-action. Any new product behavior, spending, privacy, file handling, delivery,
-permission, or scope decision requires explicit approval. The Builder must
-separate completed work, proposals, and decisions needed from Spenser.
+After every Builder report, Codex gives Spenser the four-part Product Control
+Brief defined below. Recommendations remain proposals until Spenser explicitly
+approves them. Codex does not provide the next Builder instruction until
+Spenser approves the next action. Any new product behavior, spending,
+privacy, file handling, delivery, permission, or scope decision requires
+explicit approval. The Builder must separate completed work, proposals, and
+decisions needed from Spenser.
+
+## Product Control Brief
+
+After every Builder report, Codex must brief Spenser using these four sections:
+
+1. `What changed`
+   - State only completed work.
+   - Identify changed files, tests, commits, and verification.
+   - Keep proposed work separate from completed work.
+
+2. `User experience`
+   - State what the user sees or does differently now.
+   - Separate current behavior from planned behavior.
+   - Identify frontend effects and backend, data, privacy, security,
+     performance, or cost effects.
+   - If there is no user-visible or backend impact, explicitly state `None`.
+
+3. `Your decisions`
+   - Identify every product decision still requiring Spenser.
+   - Include the recommendation and its tradeoff.
+   - Silence, prior discussion, technical convenience, and a Builder
+     recommendation do not constitute approval.
+
+4. `Next move`
+   - State the smallest recommended next action.
+   - State the exact approval gate before work continues.
+
+The Builder must provide enough evidence for Codex to produce this brief
+without guessing. No material product behavior, spending, privacy, file
+handling, delivery, permission, or scope decision may be implemented without
+Spenser's explicit approval.
 
 ## Not for Mark
 

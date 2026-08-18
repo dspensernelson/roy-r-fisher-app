@@ -10,7 +10,9 @@ import brief
 import browse
 import busy
 import captions
+import classify
 import demo
+import inventory
 import jobs
 import sections
 import settings
@@ -49,6 +51,15 @@ class NewFolder(BaseModel):
 
 class ActiveJobs(BaseModel):
     active: list[str]
+
+
+class Classification(BaseModel):
+    file: str
+    label: str
+
+
+class FileOnly(BaseModel):
+    file: str
 
 
 class ProposeName(BaseModel):
@@ -322,10 +333,37 @@ def create_app() -> FastAPI:
                     for key, s in captions.STYLES.items()
                 ]}
 
-    @app.get("/api/jobs/{name}/scan")
-    def scan_job_folders(name: str):
-        import scan
-        return {"folders": scan.folder_rows(photos_routes._job_or_404(name))}
+    @app.get("/api/classifications")
+    def classification_labels():
+        # The screen draws its menu from here rather than restating the list,
+        # so what Mark can pick can never drift from what the server accepts.
+        return {"labels": list(classify.LABELS)}
+
+    @app.get("/api/jobs/{name}/folders")
+    def job_folders(name: str):
+        job = photos_routes._job_or_404(name)
+        return classify.attach(job, inventory.read_job(job))
+
+    @app.put("/api/jobs/{name}/classification")
+    def put_classification(name: str, body: Classification):
+        job = photos_routes._job_or_404(name)
+        try:
+            record = classify.set_label(job, body.file, body.label)
+        except ValueError:
+            raise HTTPException(400, "That is not one of the classifications.")
+        except LookupError:
+            # Not there now, whatever it was a moment ago. Recording an answer
+            # about a file the app cannot see would be a claim it cannot check.
+            raise HTTPException(404, "That file is not in this job.")
+        return {"file": body.file, "label": record["label"], "state": "present"}
+
+    @app.delete("/api/jobs/{name}/classification")
+    def delete_classification(name: str, body: FileOnly):
+        # Works whether or not the file is still there, which is how a record
+        # for something he has since renamed gets cleared. Only the app's own
+        # note goes; the file, if it exists, is left exactly as it is.
+        classify.remove_label(photos_routes._job_or_404(name), body.file)
+        return {"ok": True}
 
     @app.put("/api/jobs/{name}/sections")
     def put_sections(name: str, body: SectionChoice):

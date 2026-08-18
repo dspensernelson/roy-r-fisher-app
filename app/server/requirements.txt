@@ -1,11 +1,17 @@
-fastapi
-uvicorn[standard]
-python-multipart
-pillow
-pillow-heif
-anthropic
-pydantic
-python-docx
-pypdf
-pytest
-httpx
+# Pinned 2026-08-15 to the versions the test suite actually runs against
+# on the development Mac. Top-level pins only; transitive dependencies
+# float, and a fully frozen lock is a packaging-phase job. Change a pin
+# only with the suite green after.
+fastapi==0.128.8
+uvicorn[standard]==0.39.0
+python-multipart==0.0.20
+pillow==11.3.0
+pillow-heif==1.1.1
+anthropic==0.121.0
+pydantic==2.13.4
+python-docx==1.2.0
+pypdf==6.14.2
+
+# Test-only.
+pytest==8.4.2
+httpx==0.28.1

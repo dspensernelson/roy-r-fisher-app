@@ -22,10 +22,11 @@ final packaging. No Description of Improvements work of any kind.
 
 **Status of this document.** A plan, not implementation authorization. The
 product decisions in it are approved. The technical direction in it is approved
-too. As of 2026-08-19 it also carries an execution plan, Section 25, with seven
+too. As of 2026-08-19 it also carries an execution plan, Section 26, with eight
 bounded tasks and four approval gates. Approval of a technical direction is not
-proof that it works and is not a record that it was built. Nothing in this
-document has run on Windows, and no task in Section 25 has started.
+proof that it works and is not a record that it was built. Task 1 is complete
+and its evidence is in Section 7a. Nothing in this document has run on Windows,
+and no task after Task 1 has started.
 
 ## How to read the labels
 
@@ -127,7 +128,7 @@ confirming a suspicion.
 **APPROVED sequencing, 2026-08-19.** The defect is live on the Mac today, so
 the question of when to fix it is real. The answer:
 
-- The fix lands **inside Task 4's photo-optimization work**, per Section 25.
+- The fix lands **inside Task 4's photo-optimization work**, per Section 26.
   Nothing separate is written for it.
 - **Do not create a separate Mac hotfix** unless Spenser later asks for one.
 - **HEIC dependency viability is still tested first, in Task 1**, because a
@@ -754,60 +755,170 @@ where the same silence looks to him exactly like the app forgetting his setup.
 - A fingerprint of the job folder before and after every state operation proves
   no job file or client file was written, moved, renamed, or deleted.
 
-## 7. Embedded Python, dependencies, and the HEIC proof
+## 7. Runtime, dependencies, and the Task 1 evidence
 
-**DIRECTION, approved 2026-08-18. Not built, not proven.** The Windows
-embeddable package, assembled by the committed packaging script of Section 11.
+### 7a. What Task 1 proved
 
-**The runtime version is not settled and must not be asserted.** The previous
-revision said Python 3.12 has better Windows wheel coverage than 3.9. Nothing
-measured that, and this revision withdraws the claim. The runtime version is
-decided by the first packaging proof below, not by assertion. The source stays
-Python 3.9 compatible per the roadmap either way, so this is a runtime choice
-and never a language choice.
+**FACT, 2026-08-19, from Task 1.** Evidence gathered on the Mac from the
+package index and python.org. Task 1 changed no repository file, installed
+nothing, and made no API call.
 
-**The first packaging proof determines whether every pinned dependency has a
-compatible Windows wheel.** `pillow-heif==1.1.1` is checked first, because it
-bundles libheif, it is the least portable pin in
-`app/server/requirements.txt`, and Section 1b shows HEIC is on the live path.
+- **Every pinned dependency resolves to binary `win_amd64` wheels for CPython
+  3.9, 3.10, 3.11, 3.12, 3.13, and 3.14.** 34 distributions on 3.9 and 3.10,
+  33 on 3.11 and above. The difference is `typing-extensions`, required only
+  below 3.11.
+- **No source build is required on any candidate.** Resolution was performed
+  with binary artifacts only, so a source fallback could never make a
+  candidate appear viable.
+- **`pillow-heif==1.1.1` publishes a compatible Windows wheel for every
+  candidate checked.** 53 files published, 8 `win_amd64` wheels, 6 CPython and
+  2 PyPy.
 
-**FACT.** `uvicorn[standard]` pulls `uvloop`, which is POSIX-only and is
-skipped on Windows by its own environment marker. `httptools` and `watchfiles`
-do publish Windows wheels. `pillow`, `pillow-heif`, and `pydantic-core` are
-binary and must resolve as `win_amd64` wheels. `pytest` and `httpx` are
-test-only and are not installed into the package.
+  | Candidate | ABI | Wheel |
+  |---|---|---|
+  | 3.9 | cp39 | `pillow_heif-1.1.1-cp39-cp39-win_amd64.whl` |
+  | 3.10 | cp310 | `pillow_heif-1.1.1-cp310-cp310-win_amd64.whl` |
+  | 3.11 | cp311 | `pillow_heif-1.1.1-cp311-cp311-win_amd64.whl` |
+  | 3.12 | cp312 | `pillow_heif-1.1.1-cp312-cp312-win_amd64.whl` |
+  | 3.13 | cp313 | `pillow_heif-1.1.1-cp313-cp313-win_amd64.whl` |
+  | 3.14 | cp314 | `pillow_heif-1.1.1-cp314-cp314-win_amd64.whl` |
 
-**TEST. The seven explicit proofs, in this order:**
+- **HEIC remains in scope.** The riskiest pin turned out to be the
+  best-covered one. No product compromise was needed and none was made.
+- **`uvloop` is correctly excluded on Windows.** Its own marker,
+  `sys_platform != "win32" and ... and extra == "standard"`, evaluates false
+  under a Windows CPython environment. It is absent from every candidate's
+  resolution. A first attempt appeared to fail on `uvloop`, which was the
+  development Mac's pip evaluating markers against the running platform, not a
+  Windows fact.
+- **`colorama` is included on Windows.** Its marker is
+  `sys_platform == "win32" and extra == "standard"`, so Windows gains a
+  dependency the Mac does not have. Earlier revisions of this plan never
+  mentioned it.
+- **The existing suite remained green: 320 passed, 15 skipped.** Matching the
+  branch-point baseline in Section 17 exactly.
+- **Task 1 changed no repository file.** `git status --short` empty and the
+  tree identical to HEAD at the end of the task.
 
-1. **Download the targeted Windows wheels without installing them.** On the
-   Mac. `pillow-heif==1.1.1` first and on its own, so its answer is
-   unambiguous. Failure here proves a wheel is unavailable and settles the
-   runtime version question with evidence.
+**FACT. Wheel availability does not prove Windows import success.** Everything
+in 7a is artifact evidence gathered on a Mac. It says a compatible file exists
+and can be fetched. It says nothing about whether that file loads on Mark's
+machine.
+
+**UNPROVEN until Gate A**, and none of it may be reported as working before
+then: that the embeddable runtime starts at all; that its `._pth` honours a
+packaged `site-packages`; that the compiled wheels import; that real HEIC
+decoding works there; that `Path.home()` resolves to his profile; that dynamic
+port binding yields a usable loopback port; what SmartScreen actually says; and
+that a second version is refused rather than started.
+
+### 7b. The approved runtime direction
+
+**APPROVED, 2026-08-19. CPython 3.14 is the pilot runtime direction.** The
+runtime version is no longer an open question. Any earlier wording in this
+document that treated it as unresolved is superseded by this subsection.
+
+- **Target artifact, verified by Task 1:** `python-3.14.7-embed-amd64.zip`,
+  from `https://www.python.org/ftp/python/3.14.7/`. HTTP 200, 12,673,227 bytes.
+- **All nine compiled dependencies currently publish compatible `cp314`
+  wheels**, all native, with no `abi3` fallback and no source artifact.
+
+**The selection rests on current Windows binary support and the longer
+remaining bugfix window, not on 3.14 being newer.** Task 1 measured a fact that
+decides it: python.org stops publishing Windows embeddable builds when a series
+leaves bugfix support and goes security-only.
+
+| Series | Last release with an embeddable | Security releases published since, with no Windows binary |
+|---|---|---|
+| 3.9 | 3.9.13 | 12 |
+| 3.10 | 3.10.11 | 10 |
+| 3.11 | 3.11.9 | 7 |
+| 3.12 | 3.12.10 | 4 |
+| 3.13 | 3.13.15 | none, still current |
+| 3.14 | 3.14.7 | none, still current |
+
+So shipping 3.12 would ship a CPython missing four rounds of security fixes,
+and 3.9 would miss twelve. Only 3.13 and 3.14 are current. Between those two,
+3.13 leaves bugfix support around October 2026 and its embeddable then freezes
+exactly as 3.12's already has, while 3.14 keeps receiving Windows binaries to
+roughly October 2027. The pilot carries versions 1 through 6 and the folder
+sits on Mark's machine for months, so the runtime that keeps being patched is
+the stronger one.
+
+The argument against 3.14 is ecosystem youth. Task 1 checked it rather than
+dismissing it: all nine compiled dependencies already ship native `cp314`
+wheels today. The residual risk is a future pin bump, not the present set.
+
+**Real imports remain unproven until the Windows spike.** Approving the
+direction is not evidence that it runs.
+
+**If the Windows spike fails, stop and return evidence. Do not silently change
+the runtime.** Changing it is a product decision and it is not the executor's.
+
+### 7c. What actually ships, corrected
+
+**FACT, 2026-08-19, from Task 1. An earlier revision of this plan was wrong
+about `httpx`.** It said "pytest and httpx are test-only and are not installed
+into the package". That is false for `httpx`.
+
+- `anthropic==0.121.0` requires `httpx<1,>=0.25.0` **unconditionally**, with no
+  marker and no extra.
+- **The shipped package must therefore include `httpx`, `httpcore`, `certifi`,
+  `idna`, and `anyio`.**
+- Uncorrected, the packaging script would omit them and `import anthropic`
+  would fail on Mark's machine and nowhere else.
+- **`pytest` remains test-only and does not ship.**
+
+**FACT. The compiled Windows dependency set contains nine packages**, not the
+three an earlier revision named:
+
+| Compiled package | Arrives via |
+|---|---|
+| Pillow | direct pin |
+| pillow-heif | direct pin |
+| pydantic-core | pydantic |
+| lxml | python-docx |
+| jiter | anthropic |
+| httptools | uvicorn[standard] |
+| watchfiles | uvicorn[standard] |
+| websockets | uvicorn[standard] |
+| PyYAML | uvicorn[standard] |
+
+**DIRECTION, approved 2026-08-19.**
+
+- **Packaging and Gate A tests must import and verify the complete runtime
+  dependency closure**, not only the packages previously named by hand.
+- **The committed packaging script must derive the runtime dependency closure
+  from the pinned requirements and the resolved metadata**, rather than
+  maintaining a hand-written copy of the list. A hand-written list is how
+  `httpx` went missing, and a second hand-written list would fail the same way
+  in a new place.
+
+**TEST. Gate A must import the whole closure on Windows**, not a sample. At
+minimum `anthropic` and every distribution it pulls, plus `uvicorn`, `PIL`,
+`pillow_heif`, `docx`, `lxml`, and `pydantic_core`.
+
+### 7d. What is still to be proven, and in what order
+
+The seven proofs, with Task 1's two now closed:
+
+1. **Download the targeted Windows wheels without installing them.**
+   **DONE in Task 1.** Passed for all six candidates.
 2. **Assemble the self-contained runtime through the committed packaging
-   script** of Section 11. Never by hand-typed commands.
-3. **On Windows, import `uvicorn`, `PIL`, `pillow_heif`, `docx`, and
-   `pydantic_core`.** One command against the packaged interpreter, before any
-   app code runs.
+   script** of Section 11. Not started.
+3. **On Windows, import the complete runtime dependency closure**, per 7c.
+   Not started.
 4. **Verify `Path.home()` resolves to the expected Windows user profile.**
 5. **Verify direct HEIC files open correctly.** A `.heic` placed straight into
    a `Photos` folder, not uploaded through the app. Per Section 1b this fails
    today, so this test starts red and proves Section 12 fixed it.
 6. **Verify Word opens the generated document.**
 7. **Verify the chosen runtime configuration and `._pth` behavior** rather than
-   assuming them. The embeddable distribution's import path is governed by its
-   `._pth` file, and whether the packaged `site-packages` is honoured is a
-   thing to observe on Windows, not to assume from documentation.
+   assuming them. Task 1 proved artifacts exist; it proved nothing about the
+   import path. This stays a Windows observation.
 
-**If HEIC support fails, stop and return evidence.** Do not silently remove
-HEIC support. Do not silently change runtime versions. Both are product
-decisions and neither belongs to the executor.
-
-**What step 1 proves and does not prove.** Step 1 failing proves a wheel is
-unavailable. Step 1 succeeding does not prove the wheels import on Windows.
-That is step 3, and it is a Windows acceptance item.
-
-**UNPROVEN, all of it.** Nothing in this section has run. No dependency is
-installed and no download is performed during this planning checkpoint.
+**If HEIC support fails on Windows, stop and return evidence.** Do not silently
+remove HEIC support and do not silently change runtime versions.
 
 ## 8. How the built web interface enters the package
 
@@ -904,6 +1015,12 @@ says why that separation matters.
 `app/server`, `app/templates`, `app/web/dist`, the embedded runtime, the
 launcher, the readme, the version file, the manifest.
 
+The embedded runtime carries **the complete runtime dependency closure** of
+Section 7c, derived by the packaging script from the pinned requirements and
+resolved metadata. That closure includes `httpx`, `httpcore`, `certifi`,
+`idna`, and `anyio`, which an earlier revision wrongly called test-only. It
+excludes `pytest`, which genuinely is.
+
 **Excluded. The exclusion list itself is not a proposal: it is a requirement,
 and every line is asserted by a packaging test.**
 
@@ -966,6 +1083,10 @@ outside the immutable set:
 
 - Package creation is performed by a **committed, repeatable packaging
   script**, not by manual commands.
+- **The script derives the runtime dependency closure from the pinned
+  requirements and the resolved metadata.** It never carries a hand-written
+  copy of the dependency list. Section 7c records what a hand-written list
+  already cost: `httpx` was called test-only and would have been omitted.
 - The script generates the manifest during packaging, listing every **immutable**
   file and its size.
 - The aggregate is defined **deterministically over the ordered paths, sizes,
@@ -1032,6 +1153,11 @@ corruption that preserves file size.
   `ImportError` traceback.
 - Running the packaging script twice from identical inputs produces an
   identical immutable manifest, aggregate included.
+- The packaged closure contains every distribution the pinned requirements
+  resolve to, `httpx` and its chain included, and contains no test-only
+  distribution.
+- Removing any single distribution from the closure is detected before the
+  package is declared good.
 
 ## 12. Report photo optimization
 
@@ -1180,7 +1306,10 @@ testing that way would pass while the real path fails.
 4. Confirm 61 photos are blocked before any API request or any cost occurs.
 5. Never test against original evidence or client folders.
 6. A copied real demo job may be used only after Spenser selects the copy and
-   explicitly authorizes those photos for an external AI request.
+   explicitly authorizes those photos for an external AI request. Since
+   2026-08-19 that authorization has a mechanism rather than a convention: the
+   job must be on the AI-safe allowlist of Section 25b, and everything else
+   under the demo root is refused in code before a client is built.
 7. Generated documents must use fresh output names and must not overwrite
    existing documents.
 
@@ -1256,6 +1385,9 @@ Section 12 requires Spenser's screen review on real images.
     mistaken for first-time setup.
 30a. The AI Usage History survives upgrade and rollback, and holds no job name,
      address, photo filename, caption, prompt, or key.
+30b. Reset Demo restores the hydrated photographs rather than deleting them.
+30c. A Local-only demo job is refused before any client is constructed, and the
+     refusal survives Reset Demo.
 31. The last-known-good record reflects the version that actually ran, and a
     version that dies inside 20 seconds never records itself.
 
@@ -1263,6 +1395,8 @@ Section 12 requires Spenser's screen review on real images.
 
 32. Automated tests, a real screen walkthrough, and a real Windows-machine
     acceptance test remain separate evidence. One never stands in for another.
+32a. A hands-on Spenser sandbox session is its own evidence too, and a passing
+     suite never stands in for it. See the definition of done in Section 26.
 33. Measured file size and visual acceptance remain separate evidence. Size may
     be reported before Spenser's screen review; appearance may not.
 
@@ -1288,6 +1422,8 @@ Everything below runs on the Mac and must be green before any package is sent.
 | `test_settings_survive_upgrade.py` | Section 5c and 6: four literal filenames, last-good round-trip, no record from a process that dies inside 20 seconds, upgrade and rollback survival tested separately |
 | `test_state_atomicity.py` | Section 6: interrupted writes leave the previous file intact for all four files; malformed files produce a clear recoverable error; an unknown schema version is refused |
 | `test_photo_optimization.py` | Section 12: originals unchanged by fingerprint, temporary copies removed on success and failure, EXIF orientation applied, longest edge capped at 1,600, quality 85, smaller images never enlarged, HEIC and JPEG and photographic PNG all take the same path |
+| `test_ai_policy.py` | Section 25b: Local-only demo photos work locally but never reach the caption client, a renamed or new or unrecognized job defaults to Local only, only an allowlisted job reaches the stand-in client, Reset Demo preserves the restriction, production jobs are unaffected, and no image or address or caption or key is written to the policy file |
+| `test_demo_hydration.py` | Task 6: every demo job populated, the read-only source tree fingerprint-identical before and after, Reset Demo restoring rather than deleting the hydration, hydration reproducible, nothing tracked by Git, and every hydrated job Local only until allowlisted |
 | `test_file_safety.py` (existing) | Still green. Never weakened |
 
 ## 18. Provable on the Mac, versus requires Windows
@@ -1418,7 +1554,7 @@ decision for an accident.
 | Question | Chosen | Rejected, and why |
 |---|---|---|
 | Runtime | Embeddable zip | A frozen single-file binary is less work to hand over and is rejected because a pilot exists to produce diagnosable failures. When the embeddable fails, `python.exe` is a real interpreter Spenser can run by hand over screen share. A full installer is rejected as more machinery than six versions need |
-| Runtime version | Decided by the Section 7 proof, not asserted | The previous revision's claim that 3.12 has better wheel coverage is withdrawn. It was never measured, and `pillow-heif` is the pin that actually decides it |
+| Runtime version | **CPython 3.14**, approved 2026-08-19 on Task 1 evidence | 3.9 through 3.12 are rejected because python.org stopped publishing their Windows embeddables, leaving 12, 10, 7, and 4 security releases with no binary. 3.13 is rejected because its bugfix window closes around October 2026 and its embeddable then freezes the same way. Not chosen for being newest |
 | Launcher | `.bat` shim with the logic in Python, console visible | `.vbs` to hide the console is rejected because it makes failure invisible. A signed `.exe` shim is out per the approved no-signing decision |
 | Launcher liveness probe | `GET /api/version` | `/api/demo` is rejected because Section 10 removes it from the package, so the probe would work on the Mac and fail on Mark's machine |
 | Port | Bind `0`, record in the version's `runtime.json` | Fixed 8000 is rejected because it makes two versions indistinguishable. Walk-up from 8000 is rejected because it starts a second copy, which `busy.py:31` does not guard, and because it has no terminating condition under localhost interference |
@@ -1449,6 +1585,13 @@ Stop and report, without proceeding, when any of these is true:
 3. A wheel has no `win_amd64` build, so the package cannot be assembled.
 4. **HEIC support fails.** Return evidence. Do not silently remove HEIC
    support and do not silently change runtime versions.
+4a. **The packaged runtime cannot import `anthropic` and its complete
+    dependency chain on Windows.** Do not continue. Do not work around it by
+    trimming the closure, and do not silently change the runtime. Section 7c
+    records why this stop condition exists: a hand-written dependency list
+    already dropped `httpx` once.
+4b. **A Local-only demo job could reach the caption client**, or the Section 25
+    policy cannot be shown to refuse before a client is constructed.
 5. The suite is not green at the end of any task.
 6. A packaging step would include anything in the Section 10 exclusion list.
 7. The confirmed city or address is unavailable and the code would have to
@@ -1499,7 +1642,17 @@ reopens them:
   The integrity check catches damage, not an adversary, and Section 11 says so.
 - The live HEIC defect is fixed inside Task 4, with no separate Mac hotfix,
   while HEIC dependency viability is still proven first in Task 1.
-- The work runs as the seven tasks and four approval gates of Section 25.
+- The pilot runtime direction is CPython 3.14, on the Task 1 evidence in
+  Section 7b, and real imports stay unproven until Gate A.
+- `httpx` and its chain ship. The packaging script derives the closure rather
+  than keeping a hand-written list (Section 7c).
+- Demo material is hydrated into the demo baseline so Reset Demo restores it,
+  as Task 6 of Section 26.
+- Demo material defaults to Local only, and an app-owned policy blocks it from
+  external AI in code unless explicitly marked AI safe (Section 25).
+- Done means the eight-item definition at the head of Section 26, not working
+  code and not a green suite.
+- The work runs as the eight tasks and four approval gates of Section 26.
 
 **Discovered during this revision, and needing Spenser only if the evidence
 comes back badly:**
@@ -1514,17 +1667,117 @@ comes back badly:**
 
 **Not authorization.** Approval of this plan's product decisions and technical
 direction is not approval to implement. Implementation waits on Spenser's
-explicit yes to begin Task 1 of Section 25, and then stops at Gate A.
+explicit yes to begin Task 1 of Section 26, and then stops at Gate A.
 
-## 25. The execution plan
+## 25. Demo material, corpus classes, and the AI policy
+
+**APPROVED, 2026-08-19.** Demo photographs make the workflow testable. They
+also create a way for real property imagery to reach an external service by
+accident. This section is how both are handled, and the second half of it is
+code, not a naming convention.
+
+### 25a. The two corpus classes
+
+| Class | May contain | Used for | May reach Anthropic |
+|---|---|---|---|
+| **Local layout corpus** | Images copied or extracted from sample reports | Local screens, document building, Word and PDF size, orientation, visual review | **No.** Never, without a later explicit approval from Spenser |
+| **AI-safe stress corpus** | Generated images, or photographs Spenser explicitly approves for external AI use | Paid caption testing, cost learning, split runs, retries, caption-quality review | Yes, and only these |
+
+**Why the local class exists at all.** Sample-report photographs are real
+property imagery belonging to Mark's clients. Coming from an example report
+does not make them sendable. They are useful for everything that happens on
+this machine, and for nothing that leaves it.
+
+**FACT, and the reason naming is not enough.** The caption route sends whatever
+`photos_routes.included(manifest)` yields for a job, confined to that job's
+`Photos` folder (`main.py:386-394`). Nothing in that path consults a folder
+name, a filename, or a fixture label. A convention that lives only in names
+would be enforced by whoever remembers it.
+
+### 25b. The app-owned AI policy
+
+**APPROVED, 2026-08-19. Naming and folders alone are insufficient enforcement.**
+The policy is app-owned state stored outside all job folders, alongside the
+other app-owned files of Section 6 and written with the same atomic helper.
+
+- It records the **resolved demo root**.
+- **The entire registered demo root defaults to `Local only`.** Default-deny,
+  not default-allow.
+- It maintains an **explicit allowlist of demo jobs marked `AI safe`**.
+- **A renamed, moved, newly added, or unrecognized job under that demo root
+  stays Local only.** Falling off the allowlist can only ever make a job more
+  restricted, never less.
+- **Reset Demo does not erase or weaken the policy.**
+- **The caption endpoint checks the policy before constructing an API client
+  or sending any image.**
+- A Local-only demo job gets a plain refusal saying its photographs are
+  restricted to local testing.
+- **The refusal happens before any external request, any token usage, and any
+  cost.** Same shape as the 61-photo ceiling in Section 15, and provable the
+  same way at zero cost.
+- **Production jobs outside the registered demo root are not silently
+  reclassified by this demo-only policy.** It restricts demo material; it does
+  not quietly change how Mark's real jobs behave.
+- **No Mark-facing control for changing this policy ships in the pilot.** There
+  is no switch on a screen.
+- **AI-safe status is established only through the controlled demo-preparation
+  workflow**, after Spenser approves the corpus.
+
+**What the policy file may hold:** the resolved demo root, the allowlist of job
+names under it, and a schema version. **What it may never hold:** a source
+image, an address, a caption, or an API key. Job names under the demo root are
+the allowlist's only possible key, so they are recorded; nothing else about a
+job is.
+
+**TEST, required before acceptance.** In `test_ai_policy.py`, with a stand-in
+for the model so cost is zero:
+
+- Local-only demo photographs can be viewed, reviewed, optimized, and built
+  locally. The restriction blocks sending, not working.
+- **Local-only photographs cannot reach the caption client**, asserted by
+  proving no client was constructed and no request attempted.
+- A renamed job inside the demo root defaults to Local only.
+- A newly added job inside the demo root defaults to Local only.
+- An unrecognized job inside the demo root defaults to Local only.
+- **Only an explicitly allowlisted AI-safe demo job reaches the stand-in
+  caption client.**
+- Reset Demo preserves the effective restriction.
+- A production job outside the demo root is unaffected by the policy.
+- **No source image, address, job name outside the demo root, caption, or API
+  key is written into the policy file**, asserted by scanning the written
+  file's bytes.
+
+## 26. The execution plan
 
 **APPROVED, 2026-08-19.** Everything above this section is requirements. This
 section is the order the work is done in, the gates it stops at, and what each
 stop must produce. Without it the document says what to build and never says
 when to stop.
 
-**Nothing here is authorization to start.** Task 1 begins only on Spenser's
+**Nothing here is authorization to start.** Each task begins only on Spenser's
 explicit yes.
+
+### Definition of done
+
+**APPROVED, 2026-08-19.** The Windows Photo Pilot is done only when all eight
+of these hold:
+
+1. Every approved behavior is implemented and tested.
+2. Spenser completes at least one hands-on sandbox session using the complete
+   feature.
+3. Problems from that session are captured.
+4. Any required usability facelift is completed as a separate bounded
+   refinement.
+5. Visible refinements receive another screen review.
+6. The exact candidate package passes Windows installation, startup, Word and
+   PDF, update, rollback, SmartScreen, and recovery testing.
+7. Spenser approves that exact package.
+8. The approved package and private download link are ready for Spenser to
+   install with Mark over screen share.
+
+**Working code does not independently meet this. Nor does a green suite. Nor
+does an existing zip.** Each of those is necessary and none of them is
+sufficient, and a report that offers one of them as completion is wrong.
 
 ### Rules that bind every task
 
@@ -1540,16 +1793,22 @@ Every task, without exception:
 - Never pushes, merges, delivers, or treats work as accepted without explicit
   authorization.
 
-### Task 1: Prove Windows dependency viability
+### Task 1: Prove Windows dependency viability. COMPLETE 2026-08-19
+
+Outcome recorded as FACT in Section 7a. Every pinned dependency resolves to
+binary `win_amd64` wheels on all six candidates, HEIC stays in scope, and the
+runtime direction of Section 7b follows from it. Task 1 changed no repository
+file. What it did not prove is in Section 7a's UNPROVEN list.
+
+The original scope, kept for the record:
 
 - Check the targeted `win_amd64` wheels, `pillow-heif==1.1.1` first and alone
   so its answer is unambiguous.
-- Decide the runtime version **from that evidence, not from preference**. The
-  withdrawn 3.12 claim of Section 7 is not a starting position.
+- Decide the runtime version **from that evidence, not from preference**.
 - Make no product compromise if HEIC fails.
 - **Stop and report if any required wheel or import path is unproven.**
 
-Files this task may change: none in `app/`. It produces evidence, not code.
+Files this task may change: none in `app/`. It produced evidence, not code.
 
 ### Task 2: Make app-owned state safe
 
@@ -1612,39 +1871,143 @@ continuing.**
 - The `Planned workflows` band containing only Description of Improvements.
 - Clear errors, and no inactive controls that look clickable.
 
-### Approval Gate B: Spenser's Mac acceptance
+### Task 6: Demo Hydration
 
-**Stop after automated tests and the real Mac screen walkthrough.** Spenser
-reviews:
+**APPROVED, 2026-08-19.** Runs after the frontend and **before Gate B**,
+because Gate B is a hands-on session and an empty demo job cannot be used
+hands-on.
 
-- Caption workflow
-- Review clicks
-- Cost language
-- Partial failures
-- Output naming
-- Word-document size
-- Photo quality
-- HEIC behavior
-- Planned-workflow presentation
+- Populate the `Photos` folder in **every** demo job.
+- Work only in disposable, app-owned demo copies.
+- Keep all hydrated material out of Git.
+- **Never modify source reports, evidence, original client folders, or original
+  photographs.**
+- **Hydrate `.rrf-demo-baseline/RRF Demo Jobs`, then use the existing Reset
+  Demo flow to create or restore the working `RRF Demo Jobs`.**
+- **Prove Reset Demo restores the hydration instead of deleting it.**
+- Fingerprint the source material before and after extraction or copying.
+- **Prove the read-only source tree remains unchanged.**
+- Make hydration **reproducible**, not dependent on undocumented manual
+  copying.
 
-**Do not conduct a paid real-photo calibration, and do not create Mark's
-delivery package, until Spenser accepts the feature experience.**
+**Why hydration targets the baseline and not the working folder. FACT:**
+`demo.py` replaces the whole working folder with the baseline, and its own
+docstring says anything not in the baseline is simply gone. The approved paths
+are baseline `.rrf-demo-baseline/RRF Demo Jobs` and working `RRF Demo Jobs`
+(`demo.py:35-40`). Hydrating the working folder directly would be erased by the
+first Reset Demo. Hydrating the baseline makes Reset Demo restore the
+photographs instead, which is what Spenser approved on 2026-08-19.
 
-### Task 6: Bounded paid calibration
+**FACT, so nobody builds machinery for it.** Keeping hydrated material out of
+Git is already free. `.gitignore` carries `**/Photos*/**` with a
+`!**/Photos*/GUIDE.md` re-include, and `RRF Demo Jobs/` and
+`.rrf-demo-baseline/` are ignored outright. Photographs placed in these folders
+are ignored more than once.
 
-- Use **only** a corpus Spenser explicitly approves for an external AI request.
-- Run the smallest useful paid test.
-- Record measured usage, calculated cost, the learned-rate change, caption
-  quality, and any failed request.
-- Do not exceed the approved $20 provider limit.
-- **Do not use client photographs without explicit corpus approval.**
+**Scenarios distributed purposefully across the demo jobs**, so each one
+exercises something different rather than every job looking the same:
+
+| Scenario | Purpose |
+|---|---|
+| Normal 12-photo job | The ordinary path, and the $0.05 arithmetic example |
+| 60-photo maximum | The ceiling exactly at its limit, and a real split run |
+| 61-photo refusal | The refusal, provable at zero cost per Section 15 |
+| Large phone photographs | Section 12 optimization, and DOCX size before and after |
+| HEIC | The live Section 1b defect, placed directly and not uploaded |
+| JPEG | The common case |
+| PNG | The photographic-PNG path of Section 12 |
+| Portrait and landscape | Layout in the built document |
+| Rotated EXIF | Orientation applied before resize, which is new behavior |
+| Small images that must not be enlarged | The never-enlarge rule |
+| Excluded photographs | That exclusions never block Build |
+| Draft, reviewed, and edited-caption fixture states | The review state machine, where fixtures are appropriate |
+
+**Every demo job must have enough photographs to make the workflow feel real.**
+A job with three photographs does not tell Spenser what sixty feels like.
+
+**Corpus classification is not optional here.** Everything hydrated from sample
+reports is **Local layout corpus** under Section 25 and is Local only by
+default. Nothing becomes AI-safe by being hydrated.
+
+**TEST, required before acceptance.** In `test_demo_hydration.py`:
+
+- Every demo job has a populated `Photos` folder after hydration.
+- A fingerprint of the read-only source tree is identical before and after.
+- No source report, evidence file, client folder, or original photograph is
+  modified, renamed, moved, or deleted.
+- **Reset Demo restores the hydrated photographs rather than removing them.**
+- Hydration is reproducible: running it twice yields the same baseline.
+- Nothing hydrated is tracked by Git.
+- Every hydrated job is Local only under the Section 25 policy until
+  explicitly allowlisted.
+
+### Approval Gate B: Spenser's hands-on sandbox session
+
+**APPROVED, 2026-08-19. Stop after automated tests and a real hands-on session
+using the hydrated demo jobs of Task 6.** This is not a walkthrough of a script.
+It is Spenser freely using and experimenting with the feature, which is why
+Demo Hydration comes first.
+
+**Spenser must be able to:**
+
+- Generate or enter captions
+- Edit captions
+- Click each `Reviewed` control
+- Exclude and restore photographs
+- Observe review progress
+- Attempt Build before and after review completion
+- Inspect output naming
+- Open the optimized Word document
+- Save or inspect the PDF
+- Compare file size and image quality
+- See the `Planned workflows` presentation
+- Refresh and restart to confirm state survives
+
+**If the session finds usability problems:**
+
+- Capture them.
+- Propose **one bounded refinement task**.
+- **Wait for approval before implementing any new product behavior.**
+- Repeat the screen review when visible behavior changes.
+
+A refinement is a separate bounded task, not a set of fixes folded quietly into
+whatever comes next. It is item 4 of the definition of done above.
+
+**Do not proceed to paid AI calibration until Gate B is explicitly accepted.**
+Do not create Mark's delivery package before that either.
+
+### Task 7: Bounded paid AI calibration
+
+**APPROVED, 2026-08-19.** Uses **only the AI-safe stress corpus of Section 25,
+explicitly approved by Spenser.** The Local layout corpus never takes part, and
+Section 25b's policy makes that a refusal in code rather than a promise.
+
+Coverage required:
+
+- A normal run.
+- A split run.
+- Partial success.
+- Manual retry of **only the remaining photographs**.
+- **Proof of no duplicate charging.**
+- The adaptive estimate, verified moving as Section 3e says it should.
+- Local usage-history accuracy, verified against Section 3f.
+- Caption quality, reviewed on real photographs.
+- **Remaining within the $20 provider limit.**
+
+Record measured usage, calculated cost, the learned-rate change, caption
+quality, and any failed request.
+
+**Do not use client photographs without explicit corpus approval.**
 
 ### Approval Gate C: Cost and caption acceptance
 
 **Stop and report the calibration evidence.** Spenser decides whether the
 estimate, the model, and the caption quality are acceptable.
 
-### Task 7: Windows package acceptance
+**If the stress test reveals a usability problem, propose a bounded refinement
+and wait for approval. Do not proceed directly to the final Windows package.**
+
+### Task 8: Windows package acceptance
 
 - Build the exact candidate package through the committed script.
 - Deliver through the approved private-download path of Section 14.
@@ -1666,9 +2029,13 @@ different package. A rebuild is a new package and needs its own yes.
 | After | Gate | What it protects |
 |---|---|---|
 | Task 3 | A: Windows spine proof | No feature work is built on an unproven Windows foundation |
-| Task 5 | B: Mac acceptance | No money is spent, and no package is cut, before the experience is right |
-| Task 6 | C: Cost and caption acceptance | The estimate and the caption quality are judged on evidence |
-| Task 7 | D: Exact package approval | Mark receives only a package Spenser tested and named |
+| Task 6 | B: Spenser's hands-on sandbox session | No money is spent, and no package is cut, before the experience is right. Demo Hydration comes first because the session needs real photographs to use |
+| Task 7 | C: Cost and caption acceptance | The estimate and the caption quality are judged on evidence |
+| Task 8 | D: Exact package approval | Mark receives only a package Spenser tested and named |
+
+**The eight tasks in order:** dependency viability (complete), safe app-owned
+state, Windows delivery spine, Photo Pilot backend, Photo Pilot frontend, Demo
+Hydration, bounded paid AI calibration, Windows package acceptance.
 
 ## Appendix: what this revision changed and why
 
@@ -1705,5 +2072,21 @@ legible without a diff.
 | `runtime.json` removed from the packaged tree, created after validation, outside the immutable set | The previous revision would have had the app invalidate its own package on first startup |
 | The manifest excluded from its own aggregate, and the aggregate defined over ordered paths, sizes, and contents | A file cannot hash itself, and the previous wording never said how the aggregate was computed |
 | Section 11 now states plainly what the check does not do | Without code signing it detects damage, not an adversary who rewrites files and manifest together. Saying so is better than implying otherwise |
-| Section 25: seven tasks and four approval gates | The document was all requirements and no sequence, so nothing said where to stop |
+| An execution plan added, seven tasks and four approval gates at the time | The document was all requirements and no sequence, so nothing said where to stop. It became Section 26 with eight tasks at the 2026-08-19 checkpoint below |
 | HEIC sequencing recorded in Section 1b | The defect is live on the Mac, so when it gets fixed had to be a decision rather than a drift |
+
+**Checkpoint of 2026-08-19, after Task 1.**
+
+| Change | Reason |
+|---|---|
+| Section 7 rewritten around the Task 1 evidence, as FACT with provenance | The runtime question was answered by measurement, so the section that framed it as open had to stop saying so |
+| CPython 3.14 recorded as the approved runtime direction | python.org stops publishing Windows embeddables at the bugfix boundary, leaving 3.9 through 3.12 missing 12, 10, 7, and 4 security releases, and 3.13 two months from the same cliff |
+| Section 7c: `httpx` is not test-only | `anthropic==0.121.0` requires it unconditionally. The old wording would have produced a package that fails only on Mark's machine |
+| The compiled set corrected from three packages to nine | `lxml` and `jiter` were never listed, and four uvicorn extras were treated as incidental |
+| The packaging script must derive the closure from resolved metadata | A hand-written list already lost `httpx` once, and a second hand-written list fails the same way somewhere new |
+| Stop condition 4a added | If the packaged runtime cannot import `anthropic` and its chain on Windows, trimming the closure is not the fix |
+| Section 25: two corpus classes and an app-owned AI policy | Sample-report photographs are real client imagery. The caption route consults no filename, so a naming convention would be enforced only by memory |
+| Definition of done, eight items, opening Section 26 | Working code, a green suite, and an existing zip were all being treated as if any one of them meant finished |
+| Task 6 Demo Hydration inserted, later tasks renumbered to eight | Gate B is a hands-on session and an empty demo job cannot be used hands-on |
+| Hydration targets the demo baseline, not the working folder | `demo.py` replaces the working folder wholesale, so hydrating it directly would be erased by the first Reset Demo |
+| Gate B moved after Task 6 and expanded into a real sandbox session | It had been placed before the task that makes it possible |

@@ -1,5 +1,16 @@
 async function j(res) {
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    // message is unchanged, so every existing caller keeps the sentence it
+    // already showed. What is added is the little the startup screen needs to
+    // tell one failure from another, and nothing more: the status line and the
+    // server's own flag. Deliberately not the whole body, so no future caller
+    // can reach through this and put server internals on a screen.
+    const err = new Error(body.detail || res.statusText);
+    err.status = res.status;
+    err.stateUnreadable = body.state_unreadable === true;
+    throw err;
+  }
   return res.json();
 }
 export const listJobs = () => fetch("/api/jobs").then(j);

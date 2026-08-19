@@ -110,8 +110,17 @@ def create_app() -> FastAPI:
         damaged settings file read as "he has not chosen a jobs folder yet",
         which is the first-run screen, so the app appeared to have forgotten
         his setup and offered no hint that anything had been lost.
+
+        `state_unreadable` is a flag for the screen, not a message. 409 alone
+        is not enough to identify this: `busy.Busy` answers 409 too, and the
+        screen would have to tell them apart by matching the sentence, which
+        would mean keeping a second copy of that sentence in JavaScript for it
+        to drift away from. The flag says which case this is; the sentence
+        stays in one place.
         """
-        return JSONResponse(status_code=409, content={"detail": exc.message})
+        return JSONResponse(status_code=409,
+                            content={"detail": exc.message,
+                                     "state_unreadable": True})
 
     @app.exception_handler(demo.DemoError)
     def demo_error_handler(_request, exc: demo.DemoError):

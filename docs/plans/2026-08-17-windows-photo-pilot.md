@@ -1842,6 +1842,45 @@ The original scope, kept for the record:
 
 Files this task may change: none in `app/`. It produced evidence, not code.
 
+### Task 2.1: Make the damaged-state message reach the screen. COMPLETE 2026-08-19
+
+**FACT, 2026-08-19.** Task 2 made the API tell the truth and the screen threw
+it away. `App.jsx` caught the failure with `.catch(() => ...)`, which discards
+the error, and substituted "Could not reach the app's server. Close this tab
+and start the app again." For a damaged settings file that was wrong twice: it
+named the wrong cause, and it sent Mark round a restart loop that cannot fix a
+file on disk.
+
+What changed:
+
+- The damaged-state response carries a `state_unreadable` flag as well as the
+  approved sentence, so the screen identifies the case rather than matching
+  text. 409 alone was not enough, because `busy.Busy` answers 409 too.
+- `api.js` attaches the status and that flag to the Error it already threw.
+  Its message is unchanged, so every existing caller keeps the sentence it
+  showed before.
+- `App.jsx` shows the server's sentence for that one flagged case, and the
+  existing connection message for everything else, including a fetch that
+  never got an answer.
+- The approved sentence is not copied into JavaScript. It lives in
+  `state.RECOVERABLE_MESSAGE` and is displayed from the response, so there is
+  no second copy to drift.
+
+**No automatic repair behaviour was added.** Task 2.1 explains the problem. It
+does not rename, delete, rewrite, or repair the file, and no route or control
+was added that would. Verified by eye on the real app against a deliberately
+malformed file in an isolated state folder: the sentence rendered, the file was
+unchanged afterwards, and no path, traceback, or parser text appeared.
+
+**Writer-version history was explicitly deferred**, 2026-08-19. Recording which
+version wrote each state file would let a rollback warn that a newer version's
+settings are being read by an older one. Spenser judged that unnecessary
+complexity for this pilot. **Schema versions remain the rollback protection**,
+and an unknown future schema is refused rather than truncated, which is the
+half that actually prevents data loss.
+
+**Task 3 remains unauthorized.**
+
 ### Task 2: Make app-owned state safe
 
 - The shared atomic-write helper of Section 6.

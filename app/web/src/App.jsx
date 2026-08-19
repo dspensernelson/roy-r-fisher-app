@@ -21,9 +21,19 @@ export default function App() {
   const [resetError, setResetError] = useState("");
   const [wsError, setWsError] = useState("");
 
+  // Two different failures, and they used to read the same. A damaged
+  // settings file is not an unreachable server, and telling Mark to restart
+  // the app would send him round a loop that cannot fix it. The server flags
+  // that one case; everything else, including a fetch that never got an
+  // answer, keeps the message it has always had. Only the flagged case shows
+  // the server's own sentence, so this is not a rule that puts any backend
+  // text on the startup screen.
+  const CANNOT_REACH = "Could not reach the app's server. Close this tab and start the app again.";
+
   useEffect(() => {
     getWorkspace().then(setWs)
-      .catch(() => setWsError("Could not reach the app's server. Close this tab and start the app again."));
+      .catch((e) => setWsError(
+        e && e.status === 409 && e.stateUnreadable && e.message ? e.message : CANNOT_REACH));
     getDemo().then(setDemo).catch(() => {});
   }, []);
 

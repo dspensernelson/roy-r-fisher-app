@@ -147,7 +147,11 @@ def test_the_route_answers_with_the_approved_sentence_and_no_detail():
     response = client.get("/api/workspace")
 
     assert response.status_code == 409
-    assert response.json() == {"detail": state.RECOVERABLE_MESSAGE}
+    # state_unreadable was added in Task 2.1 so the startup screen can tell
+    # this apart from a busy 409 without matching the sentence, which would
+    # mean keeping a second copy of it in JavaScript.
+    assert response.json() == {"detail": state.RECOVERABLE_MESSAGE,
+                               "state_unreadable": True}
 
     body = response.text
     assert "Traceback" not in body

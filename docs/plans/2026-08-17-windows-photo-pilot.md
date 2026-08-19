@@ -4,6 +4,10 @@ Written 2026-08-17 on branch `windows-photo-pilot`, cut from `main` at the
 Phase 0 merge (`5b7ee7c`). Authorized by the roadmap decision of 2026-08-17,
 "Mark receives an early Windows Photo Pilot, before the handoff bundle".
 Reconciled 2026-08-18 with the product decisions Spenser approved that day.
+Reconciled again 2026-08-18, after an independent technical review of the
+packaging, launcher, updater, and state design, with the six recommendations
+Spenser approved from it and the report photo optimization he approved
+alongside them.
 
 **Goal.** Mark receives a versioned Windows package that he unzips once,
 launches with one double-click, points at his jobs folder, sets up guarded AI
@@ -16,20 +20,27 @@ or PDF through COM. Not the complete handoff through Phase 3. Not Phase 5
 final packaging. No Description of Improvements work of any kind.
 
 **Status of this document.** A plan, not implementation authorization. The
-product decisions in it are approved. The technical design is not settled:
-every packaging, launcher, and updater proposal below is pending independent
-technical review, and none of it has run on Windows.
+product decisions in it are approved. The technical direction in it is now
+approved too, which is a change from the previous revision. Approval of a
+technical direction is not proof that it works and is not a record that it
+was built. Nothing in this document has run on Windows.
 
 ## How to read the labels
 
 This plan mixes things that are known with things that are not, so every claim
-carries one of four labels. Nothing unlabeled is load bearing.
+carries one of five labels. Nothing unlabeled is load bearing.
 
 - **FACT.** Verified in the code or on disk on the stated date, with a
   pointer.
 - **APPROVED.** A product decision Spenser has explicitly made.
-- **PROPOSAL.** A recommendation, not settled, and not authorization to build.
-- **OPEN.** An unresolved question. Whose it is, is stated with it.
+- **DIRECTION.** A technical approach Spenser has approved. Approved is not
+  proven and is not built. Every DIRECTION item still needs its tests to
+  pass before anything about it may be reported as working.
+- **UNPROVEN.** A Windows assumption nobody has tested. It becomes FACT only
+  after it has run on Windows.
+- **TEST.** Required before acceptance. Listed so no item can be quietly
+  dropped.
+- **OPEN.** Still unresolved. Whose question it is, is stated with it.
 
 ## Global constraints
 
@@ -42,35 +53,74 @@ carries one of four labels. Nothing unlabeled is load bearing.
   repository, and neither is ever copied in.
 - Never commit, log, display, or place the key in a job folder. Tests use fake
   keys only.
+- Never modify, replace, rename, move, or recompress one of Mark's original
+  photographs. See Section 12.
 - The suite must end green after every task: `python3 -m pytest app/tests -q`
 - Commits on this branch are recovery checkpoints. Nothing is pushed, opened
   as a pull request, or merged without Spenser's yes.
 
 ---
 
-## 1. What currently works unchanged
+## 1. What currently works
 
-**FACT**, inspected 2026-08-17 and 2026-08-18 at `5b7ee7c`. None of this needs
-changing for the pilot.
+**FACT**, inspected 2026-08-17 and re-verified 2026-08-18 at `c5d5da1`. This is
+the state of the code as it stands. Most of it needs no change for the pilot.
+Two rows do change and say so, so this table cannot be read as a promise that
+nothing in it moves.
 
 | Area | State | Evidence |
 |---|---|---|
-| Server and web on one port | `run_app.py` starts uvicorn on 127.0.0.1:8000 and `main.py` mounts `app/web/dist` at `/` | `main.py:517-542` |
+| Server and web on one port | `run_app.py` starts uvicorn on 127.0.0.1:8000 and `main.py` mounts `app/web/dist` at `/`. **This one changes:** the host stays 127.0.0.1, the fixed port 8000 does not survive Section 5b | `run_app.py:13`, `main.py:517-542` |
 | Jobs folder selection | Chosen on a screen, remembered in `~/.rrf-app.json` | `workspace.py:23,35-39` |
 | Key entry and display | Saved to `~/.rrf-app.env`, last four only ever reaches the browser | `settings.py:97-101` |
 | Key file robustness | Reads `export`, indented, and quoted forms; save and remove match all of them | `settings.py:62-79,120-143` |
 | Photo manifest and cuts | Reversible cuts, hand-editable manifest, 400 on malformed JSON | `photos.py`, Phase 0 Task 3 |
 | Photo document build | Real Word file from the shipped template | `photo_pages.build_photo_docx` |
-| Non-overwrite output | Counts up until a free name is found; never returns an existing filename | `photo_pages.next_output_name:54-69` |
+| Non-overwrite output | Counts up until a free name is found; never returns an existing filename. **This one changes:** the base name becomes an argument per Section 2. The counting loop and the safety do not change | `photo_pages.next_output_name:54-69` |
 | Windows-safe naming | `WINDOWS_FORBIDDEN` strip already used for folder names | `jobs.py:52,59` |
 | Home-folder paths | `Path.home()` for key, settings, classifications | `settings.py:28`, `workspace.py:39`, `classify.py:46` |
-| No Mac-only calls | No `subprocess`, `osascript`, or POSIX-only call anywhere in the app path | grep, 2026-08-17 |
+| No Mac-only calls | No `subprocess`, `osascript`, `os.system`, `pwd`, `fcntl`, `tkinter`, or `ctypes` anywhere in the app path. The one POSIX-only call, `chmod(0o600)`, is already wrapped and commented for Windows | grep 2026-08-18; `settings.py:42-47` |
 | Demo reset already off | `demo.enabled()` gates the route; the button never renders unconfigured | `main.py:113-125` |
+| Front end tolerates a missing demo route | `getDemo().then(setDemo).catch(() => {})`, so removing the route breaks no screen | `App.jsx:27` |
 
 Two consequences worth stating. The non-overwrite machinery already exists, so
 the filename work is a change of base name, not new safety. And every piece of
 app-owned state already lives in the home folder, outside the package, so
 versioned pilot updates preserve Mark's setup with no migration code.
+
+### 1a. What the independent review found that this plan had not recorded
+
+**FACT, 2026-08-18.** Four verified findings. Each one is acted on in a
+section below, named here so none of them can be lost.
+
+| Finding | Evidence | Acted on in |
+|---|---|---|
+| Only one of the three home-folder files is written safely. `classify.py` writes through a temporary file and `os.replace`. `workspace.py` and `settings.py` call `write_text` directly | `classify.py:63-79` versus `workspace.py:56-62` and `settings.py:38-47` | Section 6 |
+| An unreadable settings file is treated as no settings at all, silently, with no message to Mark | `workspace.py:48-52`, and the same shape at `classify.py:55-59` | Section 6 |
+| `busy.py` is a `threading.Lock`. It guards writes inside one process. Nothing guards two app processes writing the same home-folder files | `busy.py:31` | Section 5b |
+| The document builder embeds the original image file. `add_picture(path, width=...)` stores the file's own bytes in the package and sets only the displayed width | `photo_pages.py:75` | Section 12 |
+
+### 1b. A live defect found during the review
+
+**FACT, 2026-08-18.** A `.heic` file placed directly into a job's `Photos`
+folder makes Build fail today.
+
+`PHOTO_EXTS` accepts `.heic` (`jobs.py:9`), so the app lists such a file,
+thumbnails it, captions it, and includes it in the manifest. Build then hands
+it to `add_picture` (`photo_pages.py:75`), and python-docx recognises only
+PNG, JPEG, GIF, TIFF, and BMP by file signature. Verified against the pinned
+`python-docx==1.2.0` on 2026-08-18 by reading its `SIGNATURES` table. A HEIC
+raises `UnrecognizedImageError`.
+
+The reason this has not bitten yet is that the upload route converts HEIC to
+JPEG on the way in (`photos.py:230-235`), and testing has gone through upload.
+Mark copies photos into his own folders directly, which is the path that fails.
+
+This defect is fixed as a direct consequence of Section 12, because converting
+the document copy to RGB JPEG makes a HEIC source embeddable. It is recorded
+separately here so the fix is deliberate rather than incidental, and so the
+HEIC test in Section 7 is understood as testing a known failure rather than
+confirming a suspicion.
 
 ## 2. Output naming
 
@@ -101,6 +151,21 @@ available. It is offered on the New Job screen but not built (`README.md`,
 - Sanitize Windows-invalid filename characters.
 - Never overwrite an existing output. Create a numbered copy on collision.
 
+**DIRECTION, 2026-08-18. This is parsing, not lookup.** The brief stores one
+joined string, so recovering two values from it means splitting text. A street
+carrying a comma, a unit number, a hand-written brief, or a brief from the
+older onboarding skill can all split wrongly. The code must be written and
+described as a parser that can be wrong, not as a field read.
+
+Consequences that follow from that, and are required:
+
+- A confident wrong split produces a wrong filename, which is cheap and
+  visible. A missing value produces a refusal, which is also correct. Neither
+  may produce a guess drawn from the folder name.
+- Both parsed values are shown to Mark before Build, so a wrong split is
+  visible before it reaches a filename.
+- His correction is stored app-side and wins over the parse from then on.
+
 **What changes in code:**
 
 1. **A shared filename sanitizer.** `jobs.py:52-61` already strips
@@ -109,11 +174,24 @@ available. It is offered on the New Job screen but not built (`README.md`,
    the output namer call, so the two cannot drift.
 2. **`next_output_name` takes the base name.** Signature becomes
    `next_output_name(photos_dir, base)`. The counting loop is unchanged.
-3. **A reader for the two values,** from the brief, with a correction stored
+3. **A parser for the two values,** from the brief, with a correction stored
    app-side alongside classifications, outside Mark's folders.
 4. **Build refuses** when neither the brief nor a correction yields a city and
    an address. It does not guess, and it does not fall back to the old
    `Photo (RRF App)` name.
+
+**TEST, required before acceptance.** In `test_output_naming.py`:
+
+- A street containing a comma parses without silently losing the city.
+- A street containing a unit number parses without silently losing the city.
+- A brief with no city refuses rather than guessing.
+- A brief with neither value refuses rather than guessing.
+- A brief in the older onboarding skill's order does not produce a confidently
+  wrong pair without that being visible.
+- A stored correction wins over the parsed value.
+- A correction is stored outside the job folder and no job file is written.
+- Windows-forbidden characters are stripped from the final name.
+- An existing output produces a numbered copy and never an overwrite.
 
 **What is not changed.** The counting loop, the confinement checks, the
 template, and the layout engine. No existing generated output is touched.
@@ -127,7 +205,7 @@ template, and the layout engine. No existing generated output is touched.
 | Guardrail | Where |
 |---|---|
 | Key entered locally through Settings | `settings.save_key`, Settings screen |
-| No key ships in the package | Key lives in `~/.rrf-app.env`; Section 9 excludes every env file |
+| No key ships in the package | Key lives in `~/.rrf-app.env`; Section 10 excludes every env file |
 | Only availability and last four reach Settings | `settings.status()` returns exactly `key_set` and `ends_with` |
 | AI runs only after Mark asks | `POST /api/jobs/{name}/captions` fires from a button; nothing captions on open |
 | Manual captions always available | Only blank captions are drafted; anything typed is left alone (`main.py:389,405`) |
@@ -135,6 +213,7 @@ template, and the layout engine. No existing generated output is touched.
 | AI receives only approved job context | `manifest.get("context")` and nothing else |
 | No general filesystem access | Every path is resolved and confined to the job's `Photos` folder before opening |
 | Cannot move, rename, edit, or delete sources | The AI path opens images read-only and writes only the app-owned manifest |
+| AI never receives a full-size photograph | `captions.py:135-138` sends a 1024 pixel RGB JPEG made in memory. The original is never uploaded and never altered |
 | Never log the key | Handed to the client explicitly, never printed; no logging calls in the server path |
 
 ### 3b. Missing today
@@ -148,6 +227,7 @@ template, and the layout engine. No existing generated output is touched.
 | A run ceiling | Every blank photo goes in one request; a 60-photo job sends 60 images with no cap |
 | Retry control | SDK default retries apply implicitly; nothing is set |
 | A review state | `draft_job_captions` writes straight into the manifest with `save_manifest` (`main.py:403-407`). Nothing marks a caption unreviewed, and Build does not care |
+| Splitting | There is no splitting logic of any kind. One request, however many photos |
 
 ### 3c. The approved workflow
 
@@ -203,6 +283,48 @@ plainly that the dollar figure is the estimate, not a measurement. That is what
 "when provider usage data permits" means above. Resolved during implementation,
 recorded in a code comment, no product decision required.
 
+### 3d. Split runs and partial failure
+
+**FACT, 2026-08-18.** The 60-photo ceiling and the "one request when it fits"
+rule cannot both hold at 60 photos. Sixty images at any realistic size exceed a
+single provider request, so a full run will always split. The previous revision
+of this plan did not say what happens when one group of a split run fails, and
+that is money on the floor.
+
+**APPROVED, 2026-08-18.** The 60-photo ceiling remains. When a run must be
+split because of provider request-size constraints:
+
+- Each successful group's captions save immediately as unreviewed drafts,
+  before the next group is sent.
+- If a later group fails, every earlier group's paid work is kept.
+- Only the photos in the failed and unsent groups are left uncaptioned.
+- The screen shows which photos remain without a caption.
+- A deliberate `Retry remaining photos` action is offered.
+- Nothing retries automatically.
+- The retry estimate covers only the remaining photos, using the same
+  arithmetic as Section 3c.
+- Photos that already have a caption are never sent again and never charged
+  again.
+- Actual cost reporting distinguishes successful work from failed or unsent
+  work, when provider usage data permits.
+- Build remains governed by the per-photo review requirement in Section 3c.
+  Remaining uncaptioned photos are handled by typing a caption or by excluding
+  the photo, exactly as they are today.
+
+**TEST, required before acceptance.** In `test_caption_guards.py` and
+`test_caption_review.py`, all with a stand-in for the model so cost is zero:
+
+- 60 photos is accepted; 61 refuses before any request is attempted.
+- Failure before any group succeeds leaves every caption blank and reports
+  plainly. Nothing is marked reviewed and nothing is charged.
+- Failure after partial success keeps every successful caption as an unreviewed
+  draft and names the remaining photos.
+- A refresh after partial success still shows the successful captions.
+- A deliberate retry sends only the remaining photos, and the count and
+  arithmetic shown for that retry match only those photos.
+- A photo that already carries a caption is never included in a retry payload.
+- Retries are off at the client, so a failed request is attempted once.
+
 ## 4. API key and spending controls
 
 Two different things are involved and the plan keeps them apart, because only
@@ -230,10 +352,38 @@ are the hard financial guardrail, not because the app implements them.
 
 **What happens when the external limit is reached.** The app cannot see it
 coming. The request fails, and Mark sees the clear error and the deliberate
-retry from Section 3c, with no automatic retry burning further calls. That is
-the intended behavior, not a gap.
+retry from Sections 3c and 3d, with no automatic retry burning further calls.
+That is the intended behavior, not a gap.
 
-## 5. Version and update direction
+### 4a. Two different network failures currently read differently
+
+**FACT, 2026-08-18.** Saving a key and drafting captions do not fail the same
+way, and only one of them was written to degrade well.
+
+- Saving a key catches every non-authentication exception and stores the key
+  anyway, with "Saved, but we could not reach Anthropic to check it."
+  (`main.py:311-314`). A blocked network, a captive proxy, and a TLS-inspecting
+  corporate proxy all land here and read sensibly.
+- Drafting captions has no equivalent. Whatever the SDK raises is what
+  surfaces.
+
+So a blocked network does not produce the same clear message as a missing key.
+It produces a worse one, on the caption path only. That was an OPEN question in
+the previous revision. It is now answered and it is a defect to fix.
+
+**DIRECTION, 2026-08-18.** Caption failures are reported in plain language,
+naming which of these happened, without a traceback and without raw SDK text:
+
+- No key configured. Already handled; captions turn themselves off and say so.
+- The key was refused.
+- Anthropic could not be reached at all.
+- Anthropic was reached and refused the request, for example a spending limit.
+- The request was too large and could not be split further.
+
+**TEST.** Each of the five paths above produces its own plain sentence, with a
+stand-in for the model. No test uses a real key or makes a real request.
+
+## 5. Version identity, ports, and update direction
 
 **APPROVED, 2026-08-18:**
 
@@ -250,138 +400,498 @@ the intended behavior, not a gap.
   stable settings storage, port detection, and understandable startup
   failures.
 
-**Stated plainly:** the list above is a set of approved requirements. It is not
-proof that an updater architecture works, and it does not settle how any of it
-is built. Every mechanism proposed in Section 16 is a proposal pending
-independent technical review, and none of it has run on Windows.
-
 **FACT, 2026-08-18.** No version string exists anywhere in the app today. Not
-in `main.py`, not in `run_app.py`, not in `package.json`. Showing a version on
-every screen is entirely new work: a `VERSION` file in the package, an endpoint
-that reads it, and a place in the shared screen furniture that renders it.
+in `main.py`, not in `run_app.py`, not in `app/web/package.json`, which carries
+`name`, `private`, and `type` and no `version` field. Showing a version on
+every screen is entirely new work.
 
-**PROPOSAL for the last-good record, pending review.** Write it into the
-existing `~/.rrf-app.json`, which is already the app-owned settings file, rather
-than creating a fourth file in the home folder. Fewer files is fewer things to
-migrate, and the approved wording says app-owned settings. The reviewer may
-disagree; the record itself is approved, its location is not yet settled.
+### 5a. Version identity
 
-## 6. Embedded Python and dependencies
+**DIRECTION, approved 2026-08-18. Not built, not proven.**
 
-**PROPOSAL, pending independent technical review.** The Windows embeddable
-package (`python-3.12.x-embed-amd64.zip`). Suggested over 3.9 because 3.9 is
-past end of life and Windows wheel coverage for the pinned set is materially
-better on 3.12. The source stays 3.9 compatible per the roadmap, so this would
-be a runtime choice, not a language choice. Not settled.
+- A `VERSION` file sits at the package root and holds the version string.
+- A permanent `GET /api/version` endpoint returns the running version.
+- Shared screen furniture renders it on every screen.
+- The launcher uses `/api/version`, and never `/api/demo`, to identify the app.
+- Demo code and demo routes remain excluded from the shipped package, per
+  Section 10.
 
-**Assembly as currently imagined, all from the Mac:**
+**Why this replaced the previous proposal.** The previous revision had the
+launcher probe `/api/demo` and treat a JSON answer as "our app is up". Section
+10 removes `demo.py` and both demo routes from the package, so on Mark's
+machine that probe returns 404 and never JSON. The probe would have worked on
+Spenser's Mac and failed only on the machine that matters. `/api/version` is
+the correct probe because it is required by the approved version display
+anyway, it is never excluded, and unlike `/api/demo` it says *which* version
+answered.
 
-1. Download the embeddable zip and expand it into `build/windows/python/`.
-2. Edit `python312._pth` to uncomment `import site`, so a `site-packages`
-   directory is honoured. The embeddable distribution ignores it otherwise.
-3. Fetch Windows wheels without installing them locally:
-   `pip download -r app/server/requirements.txt --platform win_amd64 --python-version 3.12 --only-binary=:all: -d build/windows/wheels`
-4. Install those wheels into the package:
-   `pip install --no-index --find-links build/windows/wheels --target build/windows/python/site-packages -r app/server/requirements.txt`
+### 5b. Port and single instance
 
-**Risks, named now.** `uvicorn[standard]` pulls `uvloop`, which is POSIX-only
-and is skipped on Windows by its own environment marker; `httptools` and
-`watchfiles` do publish Windows wheels. `pillow`, `pillow-heif`, and
-`pydantic-core` are binary and must resolve as `win_amd64` wheels or step 3
-fails loudly. `pytest` and `httpx` are test-only and are not installed into the
-package.
+**FACT, 2026-08-18.** `run_app.py:13` hardcodes port 8000. `busy.py:31` is a
+`threading.Lock`, so it guards writes inside one process and nothing across
+two. Two app processes writing `~/.rrf-app.json` and
+`~/.rrf-classifications.json` are unguarded.
 
-**What this would prove and would not prove.** Step 3 failing on the Mac proves
-a wheel is unavailable. Step 3 succeeding does not prove the wheels import on
-Windows. That is a Windows acceptance item.
+**DIRECTION, approved 2026-08-18. Not built, not proven.**
 
-No dependency is installed and no download is performed during this planning
-checkpoint.
+- Bind to port `0` and let Windows select a free local port.
+- Keep the server bound to `127.0.0.1`, never `0.0.0.0`.
+- Record the chosen port in that version folder's own `runtime.json`, beside
+  the launcher, inside the package folder.
+- Open the browser at the port actually bound, never at an assumed port.
+- Before starting, inspect sibling version folders for a live RRF process, by
+  reading each `runtime.json` and probing the port it names.
+- The launcher must never accept another version's `/api/version` response as
+  success.
+- If another version is running, refuse to start and show a plain message
+  naming the running version and its folder.
+- Do not allow two versions to run simultaneously.
+- Do not use an unbounded port walk-up.
 
-## 7. How the built web interface enters the package
+**Why this replaced the previous proposal.** Two reasons, and both were live
+defects rather than preferences.
 
-**PROPOSAL, pending review.** `app/web/dist` is produced on the Mac by
+First, a version-blind probe breaks upgrade and rollback in both directions. If
+v2 is running and Mark double-clicks v1 to roll back, he gets v2. If v1 is
+running and he double-clicks v2 to upgrade, he gets v1. Both look like success,
+and the only clue is a version number nobody asked him to read.
+
+Second, the previous alternative, walking up from 8000 to the first free port,
+starts a second copy instead. Given `busy.py:31` that is not benign. It also
+has no terminating condition if a security product answers on every local port.
+Binding port 0 removes the walk-up loop entirely, makes versioned folders
+genuinely independent, and turns "am I already running" into a precise question
+answered by this version's own `runtime.json`.
+
+**UNPROVEN.** That Windows selects a usable loopback port under `bind(0)` on
+Mark's machine, that `runtime.json` is writable inside the package folder where
+he unzipped it, and that the sibling scan sees folders he may have moved or
+renamed. All three are Windows acceptance items.
+
+**TEST, on the Mac, in `test_launcher.py`:**
+
+- Binding port 0 yields a bound port and the browser target uses that port.
+- `runtime.json` is written with the bound port and is re-read correctly.
+- A sibling folder reporting a live port of a *different* version causes a
+  refusal, and the message names that version.
+- A sibling folder reporting a stale port that answers nothing does not cause a
+  refusal.
+- A port that answers but does not return this app's `/api/version` shape is
+  never treated as success.
+- A port that answers with a *different* version's string is never treated as
+  success.
+- There is no unbounded loop: interference on every probed port produces a
+  bounded, plain refusal rather than a hang. See Section 20.
+
+### 5c. Last-known-good
+
+**APPROVED product requirement:** the last successfully started version is
+recorded in app-owned settings.
+
+**DIRECTION, approved 2026-08-18. Not built, not proven.**
+
+- The record lives in its own file, `~/.rrf-app-version.json`.
+- It does **not** live inside `~/.rrf-app.json`.
+- A version counts as successfully started only when both hold:
+  1. `GET /api/version` on the bound port returns that exact version string.
+  2. The same process is still alive 20 seconds later.
+- The running server records that evidence itself, after the 20-second check,
+  not the launcher.
+- The record is diagnostic evidence for Spenser. Nothing consumes it
+  automatically.
+- Do not implement automatic rollback.
+- Rollback stays manual: close the current version, then launch the prior
+  version's folder.
+
+**Why the record moved out of `~/.rrf-app.json`.** That file is written every
+time Mark picks a folder or edits his active job list, it is written
+non-atomically (`workspace.py:56-62`), and a read failure returns empty
+silently (`workspace.py:48-52`). Putting the crash-recovery record inside the
+file most likely to be damaged by a crash is backwards. The previous revision
+chose it for "fewer files to migrate", which is the convenience argument and
+the weaker one. A fourth file is not meaningfully harder to keep stable, and
+the test asserting literal filenames covers four as easily as three.
+
+**Why the threshold is what it is.** Five weaker meanings of "started
+successfully" were considered and rejected:
+
+| Candidate meaning | Why it is not enough |
+|---|---|
+| The process started | A missing wheel makes the process start and die a second later |
+| The socket bound | Binding proves nothing about whether the app is importable |
+| The server answered one request | Another program answering on that port would be recorded as our success |
+| The browser opened and rendered | Not observable. Nothing reports back what the browser did |
+| Mark completed a real task | The honest meaning of good, but nothing in the app knows it and he would never confirm it |
+
+The version check is what stops another program's answer from counting. The
+20-second wait is what handles the case the requirement exists for, a version
+that starts and then fails: a lazily failing import, a missing template, or a
+crash on first work all surface inside that window. Longer risks Mark closing
+the window before the record is written; shorter sits inside the window where a
+lazy import failure is still pending.
+
+Writing it from the server rather than the launcher matters, because a launcher
+that exits after opening the browser cannot observe anything afterward, and
+would record a success it did not witness.
+
+**TEST, in `test_settings_survive_upgrade.py`:**
+
+- The four home-folder filenames are asserted as literals.
+- The last-good record round-trips.
+- A version answering `/api/version` with a different string never records
+  itself as good.
+- A process that exits before the 20-second mark never writes the record.
+- The record survives an upgrade and a rollback, both tested separately.
+
+## 6. Safe app-owned state
+
+**FACT, 2026-08-18.** The three existing home-folder files do not behave the
+same way, and the difference is not deliberate.
+
+| Path | Holds | Written by | Written how |
+|---|---|---|---|
+| `~/.rrf-app.env` | The Anthropic API key, mode 0600 where the OS supports it | `settings.py:38-47` | Direct `write_text`. No temporary file. No explicit encoding on read or write (`settings.py:35,41`) |
+| `~/.rrf-app.json` | The chosen jobs folder and the active job list | `workspace.py:23,35-39` | Direct `write_text`, encoding stated (`workspace.py:61`) |
+| `~/.rrf-classifications.json` | What Mark said each file is | `classify.py:46` | Temporary file then `os.replace` (`classify.py:63-79`). The only safe one |
+
+All resolve through `Path.home()` and all are overridable by environment
+variable for tests. None sits inside the repository or inside a job folder.
+
+**UNPROVEN.** That `Path.home()` resolves to Mark's Windows profile. The code
+fact is `Path.home()`. Where it lands on his machine is a Windows acceptance
+item, and the previous revision recorded it inside a FACT table, which was
+wrong.
+
+**FACT.** An unreadable settings file is currently treated as no settings at
+all, with no message (`workspace.py:48-52`). The comment there argues that
+asking Mark again costs ten seconds. That reasoning holds for a file that was
+never written. It does not hold for a file that was written and then damaged,
+where the same silence looks to him exactly like the app forgetting his setup.
+
+**DIRECTION, approved 2026-08-18. Not built, not proven.**
+
+- One shared atomic-write helper: write a temporary file in the same folder,
+  then `os.replace`. Lifted from `classify.py:63-79`, which already does it.
+- Apply it to all four: workspace settings, API-key configuration,
+  classifications, and last-known-good state.
+- Add a simple schema-version field to each structured JSON state file, so a
+  future version can refuse a file it does not understand rather than misread
+  it. One integer, not a migration framework.
+- A malformed or unreadable settings file produces a clear, recoverable error
+  naming the file and what to do, instead of silently behaving like first-time
+  setup.
+- Original job files and client files remain untouched by all of it. None of
+  this writes anything into one of Mark's folders.
+
+**TEST, required before acceptance:**
+
+- Interruption during a write leaves the previous file intact and readable, for
+  each of the four files.
+- A truncated or malformed file produces the clear recoverable error, and is
+  never mistaken for first-time setup.
+- A file carrying an unknown schema version is refused with a plain message
+  rather than misread.
+- Upgrade survival and rollback survival are tested **separately**, not as one
+  case, for each of the four files.
+- A fingerprint of the job folder before and after every state operation proves
+  no job file or client file was written, moved, renamed, or deleted.
+
+## 7. Embedded Python, dependencies, and the HEIC proof
+
+**DIRECTION, approved 2026-08-18. Not built, not proven.** The Windows
+embeddable package, assembled by the committed packaging script of Section 11.
+
+**The runtime version is not settled and must not be asserted.** The previous
+revision said Python 3.12 has better Windows wheel coverage than 3.9. Nothing
+measured that, and this revision withdraws the claim. The runtime version is
+decided by the first packaging proof below, not by assertion. The source stays
+Python 3.9 compatible per the roadmap either way, so this is a runtime choice
+and never a language choice.
+
+**The first packaging proof determines whether every pinned dependency has a
+compatible Windows wheel.** `pillow-heif==1.1.1` is checked first, because it
+bundles libheif, it is the least portable pin in
+`app/server/requirements.txt`, and Section 1b shows HEIC is on the live path.
+
+**FACT.** `uvicorn[standard]` pulls `uvloop`, which is POSIX-only and is
+skipped on Windows by its own environment marker. `httptools` and `watchfiles`
+do publish Windows wheels. `pillow`, `pillow-heif`, and `pydantic-core` are
+binary and must resolve as `win_amd64` wheels. `pytest` and `httpx` are
+test-only and are not installed into the package.
+
+**TEST. The seven explicit proofs, in this order:**
+
+1. **Download the targeted Windows wheels without installing them.** On the
+   Mac. `pillow-heif==1.1.1` first and on its own, so its answer is
+   unambiguous. Failure here proves a wheel is unavailable and settles the
+   runtime version question with evidence.
+2. **Assemble the self-contained runtime through the committed packaging
+   script** of Section 11. Never by hand-typed commands.
+3. **On Windows, import `uvicorn`, `PIL`, `pillow_heif`, `docx`, and
+   `pydantic_core`.** One command against the packaged interpreter, before any
+   app code runs.
+4. **Verify `Path.home()` resolves to the expected Windows user profile.**
+5. **Verify direct HEIC files open correctly.** A `.heic` placed straight into
+   a `Photos` folder, not uploaded through the app. Per Section 1b this fails
+   today, so this test starts red and proves Section 12 fixed it.
+6. **Verify Word opens the generated document.**
+7. **Verify the chosen runtime configuration and `._pth` behavior** rather than
+   assuming them. The embeddable distribution's import path is governed by its
+   `._pth` file, and whether the packaged `site-packages` is honoured is a
+   thing to observe on Windows, not to assume from documentation.
+
+**If HEIC support fails, stop and return evidence.** Do not silently remove
+HEIC support. Do not silently change runtime versions. Both are product
+decisions and neither belongs to the executor.
+
+**What step 1 proves and does not prove.** Step 1 failing proves a wheel is
+unavailable. Step 1 succeeding does not prove the wheels import on Windows.
+That is step 3, and it is a Windows acceptance item.
+
+**UNPROVEN, all of it.** Nothing in this section has run. No dependency is
+installed and no download is performed during this planning checkpoint.
+
+## 8. How the built web interface enters the package
+
+**DIRECTION, approved 2026-08-18.** `app/web/dist` is produced on the Mac by
 `cd app/web && npm ci && npm run build` and copied into the package as
-`app/web/dist`. Nothing else from `app/web` ships: no `src`, no `node_modules`,
-no `package.json`. Mark never has Node, and the packaging step fails loudly if
-`dist` is missing or older than `src`, rather than shipping a stale interface.
+`app/web/dist`. Nothing else from `app/web` ships: no `src`, no
+`node_modules`, no `package.json`. Mark never has Node, and the packaging
+script fails loudly if `dist` is missing or older than `src`, rather than
+shipping a stale interface.
 
 **FACT.** `main.py:522` already resolves `dist` relative to the server file, so
 the mount works unchanged inside a package laid out this way.
 
-## 8. The Windows launcher
+## 9. The Windows launcher
 
-**PROPOSAL, pending independent technical review. Not settled.** The logic
-lives in Python and the `.bat` is a thin shim. HOW-WE-WORK says nothing but
-Python runs on Mark's machine, and a port check written twice (once in bash,
-once in batch) is a defect waiting to happen, so `run_app.py` would grow the
-startup logic and both platforms would share it.
+**DIRECTION, approved 2026-08-18. Not built, not proven.** The logic lives in
+Python and the `.bat` is a thin shim. `HOW-WE-WORK.md` says nothing but Python
+runs on Mark's machine, and a port check written twice, once in bash and once
+in batch, is a defect waiting to happen. So `run_app.py` grows the startup
+logic and both platforms share it.
 
-`Start Roy R. Fisher.bat` would do three things: change to its own folder, run
+`Start Roy R. Fisher.bat` does three things: change to its own folder, run
 `python\python.exe app\run_app.py`, and `pause` on failure so the window stays
 open with the reason visible.
 
-`run_app.py` would gain, in order:
+`run_app.py` gains, in order:
 
-1. **Is it already running?** Probe `http://127.0.0.1:8000/api/demo`. A JSON
-   answer means our app is up: open the browser at it and exit 0 without
-   starting a second copy. This is what the `.command` does today with `curl`,
-   moved into Python.
-2. **Is the port occupied by something else?** If the probe connects but does
-   not answer as our app, walk up from 8000 to the first free port and use it.
-   The browser is opened at the port actually bound, never at 8000 by
-   assumption.
-3. **Start, then wait for a real answer.** **FACT:** today the browser opens on
-   a one-second timer (`run_app.py:12`), which is a guess. Instead poll the
-   bound port until it answers, up to a bounded timeout, then open the browser.
-   That is the whole of "never open a dead browser page".
-4. **Report failure in plain words.** If the server never answers within the
+1. **Verify the package before importing any third-party dependency.** The
+   manifest check of Section 11, in standard-library Python only. A missing or
+   truncated file is named in plain language and the app does not start. This
+   is first because `run_app.py:7` imports uvicorn at module scope today, so a
+   damaged package currently produces a traceback before any of our code can
+   speak.
+2. **Refuse if another version is running.** The sibling scan of Section 5b.
+   The message names the running version and its folder.
+3. **Detect this same version already running.** Read this folder's own
+   `runtime.json`, probe that port, and confirm `/api/version` returns this
+   exact version. If it does, open the browser at that port and exit 0 without
+   starting a second copy. A different version, or an answer that is not ours,
+   is never accepted as success.
+4. **Bind port 0 and record it.** Write the bound port to this folder's
+   `runtime.json`. Never assume 8000. Never walk up.
+5. **Start, then wait for a real answer.** **FACT:** today the browser opens on
+   a one-second timer (`run_app.py:12`), which is a guess. Instead poll
+   `/api/version` on the bound port until it answers with this version, up to a
+   bounded timeout, then open the browser. That is the whole of "never open a
+   dead browser page".
+6. **Record last-known-good after 20 seconds.** Section 5c. From the server, not
+   from here.
+7. **Report failure in plain words.** If the server never answers within the
    timeout, print what was tried, the port, and what to do next, then exit
    non-zero so the `.bat`'s `pause` holds the window open. No traceback as the
    only output.
 
-The Mac `.command` would be reduced to the same thin shim so both platforms
-take the same path.
+The Mac `.command` is reduced to the same thin shim so both platforms take the
+same path.
 
-## 9. Package contents and exclusions
+**Keep the console visible during the pilot.** A hidden console makes failure
+invisible, and the console is the only place a plain failure message can land.
+This is a pilot decision, revisited later.
 
-**PROPOSAL for the layout, pending review.** One versioned top folder so
+## 10. Package contents and exclusions
+
+**DIRECTION for the layout, approved 2026-08-18.** One versioned top folder so
 nothing overwrites a prior pilot:
 
 ```
 Roy R. Fisher v0.1.0/
-  Start Roy R. Fisher.bat
-  README FIRST.txt          plain instructions for Mark
-  VERSION                   the version string, read and shown on every screen
-  python/                   embedded runtime + site-packages
-  app/
-    run_app.py
-    data/  engine/  server/  templates/
-    web/dist/
+    Start Roy R. Fisher.bat
+    README FIRST.txt          plain instructions for Mark
+    VERSION                   the version string, read and shown on every screen
+    MANIFEST                  expected files and sizes, plus the aggregate hash
+    runtime.json              written at startup, holds the bound port
+    python/                   embedded runtime + site-packages
+    app/
+        run_app.py
+        data/  engine/  server/  templates/
+        web/dist/
 ```
 
 **Included:** `run_app.py`, `app/data`, `app/engine`, `app/server`,
 `app/templates`, `app/web/dist`, the embedded runtime, the launcher, the
-readme, the version file.
+readme, the version file, the manifest.
 
 **Excluded. The exclusion list itself is not a proposal: it is a requirement,
 and every line is asserted by a packaging test.**
 
 - `app/tests` and every test artifact
 - `app/web/src`, `app/web/node_modules`, `package.json`, `package-lock.json`
-- `app/server/demo.py` and the demo reset route (development-only control)
+- `app/server/demo.py` and both demo routes (development-only control)
 - `RRF Demo Jobs/` and any demo or client material
 - `brand/`, `docs/`, `.git/`, and anything from `Report Examples/` or `locker/`
 - `__pycache__/`, `.pytest_cache/`, `.DS_Store`
 - any `.env` file, any key, any cache, any thumbnail cache
 - `Start Roy R. Fisher.command` (the Mac launcher)
 
-Excluding `demo.py` means `main.py` must import it conditionally and register
-neither demo route when it is absent. **FACT:** `demo.enabled()` already gates
-the reset (`main.py:120-125`), so this is defence in depth: the control is
-gated and also not present.
+### 10a. Removing demo.py correctly
 
-## 10. Representing unfinished features honestly
+**FACT, 2026-08-18.** `demo.py` cannot simply be deleted from the package.
+`main.py:14` imports it unconditionally, and `main.py:98` references
+`demo.DemoError` inside an exception-handler decorator. Deleting the file makes
+the server fail to import at all, so the app would not start on Mark's machine.
+
+**DIRECTION, approved 2026-08-18.** Do not delete `demo.py` without also
+handling its imports and its exception reference:
+
+- Import it conditionally.
+- Register neither demo route when it is absent.
+- Do not register the `demo.DemoError` exception handler when it is absent.
+
+**FACT.** `demo.enabled()` already gates the reset (`main.py:120-125`), so
+absence from the package is defence in depth: the control is gated and also
+not present. And `App.jsx:27` already tolerates a missing route, so no screen
+breaks.
+
+**TEST.** A packaged tree with `demo.py` absent imports, starts, serves
+`/api/version`, and renders every screen. This test runs against output from
+the packaging script, per Section 11.
+
+## 11. Reproducible packaging and integrity check
+
+**FACT, 2026-08-18.** There is no packaging tooling of any kind in the
+repository. The previous revision described assembly as four commands typed by
+hand, and proposed a test asserting "against a built package tree" without
+naming anything that builds it. A test that checks an artifact no script
+produces is a test that gets run once.
+
+**DIRECTION, approved 2026-08-18. Not built, not proven.**
+
+- Package creation is performed by a **committed, repeatable packaging
+  script**, not by manual commands.
+- The script generates a package manifest during packaging.
+- The manifest identifies every expected packaged file and its size.
+- The script generates an aggregate SHA-256 integrity value over the package.
+- The launcher validates the package against the manifest **before importing
+  any third-party dependency**, per Section 9 step 1.
+- Missing, truncated, or corrupt files produce a plain-language error naming
+  the problem and the file.
+- **Mark performs no manual checksum comparison.** The check is the launcher's
+  job, never his. A checksum he is asked to compare is a second step on his
+  machine, which the roadmap calls a defect. A checksum nobody checks is
+  decoration. The launcher doing it himself is neither.
+- The console stays visible during the pilot so those messages are readable.
+
+**Not in this pilot, by decision:** no MSI, no registry integration, no Windows
+service, no automatic updater, no automatic rollback, no code signing.
+
+**Why sizes plus one aggregate hash, and not a hash per file.** A package with
+an embedded runtime holds thousands of `site-packages` files. Per-file hashing
+would make every startup slow for no added protection that matters here. Sizes
+catch truncation, which is what an interrupted extraction produces. The
+aggregate hash catches corruption. Neither asks Mark for anything.
+
+**TEST, required before acceptance.**
+
+- `test_package_manifest.py` runs **against output produced by the committed
+  packaging script**, never against a hand-assembled tree. This replaces the
+  previous revision's manually-assembled-tree test.
+- The manifest includes every required path from Section 10.
+- The manifest excludes every path in the Section 10 exclusion list, asserted
+  line by line.
+- A deliberately truncated file in a copied package is detected and named.
+- A deliberately missing file in a copied package is detected and named.
+- A byte-level corruption that preserves file size is caught by the aggregate
+  hash.
+- Validation happens before any third-party import, proven by removing a
+  required wheel and confirming the plain message appears rather than an
+  `ImportError` traceback.
+- Running the packaging script twice produces the same manifest.
+
+## 12. Report photo optimization
+
+**FACT, 2026-08-18.** The document builder embeds the original image file.
+`photo_pages.py:75` calls `add_picture(str(image_path), width=Inches(4.0))`.
+python-docx stores the file's own bytes inside the `.docx` package and the
+`width` argument sets only the displayed size in the document XML. A 6 MB phone
+photograph displayed at four inches is still 6 MB inside the document.
+
+**FACT.** The two existing downscale paths do not help, because neither touches
+the document:
+
+| Path | What it makes | Where it goes |
+|---|---|---|
+| AI captioning | 1024 px RGB JPEG, quality 85, in memory | Sent to the model. Never written to disk, never used by the builder (`captions.py:135-138`) |
+| Screen thumbnails | `THUMB_PX` = 1024 JPEG, quality 85 | The app's own thumbnail cache, for the browser only (`photos.py:429-431`, `photos.py:28`) |
+| HEIC upload conversion | Full-resolution JPEG, quality 92 | Written into the `Photos` folder, and only on the upload route (`photos.py:230-235`). Photos Mark copies in himself never pass through it |
+
+So the AI thumbnail is already separate and does not solve Word or PDF size.
+
+**APPROVED, 2026-08-18. The originals are never touched.**
+
+- Never modify, replace, rename, move, or recompress an original photograph.
+- Create temporary optimized copies solely for document assembly.
+- Apply EXIF orientation before resizing.
+- Convert embedded report copies to RGB JPEG.
+- Limit the longest edge to 1,600 pixels.
+- Use JPEG quality 85.
+- Never enlarge a smaller image.
+- Use the optimized copies in the generated Word document.
+- Remove temporary copies after a successful build and after a failed one.
+- HEIC, JPEG, and photographic PNG inputs all follow the same
+  document-optimization path.
+- Existing output collision protection remains in force, per Section 2.
+
+**FACT, worth stating plainly.** Nothing in the app path applies EXIF
+orientation today. `photo_pages.exif_order` reads `DateTimeOriginal` for
+ordering (`photo_pages.py:37-51`) and never reads the orientation tag, and
+grep finds no `exif_transpose` anywhere in `app/server` or `app/engine`. So
+applying orientation before resizing is new behavior, not a restatement of
+something already happening. A rotated phone photograph may therefore appear
+differently in the built document after this change than before it, and that
+difference is a correction.
+
+**This also fixes the live defect in Section 1b.** Converting the document copy
+to RGB JPEG makes a directly-placed HEIC embeddable, because python-docx will
+then be handed a JPEG it recognises rather than a HEIC it does not.
+
+**TEST. The acceptance plan must:**
+
+- Fingerprint every original photograph before and after building, and prove
+  each one is byte-for-byte unchanged. This is the first test, not the last.
+- Prove no original was renamed, moved, or deleted, and that the temporary
+  copies are gone after a successful build and after a failed one.
+- Compare generated DOCX size before and after optimization, and record both.
+- Open the DOCX in Windows Word.
+- Export or save the document to PDF through the available Windows Word
+  workflow, and record the PDF size.
+- Visually compare representative photographs in Word and in the PDF against
+  the originals.
+- Cover landscape, portrait, rotated EXIF, HEIC, JPEG, PNG, small images, and
+  very large phone photographs.
+- Treat visual acceptance and measured file size as **separate evidence**. A
+  smaller file is not a claim about how it looks.
+- **Do not claim "no visible quality loss" until Spenser completes the screen
+  review.** Measured size may be reported before then. Appearance may not.
+
+**A note on the PDF step.** Producing a PDF here is Mark saving from his own
+Word by hand, as part of acceptance. It is not the Office bridge, it is not
+COM automation, and it says nothing about Phase 1. It exists only to measure
+what the optimization does to a delivered-shaped file.
+
+## 13. Representing unfinished features honestly
 
 **APPROVED, 2026-08-18:**
 
@@ -409,15 +919,45 @@ report needs and says plainly that only photos build (`README.md`). So the
 honest-representation problem is partly solved already, and the pilot's job is
 to make the boundary unmistakable rather than to invent a new listing.
 
-**PROPOSAL: smallest placement, pending review.** One band at the bottom of the
-job screen (`JobHome.jsx`), below the folder bands, titled `Planned workflows`,
-holding one plain non-interactive row. Reasons: the job screen is the one
-screen Mark returns to, the folder bands above it already establish the band
-pattern, and a row there cannot be confused with an action because the actions
-on that screen sit at the top on the title's row, per HOW-WE-WORK. No new route
-and no new screen. Not implemented in this checkpoint.
+**DIRECTION for the smallest placement, approved 2026-08-18.** One band at the
+bottom of the job screen (`JobHome.jsx`), below the folder bands, titled
+`Planned workflows`, holding one plain non-interactive row. Reasons: the job
+screen is the one screen Mark returns to, the folder bands above it already
+establish the band pattern, and a row there cannot be confused with an action
+because the actions on that screen sit at the top on the title's row, per
+`HOW-WE-WORK.md`. No new route and no new screen. Not implemented in this
+checkpoint.
 
-## 11. The testing ground
+## 14. Delivery to Mark
+
+**APPROVED, 2026-08-18.** The pilot package reaches Mark through a **private
+download link**.
+
+**Why this matters technically, and is not just logistics.** A zip downloaded
+through a browser carries the Mark of the Web, and Windows propagates that
+marking to the files extracted from it. An unsigned `.bat` extracted from a
+marked zip is the case most likely to be stopped by SmartScreen. A package
+copied from a shared folder or a USB stick usually carries no such marking, so
+testing that way would pass while the real path fails.
+
+**TEST. The acceptance test uses the same delivery path Mark will use:**
+
+- Download through a browser on Windows.
+- Extract with Windows Explorer's own built-in extraction.
+- Preserve the real Mark-of-the-Web and SmartScreen behavior. Do not strip the
+  marking, do not unblock the zip first, and do not extract with a third-party
+  tool that behaves differently.
+- **Do not test only through a shared folder or a USB path that avoids the real
+  download behavior.** Such a test proves nothing about what Mark will see.
+- Record the exact prompts Mark sees, word for word, including which button is
+  hidden behind "More info".
+- Spenser is present by screen share for the first installation.
+- **One SmartScreen confirmation is acceptable for this pilot only.** It is a
+  knowing exception to the "anything that needs two steps on his machine is a
+  defect" rule, taken because code signing is out for this pilot.
+- Reconsider code signing before any wider distribution.
+
+## 15. The testing ground
 
 **APPROVED, 2026-08-18.** A repeatable acceptance environment, in this order:
 
@@ -434,274 +974,329 @@ and no new screen. Not implemented in this checkpoint.
 **How the block at 61 is proven without spending anything.** The ceiling is
 checked before the client is constructed, so the refusal path never reaches the
 network. The test asserts the refusal and asserts that no request was
-attempted, using a stand-in for the model per HOW-WE-WORK's list of three
+attempted, using a stand-in for the model per `HOW-WE-WORK.md`'s list of three
 external conditions that may be stood in for. Cost of that test: zero.
 
 **Synthetic photos.** Generated with Pillow, the way
 `test_shipped_template.py` already does. They prove the mechanics of counting,
-batching, refusing, reviewing, and naming. **They prove nothing about caption
-quality**, which needs real photographs and is why item 6 exists.
+batching, refusing, reviewing, naming, and optimizing. **They prove nothing
+about caption quality**, which needs real photographs and is why item 6 exists.
+They also prove nothing about how an optimized photograph looks, which is why
+Section 12 requires Spenser's screen review on real images.
 
-## 12. Acceptance checklist
+## 16. Acceptance checklist
 
-**APPROVED, 2026-08-18.** Seventeen items. The pilot is not proven until every
-one passes.
+**APPROVED, 2026-08-18.** The pilot is not proven until every one passes.
 
-1. Clean installation and first launch.
-2. Jobs-folder selection.
-3. API-key setup, and behavior with no key present.
-4. Estimated cost shown before the request.
-5. Actual cost or usage shown afterward.
-6. Caption generation, and drafts persisting immediately.
-7. Refresh and restart without losing paid caption work.
-8. One-click review of every included caption.
-9. Editing a reviewed caption resets its status.
-10. Excluded photos do not block Build.
-11. Build stays blocked while included captions remain unreviewed.
-12. Exact output filename, and collision behavior.
-13. Clear failure with no automatic retry.
-14. Visible version number.
-15. Upgrade from one test version to another without losing settings.
-16. Rollback to the last working version.
-17. Automated tests, a real screen walkthrough, and a real Windows-machine
+**Installation and startup**
+
+1. Clean installation and first launch, through the Section 14 delivery path.
+2. The exact SmartScreen and Mark-of-the-Web prompts, recorded word for word.
+3. Package validation catches a truncated file and names it in plain language.
+4. Visible version number on every screen, matching the folder launched.
+5. Launching a second version while one runs is **refused**, and the message
+   names the running version.
+6. Jobs-folder selection.
+
+**Captions**
+
+7. API-key setup, and behavior with no key present.
+8. Estimated cost shown before the request.
+9. Actual cost or usage shown afterward.
+10. Caption generation, and drafts persisting immediately.
+11. A split run that fails partway keeps every successful group's captions.
+12. Deliberate retry sends only the remaining photos.
+13. Refresh and restart without losing paid caption work.
+14. One-click review of every included caption.
+15. Editing a reviewed caption resets its status.
+16. Excluded photos do not block Build.
+17. Build stays blocked while included captions remain unreviewed.
+18. Clear failure with no automatic retry, in plain language, for each of the
+    five failure kinds in Section 4a.
+
+**Document**
+
+19. Exact output filename, and collision behavior.
+20. Originals proven byte-for-byte unchanged after every build.
+21. Temporary optimized copies removed after a successful and a failed build.
+22. A directly-placed HEIC builds successfully (currently fails, per Section 1b).
+23. DOCX size recorded before and after optimization.
+24. Word opens the document on Windows.
+25. PDF produced by hand from Word, and its size recorded.
+26. Spenser's visual review across landscape, portrait, rotated EXIF, HEIC,
+    JPEG, PNG, small, and very large photographs.
+
+**State**
+
+27. Upgrade from one test version to another without losing settings.
+28. Rollback to the last working version, launched only after the current one
+    is closed.
+29. Upgrade survival and rollback survival evidenced **separately** for each of
+    the four state files.
+30. A malformed settings file produces a clear recoverable error and is not
+    mistaken for first-time setup.
+31. The last-known-good record reflects the version that actually ran, and a
+    version that dies inside 20 seconds never records itself.
+
+**Evidence discipline**
+
+32. Automated tests, a real screen walkthrough, and a real Windows-machine
     acceptance test remain separate evidence. One never stands in for another.
+33. Measured file size and visual acceptance remain separate evidence. Size may
+    be reported before Spenser's screen review; appearance may not.
 
-**No paid API test and no Windows installation test is performed during this
-planning checkpoint.**
+**No paid API test, no Windows installation test, no packaging, and no
+implementation is performed during this planning checkpoint.**
 
-## 13. Mac regression tests
+## 17. Mac regression tests
 
 Everything below runs on the Mac and must be green before any package is sent.
 
 | Test file | Proves |
 |---|---|
 | existing suite | Nothing regressed. Baseline at branch point: 320 passed, 15 skipped |
-| `test_output_naming.py` | The base name comes from the brief or a stored correction, never the folder name; Windows-forbidden characters are stripped; an existing file produces a numbered copy; a missing value refuses rather than guesses |
+| `test_output_naming.py` | The Section 2 parsing cases: commas, unit numbers, missing values, older brief order, stored corrections winning, Windows-forbidden characters, numbered copy on collision, refusal rather than a guess |
 | `test_caption_guards.py` | 60 is the ceiling; 61 refuses before any request is attempted; retries are off; the count and the $0.05 arithmetic shown before sending match what would be sent |
+| `test_caption_split.py` | Section 3d: failure before any group succeeds, failure after partial success, refresh after partial success, deliberate retry of only remaining photos, and no photo sent twice |
+| `test_caption_errors.py` | Section 4a: each of the five failure kinds produces its own plain sentence, with a stand-in for the model |
 | `test_caption_review.py` | Drafts save immediately as unreviewed; a review marks one caption; editing a reviewed caption resets it; excluded photos never block; Build refuses while an included caption is unreviewed |
-| `test_package_manifest.py` | The packaging list includes every required path and excludes every path in Section 9, asserted against a built package tree |
-| `test_launcher.py` | Port selection picks a free port, detects our own running app, and never reports success without a real answer |
-| `test_settings_survive_upgrade.py` | The three home-folder filenames are exactly as named, and the last-good version record round-trips |
+| `test_package_manifest.py` | Run against output from the committed packaging script: every required path present, every Section 10 exclusion absent, truncation detected, missing file detected, corruption caught by the aggregate hash, validation before any third-party import, and a repeatable manifest |
+| `test_launcher.py` | Section 5b: bind port 0, record and re-read `runtime.json`, refuse on a live sibling of another version, ignore a stale sibling, never accept a foreign or wrong-version answer, bounded refusal under interference |
+| `test_settings_survive_upgrade.py` | Section 5c and 6: four literal filenames, last-good round-trip, no record from a process that dies inside 20 seconds, upgrade and rollback survival tested separately |
+| `test_state_atomicity.py` | Section 6: interrupted writes leave the previous file intact for all four files; malformed files produce a clear recoverable error; an unknown schema version is refused |
+| `test_photo_optimization.py` | Section 12: originals unchanged by fingerprint, temporary copies removed on success and failure, EXIF orientation applied, longest edge capped at 1,600, quality 85, smaller images never enlarged, HEIC and JPEG and photographic PNG all take the same path |
 | `test_file_safety.py` (existing) | Still green. Never weakened |
 
-## 14. Provable on the Mac, versus requires Windows
+## 18. Provable on the Mac, versus requires Windows
 
 **Provable on the Mac:** every guardrail's logic, the ceiling and the refusal
-at 61, the cost arithmetic, the review state machine, the filename rules, the
-non-overwrite behavior, the port selection and failure reporting, the package
-contents and exclusions, the wheel availability for `win_amd64`, and the whole
-existing suite.
+at 61, the split and partial-failure behavior, the cost arithmetic, the review
+state machine, the filename parsing rules, the non-overwrite behavior, the
+port-0 bind and sibling-refusal logic, the failure reporting, the manifest
+generation and validation, the atomic-write behavior, the photo optimization
+mechanics and the originals-unchanged fingerprint, the wheel availability for
+`win_amd64`, and the whole existing suite.
 
 **Requires Windows, and is honestly unproven until then:** that the embedded
-runtime starts at all, that the binary wheels import, that the `.bat`
-double-click works from an unzipped folder, that the browser opens, that Word
-opens the output, that `Path.home()` resolves to his profile as expected, and
-that a second unzipped version runs without disturbing the first.
+runtime starts at all, that the `._pth` configuration honours the packaged
+`site-packages`, that the binary wheels import, that `pillow-heif` decodes a
+real HEIC there, that the `.bat` double-click works from an Explorer-extracted
+folder carrying the Mark of the Web, what SmartScreen actually says, that the
+browser opens, that Word opens the output, that `Path.home()` resolves to his
+profile, that `bind(0)` yields a usable loopback port, that `runtime.json` is
+writable where he unzipped, and that a second version is refused rather than
+started.
 
 **Requires a real paid run:** whether the $0.05 estimate is close, and caption
 quality on real photographs.
 
+**Requires Spenser's own eyes:** whether the optimized photographs look right
+in Word and in the PDF.
+
 No report will say the pilot works on Windows before it has run on Windows.
 
-## 15. Rollback
+## 19. Rollback
 
-**PROPOSAL, pending review.** The package is versioned and self-contained, and
-every piece of Mark's state lives outside it. So rollback would be: keep the
-previous version's folder, and double-click its launcher instead. Nothing is
-uninstalled, nothing is migrated, and no state is lost in either direction. The
-last-good version record from Section 5 exists so a report can say which
-version actually last started.
+**DIRECTION, approved 2026-08-18.** The package is versioned and
+self-contained, and every piece of Mark's state lives outside it. So rollback
+is: keep the previous version's folder, close the current version, and
+double-click the previous version's launcher.
 
-The instruction to Mark would be one line in `README FIRST.txt`: keep the
-previous folder until the new one has worked once.
+Closing first is not optional. Section 5b refuses to start a second version
+while one is running, so a rollback attempted without closing produces the
+refusal message rather than a silent wrong-version launch.
+
+The last-good record from Section 5c exists so a report can say which version
+actually last started. It is evidence for Spenser. Nothing consumes it
+automatically, and there is no automatic rollback.
+
+The instruction to Mark is one line in `README FIRST.txt`: keep the previous
+folder until the new one has worked once.
 
 There is no automatic updater in this slice, by decision. During the pilot
 Spenser installs updates; Mark does not.
 
-## 16. Updater and packaging: technical review
+## 20. Windows risks
 
-**Everything in this section is a proposal pending independent technical
-review. None of it is settled, and none of it has run on Windows.** The
-reviewer may identify risks and alternatives. The reviewer may not make product
-decisions.
-
-### 16a. Current startup and installation behavior
-
-**FACT, 2026-08-18:**
-
-- There is no installation. The app runs from a git clone.
-- `Start Roy R. Fisher.command` is bash: it `cd`s to its own folder, probes
-  `http://127.0.0.1:8000` with `curl`, opens the browser with `open` if the app
-  answers, otherwise runs `python3 app/run_app.py`.
-- `run_app.py` is 13 lines. It hardcodes port 8000, opens the browser on a
-  1.0 second `threading.Timer`, and calls `uvicorn.run`.
-- There is no port-conflict handling, no readiness check, no failure message,
-  and no exit code discipline.
-- There is no packaging tooling of any kind in the repository.
-- There is no version string anywhere.
-
-### 16b. Where settings and secrets currently live
-
-**FACT:**
-
-| Path | Holds | Written by |
-|---|---|---|
-| `~/.rrf-app.env` | The Anthropic API key, mode 0600 where the OS supports it | `settings.py:38-47` |
-| `~/.rrf-app.json` | The chosen jobs folder and the active job list | `workspace.py:23,35-39` |
-| `~/.rrf-classifications.json` | What Mark said each file is | `classify.py:46` |
-
-All three resolve through `Path.home()`, which is correct on Windows, and all
-three are overridable by environment variable for tests. None sits inside the
-repository or inside a job folder.
-
-### 16c. What must remain stable between versions
-
-The three paths in 16b, their filenames, and their on-disk shapes, plus the
-approved last-good version record. A version that renames or reshapes any of
-them silently loses Mark's setup, which is acceptance item 15.
-
-**PROPOSAL.** Treat those filenames as a compatibility surface: a test asserts
-the literal names, so a rename becomes a deliberate act with a migration
-attached rather than an accident.
-
-### 16d. Version-folder and last-known-good concepts
-
-**APPROVED product requirement:** the last successfully started version is
-recorded in app-owned settings.
-
-**PROPOSAL for how, not settled:**
-
-- Each release unzips to its own `Roy R. Fisher vX.Y.Z/` folder. Nothing
-  overwrites a prior version, which would be the whole rollback mechanism.
-- The record lives in the existing `~/.rrf-app.json` rather than a fourth
-  home-folder file, per Section 5.
-- "Last known good" is whichever version folder last started successfully.
-  Since state is external, that is a folder to re-launch, not a state to
-  restore.
-- **OPEN, for the reviewer.** What counts as "started successfully". Bound to
-  the port, or answered one request, or rendered one screen. The three differ,
-  and the weakest of them would record a version that starts and then fails.
-
-### 16e. Update download, integrity, and rollback questions
-
-**OPEN, all of them, and all deliberately unanswered here:**
-
-- How the package reaches Mark. Email attachment, a link, a shared folder. Each
-  has a different failure mode and a different size limit, and a package with
-  an embedded runtime is not small.
-- Whether integrity is verified at all, and how. A checksum Mark is asked to
-  compare is a second step on his machine, which HOW-WE-WORK calls a defect.
-  A checksum nobody checks is decoration.
-- Whether an interrupted unzip can be detected. A partial extraction that still
-  contains a launcher is the dangerous case: it starts, and then fails
-  somewhere less obvious.
-- **PROPOSAL toward that last one, pending review:** the launcher verifies a
-  small manifest of expected files before starting, and refuses with a plain
-  message naming what is missing. Cheap, local, no network, and it would turn a
-  confusing runtime failure into an understandable startup failure.
-
-### 16f. Windows risks
-
-**Risks, not yet mitigated and not yet measured:**
+**UNPROVEN, none of these measured:**
 
 - **Antivirus and SmartScreen.** An unsigned `.bat` that launches a bundled
   `python.exe` and opens a listening socket is a recognisable pattern to
-  endpoint protection. It may be blocked, quarantined, or delayed.
-  **APPROVED, 2026-08-18:** do not purchase or require code signing for Mark's
-  pilot. Reconsider it before wider distribution. So this risk is accepted for
-  the pilot, and mitigation, if any is needed, is procedural: Spenser is present
-  by screen share when Mark first launches it.
+  endpoint protection. It may be blocked, quarantined, or delayed. It presents
+  in at least three different ways: the "Windows protected your PC" dialog with
+  the real button behind "More info"; `python.exe` quarantined so the `.bat`
+  reports it cannot find the file; or a delay long enough that the startup
+  timeout fires first. **APPROVED, 2026-08-18:** do not purchase or require
+  code signing for Mark's pilot. Reconsider it before wider distribution. The
+  mitigation is procedural: Spenser is present by screen share, and one
+  SmartScreen confirmation is accepted for this pilot only, per Section 14.
+- **Firewall prompt, and why it is the least likely of the three.** The server
+  binds `127.0.0.1` and never `0.0.0.0` (`run_app.py:13` today, preserved by
+  Section 5b). Windows Defender Firewall generally does not prompt for
+  loopback-only binds. This is a concrete reason never to change that bind
+  address, and it is recorded so a future change does not make it quietly.
 - **Permissions.** Unzipping into `Program Files` needs elevation and would
-  break the write-nothing-inside-the-package assumption. Mark should unzip into
+  break the write-nothing-inside-the-package assumption, which Section 5b now
+  depends on because `runtime.json` is written there. Mark should unzip into
   his own profile, for example the Desktop or Documents. That belongs in
   `README FIRST.txt`.
-- **Port conflict.** Section 8's walk-up would handle a busy 8000. Not handled:
-  a corporate proxy or a security product that intercepts localhost traffic.
+- **Local-port and security-software interference.** A corporate proxy or a
+  security product may intercept localhost traffic and answer on ports the app
+  did not bind. **DIRECTION, approved 2026-08-18:** the failure path is bounded
+  and plain. A fixed, small number of probe attempts, then a refusal naming
+  what was tried and what answered wrongly. Never an unbounded loop, and never
+  treating a foreign answer as success. **TEST:** interference on every probed
+  port produces a bounded plain refusal rather than a hang.
 - **Path length.** A deep unzip location plus `site-packages` plus long wheel
   paths can approach the legacy 260 character limit on machines where long
   paths are not enabled. Mitigated by unzipping near the top of the profile,
-  and worth an explicit check in the manifest verification above.
-- **Blocked outbound HTTPS.** Captions need `api.anthropic.com`. If it is
-  blocked, the app must degrade to typed captions and say so, which it already
-  does when no key is present. **OPEN:** whether a blocked network produces the
-  same clear message as a missing key, or a worse one.
+  and checked explicitly by the manifest validation of Section 11.
+- **Blocked outbound HTTPS.** Captions need `api.anthropic.com`. Section 4a now
+  records what actually happens today: the key-save path degrades well and the
+  caption path does not. Fixing the caption path is required, not optional.
 
-### 16g. The smallest technical spike that would prove the design
+## 21. The smallest technical spike
 
-**PROPOSAL, pending review.** One spike, on Windows, before any pilot feature
-work:
+**DIRECTION, approved 2026-08-18.** One spike, on Windows, before any pilot
+feature work:
 
-Assemble a package containing the embedded runtime, the installed wheels, the
-built interface, and today's unmodified app. Unzip it on Windows. Double-click.
-Confirm the browser opens the working app, that the three home-folder files
-appear in Mark's profile, and that stopping and restarting works. Then unzip a
-second copy beside it and confirm both run and share the same settings.
+Assemble a package with the committed packaging script of Section 11,
+containing the embedded runtime, the installed wheels, the built interface, and
+today's unmodified app plus the `VERSION` file, the `/api/version` endpoint, the
+port-0 bind, and the manifest check. Deliver it through the Section 14 path.
+Unzip it on Windows with Explorer. Double-click. Confirm the browser opens the
+working app on the bound port, that the version shown matches the folder, that
+the state files appear in Mark's profile, and that stopping and restarting
+works. Then unzip a second version beside it and launch it.
 
-**What that spike would settle:** the embedded runtime, the binary wheels, the
-launcher, the browser open, `Path.home()`, and the versioned-folder rollback
-premise. Six of the largest unknowns, with no pilot feature code written and no
-paid API call.
+**The success criterion for the second copy, corrected.** The previous revision
+said "confirm both run and share the same settings". That was scoring a
+corruption test as a pass, given `busy.py:31`. The criterion is now:
 
-**What it would not settle:** captions, cost, filenames, review state, or
-anything about Office.
+> The second launch is **refused**, and the displayed version matches the
+> folder launched.
 
-### 16h. Alternatives and tradeoffs where the answer is not proven
+**What that spike would settle:** the embedded runtime, the `._pth` behavior,
+the binary wheels including `pillow-heif`, the launcher, the manifest check,
+the browser open, `Path.home()`, `bind(0)`, `runtime.json` writability, the
+real SmartScreen prompts, and the versioned-folder rollback premise with its
+single-instance guard. Most of the largest unknowns, with no pilot feature code
+written and no paid API call.
 
-| Question | Options | Tradeoff |
+**What it would not settle:** captions, cost, split-run failure, filenames,
+review state, photo optimization appearance, or anything about Office.
+
+## 22. Alternatives and tradeoffs
+
+Where the technical direction is now approved, the rejected option is recorded
+with it, so a later session does not relitigate it and does not mistake the
+decision for an accident.
+
+| Question | Chosen | Rejected, and why |
 |---|---|---|
-| Runtime | Embeddable zip; full installer; PyInstaller or Nuitka single file | Embeddable is transparent and debuggable but needs the `._pth` edit and a manual wheel step. A frozen binary is one file and a nicer double-click, but it is opaque when it fails and is much more likely to alarm antivirus |
-| Launcher | `.bat`; `.vbs` to hide the console; a signed `.exe` shim | The `.bat` shows a console window, which is ugly but is also the only place a plain failure message can land. Hiding it makes failure invisible. The signed shim is out, per the approved no-signing decision |
-| Runtime version | 3.12 embeddable; 3.9 to match the proven pins | 3.12 has better wheel coverage but the pinned set was proven on 3.9. Either way the Windows install is a fresh proof |
-| Update delivery | Full package each time; a diff or patch | Full is simple and matches versioned folders and rollback. Patching is smaller but introduces exactly the interrupted-update failure mode 16e worries about |
-| Version display | A `VERSION` file read at startup; a constant in the source | A file is what packaging writes and rollback distinguishes. A constant cannot drift from the code but cannot be inspected without running the app |
-| Last-good record | Inside `~/.rrf-app.json`; a separate fourth file | One file is less to migrate and matches the approved "app-owned settings" wording. A separate file cannot be corrupted by an unrelated settings write |
+| Runtime | Embeddable zip | A frozen single-file binary is less work to hand over and is rejected because a pilot exists to produce diagnosable failures. When the embeddable fails, `python.exe` is a real interpreter Spenser can run by hand over screen share. A full installer is rejected as more machinery than six versions need |
+| Runtime version | Decided by the Section 7 proof, not asserted | The previous revision's claim that 3.12 has better wheel coverage is withdrawn. It was never measured, and `pillow-heif` is the pin that actually decides it |
+| Launcher | `.bat` shim with the logic in Python, console visible | `.vbs` to hide the console is rejected because it makes failure invisible. A signed `.exe` shim is out per the approved no-signing decision |
+| Launcher liveness probe | `GET /api/version` | `/api/demo` is rejected because Section 10 removes it from the package, so the probe would work on the Mac and fail on Mark's machine |
+| Port | Bind `0`, record in the version's `runtime.json` | Fixed 8000 is rejected because it makes two versions indistinguishable. Walk-up from 8000 is rejected because it starts a second copy, which `busy.py:31` does not guard, and because it has no terminating condition under localhost interference |
+| Two versions at once | Refused, with the running version named | Allowing both is rejected: nothing guards two processes writing the same state files |
+| Version display | `VERSION` file plus `/api/version` | A source constant is rejected because packaging writes the file, rollback distinguishes it, and the endpoint is also the launcher's probe and the last-good check. Display was never the only purpose |
+| Last-good record | Its own `~/.rrf-app-version.json` | Inside `~/.rrf-app.json` is rejected: that file is written most often, written non-atomically, and fails silently, so the crash-recovery record would be lost by exactly the events it exists to survive |
+| Rollback | Manual, after closing the running version | Automatic rollback is rejected: a false positive would produce a failure Mark cannot describe, and Spenser is present during the pilot |
+| Integrity | Manifest of sizes plus one aggregate SHA-256, checked by the launcher | A checksum Mark compares by hand is rejected as a second step on his machine. Per-file hashing is rejected as slow across thousands of `site-packages` files for no protection that matters here |
+| Update delivery | Full package each time | A diff or patch is rejected: it is smaller but introduces exactly the interrupted-update failure mode the manifest check exists to catch |
+| Delivery path | Private download link | A shared folder or USB is rejected as a *test* path because it avoids the Mark of the Web and would pass while the real path fails |
+| Photo size in the document | Temporary optimized copies at 1,600 px, quality 85 | Recompressing the originals is rejected outright and is forbidden by the Never list. Relying on the existing AI thumbnail is rejected because it never reaches the document. Leaving it alone is rejected because a 60-photo report of phone photographs produces a file Word and email both struggle with |
+| Cross-process safety | Single-instance refusal | A lock file is rejected: it adds a stale-lock failure mode worse than what it prevents |
 
-**Not chosen on convenience.** The embeddable runtime and the full-package
-update are recommended because they keep failure legible and rollback trivial,
-not because they are the least work. The frozen single-file binary is less work
-to hand over and is recommended against for the pilot precisely because a pilot
-exists to produce diagnosable failures. The reviewer is invited to disagree
-with any of it.
+**Not chosen on convenience.** Where the easier option was the worse one it is
+named as rejected above, with the reason. The embeddable runtime, the full
+package, the single-instance refusal, and the manifest check are all more work
+than their alternatives.
 
-## 17. Exact stop conditions
+## 23. Exact stop conditions
 
 Stop and report, without proceeding, when any of these is true:
 
 1. `test_file_safety.py` fails, or any test shows a source file changed.
-2. A wheel has no `win_amd64` build, so the package cannot be assembled.
-3. The suite is not green at the end of any task.
-4. A packaging step would include anything in the Section 9 exclusion list.
-5. The confirmed city or address is unavailable and the code would have to
+2. Any original photograph is changed, renamed, moved, or deleted by any code
+   path, or a fingerprint comparison cannot prove it was not.
+3. A wheel has no `win_amd64` build, so the package cannot be assembled.
+4. **HEIC support fails.** Return evidence. Do not silently remove HEIC
+   support and do not silently change runtime versions.
+5. The suite is not green at the end of any task.
+6. A packaging step would include anything in the Section 10 exclusion list.
+7. The confirmed city or address is unavailable and the code would have to
    infer either one.
-6. A run would send more than 60 photos, or would send anything before the
-   count and the cost estimate have been shown.
-7. Any acceptance item in Section 12 fails.
-8. Any choice appears that materially affects Mark's setup, AI spending,
-   privacy, file safety, delivery, permissions, or scope and is not already
-   approved here.
-9. The work would touch Description of Improvements beyond the single disabled
-   row named in Section 10.
+8. A run would send more than 60 photos, or would send anything before the
+   count and the cost estimate have been shown, or would re-send a photo that
+   already carries a caption.
+9. Any acceptance item in Section 16 fails.
+10. Two versions could run at once, or a launcher could accept another
+    version's response as success.
+11. Any choice appears that materially affects Mark's setup, AI spending,
+    privacy, file safety, delivery, permissions, or scope and is not already
+    approved here.
+12. The work would touch Description of Improvements beyond the single disabled
+    row named in Section 13.
 
-## 18. Decisions still needed
+## 24. Decisions still needed
 
-**From Spenser: none.** Every product question this plan raised on 2026-08-17
-was answered on 2026-08-18. The estimate is $0.05 per included photo shown as
-arithmetic, the provider limit is $20 with notifications to Spenser, the
-`Planned workflows` section shows Description of Improvements alone, the
-last-good version is recorded in app-owned settings, and code signing is out
-for the pilot and revisited before wider distribution.
+**From Spenser: none outstanding.** Every product question raised on 2026-08-17
+was answered on 2026-08-18. Every technical question the independent review
+raised on 2026-08-18 was answered the same day, and those answers are the
+DIRECTION items above. Recorded so nobody reopens them:
 
-**From the independent technical reviewer**, before implementation:
+- The estimate is $0.05 per included photo, shown as arithmetic.
+- The provider limit is $20 with notifications to Spenser.
+- `Planned workflows` shows Description of Improvements alone.
+- Version identity is a `VERSION` file plus `GET /api/version`.
+- The launcher binds port 0, records it, and refuses a second version.
+- Last-known-good lives in `~/.rrf-app-version.json`, at 20 seconds, recorded
+  by the server, with no automatic rollback.
+- Packaging is a committed script with a manifest and an aggregate hash.
+- Delivery is a private download link, with one SmartScreen confirmation
+  accepted for this pilot only.
+- A split run keeps paid work and retries only what remains.
+- Report photos are optimized as temporary copies at 1,600 px quality 85, and
+  originals are never touched.
+- Code signing is out for the pilot and revisited before wider distribution.
 
-1. Whether the embeddable runtime and manual wheel step is the right shape at
-   all, against a frozen binary or a full installer (16h).
-2. What counts as "started successfully" for the last-good record (16d).
-3. How the package reaches Mark, and whether integrity is verified (16e).
-4. Whether a partial extraction can be detected, and whether the manifest check
-   is the right mitigation (16e).
-5. Whether the port walk-up is sufficient, or whether localhost interception
-   needs handling (16f).
+**Discovered during this revision, and needing Spenser only if the evidence
+comes back badly:**
 
-**Not authorization.** Approval of this plan's product decisions is not
-approval to implement. Implementation waits on Spenser's review of this
-reconciled plan and on the independent updater review.
+- **If `pillow-heif==1.1.1` has no compatible Windows wheel**, Section 7 stops
+  and returns evidence. Whether to change the runtime version, change the pin,
+  or change HEIC support is a product decision and none of them may be taken
+  by the executor.
+- **If Spenser's screen review finds the optimized photographs unacceptable**,
+  the 1,600 px and quality 85 figures are the dials, and changing them is his
+  call.
+
+**Not authorization.** Approval of this plan's product decisions and technical
+direction is not approval to implement. Implementation waits on Spenser's
+review of this reconciled plan.
+
+## Appendix: what this revision changed and why
+
+Recorded so the difference between the previous revision and this one is
+legible without a diff.
+
+| Change | Reason |
+|---|---|
+| Five labels instead of four, adding DIRECTION and UNPROVEN | Technical direction is now approved, and approved must not read as proven or built |
+| `/api/version` replaces `/api/demo` as the launcher probe | The old probe could not work in the shipped package, because Section 10 removes the demo routes |
+| Conditional import and exception-handler handling for `demo.py` | Deleting the file alone stops the server importing at all (`main.py:14,98`) |
+| Bind port 0, `runtime.json`, sibling scan, single-instance refusal | A version-blind probe served the wrong version on both upgrade and rollback; the walk-up alternative started an unguarded second process |
+| Last-known-good moved to its own file, threshold set at version match plus 20 seconds, written by the server | The old location was the file most likely to be damaged by the events the record exists to survive |
+| New Section 6 on safe app-owned state | Only one of the three state files was written atomically, and an unreadable file was silently indistinguishable from first-time setup |
+| New Section 11 on reproducible packaging and integrity | There was no packaging tooling, and the manifest test had nothing producing the tree it asserted against |
+| The 3.12 wheel-coverage claim withdrawn | It was asserted where it should have been measured |
+| New Section 12 on report photo optimization | The builder embeds original bytes; the existing thumbnails never reach the document |
+| New Section 1b on the HEIC build defect | Found during verification. A directly-placed HEIC fails Build today |
+| New Section 3d on split-run partial failure | The 60 ceiling and the one-request rule cannot both hold, and the old plan did not say what happens to paid work |
+| New Section 4a on differing network failures | Key-save degrades well and captions do not. This closes an OPEN question with evidence |
+| New Section 14 on delivery | The Mark of the Web is a technical difference between delivery paths, not logistics |
+| Output naming reframed as parsing | Recovering two values from one joined string can be wrong, and the old wording read like a field read |
+| The two-copy spike criterion inverted | It scored a corruption test as a pass |
+| Section 22 records rejected options with reasons | So the decisions are not relitigated and are not mistaken for accidents |

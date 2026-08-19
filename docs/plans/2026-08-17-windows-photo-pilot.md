@@ -1700,8 +1700,19 @@ would be enforced by whoever remembers it.
 The policy is app-owned state stored outside all job folders, alongside the
 other app-owned files of Section 6 and written with the same atomic helper.
 
-- It records the **resolved demo root**.
-- **The entire registered demo root defaults to `Local only`.** Default-deny,
+- **The demo root is derived, never registered by hand.** It comes from the
+  existing validated `.rrf-demo.json`, through the same validation
+  `demo.enabled()` already performs. The policy trusts the root only when that
+  validation succeeds, and the working root must resolve to the exact approved
+  `RRF Demo Jobs` location `demo.py` already enforces (`demo.py:35-40`,
+  `demo.py:150-163`).
+- **No user, Builder, test helper, or application screen can type a different
+  demo root and have it treated as trusted.** There is no manual root-entry
+  function to call.
+- **If demo validation fails, no job becomes AI safe.**
+- **A demo copy outside the validated demo root is not automatically trusted
+  or AI safe.**
+- **The entire validated demo root defaults to `Local only`.** Default-deny,
   not default-allow.
 - It maintains an **explicit allowlist of demo jobs marked `AI safe`**.
 - **A renamed, moved, newly added, or unrecognized job under that demo root
@@ -1715,13 +1726,31 @@ other app-owned files of Section 6 and written with the same atomic helper.
 - **The refusal happens before any external request, any token usage, and any
   cost.** Same shape as the 61-photo ceiling in Section 15, and provable the
   same way at zero cost.
-- **Production jobs outside the registered demo root are not silently
+- **Production jobs outside the validated demo root are not silently
   reclassified by this demo-only policy.** It restricts demo material; it does
   not quietly change how Mark's real jobs behave.
 - **No Mark-facing control for changing this policy ships in the pilot.** There
   is no switch on a screen.
 - **AI-safe status is established only through the controlled demo-preparation
   workflow**, after Spenser approves the corpus.
+- **Naming alone never grants AI permission.** Not a folder name, not a
+  filename, not a fixture label.
+
+### 25c. Which task owns which half
+
+**APPROVED, 2026-08-19.** The policy is built in one task and connected in
+another, so neither can be assumed done because the other is.
+
+| Task | Owns |
+|---|---|
+| **Task 2** | Safe AI-policy storage, validated demo-root derivation, default-deny evaluation, and their tests. No caption-route wiring |
+| **Task 4** | Connecting that policy to the caption endpoint, and proving refusal happens before an Anthropic client is constructed |
+| **Task 6** | Hydrating the demo baseline and establishing the explicitly approved AI-safe allowlist |
+
+Task 2 leaves an explicit code and test boundary showing that Task 4 must call
+the evaluation before constructing the client. Until Task 4 lands, the policy
+exists and is correct and nothing consults it, and no report may describe the
+caption route as guarded.
 
 **What the policy file may hold:** the resolved demo root, the allowlist of job
 names under it, and a schema version. **What it may never hold:** a source
@@ -1743,6 +1772,9 @@ for the model so cost is zero:
   caption client.**
 - Reset Demo preserves the effective restriction.
 - A production job outside the demo root is unaffected by the policy.
+- A valid demo configuration derives the exact approved working root.
+- No manual root can be substituted for the derived one.
+- An invalid demo configuration yields Local only and never AI safe.
 - **No source image, address, job name outside the demo root, caption, or API
   key is written into the policy file**, asserted by scanning the written
   file's bytes.

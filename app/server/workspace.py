@@ -15,10 +15,11 @@ Two things this module refuses to do:
 - Say anything about a folder it has not just looked at. Every count and
   every name in `describe` comes from reading the disk on the spot.
 """
-import json
 import os
 from pathlib import Path
 from typing import Optional
+
+import state
 
 SETTINGS_NAME = ".rrf-app.json"
 FOLDER_KEY = "jobs_folder"
@@ -40,26 +41,26 @@ def settings_file() -> Path:
 
 
 def _read() -> dict:
-    path = settings_file()
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError, UnicodeDecodeError):
-        # A settings file we cannot read counts as no settings at all. It is
-        # never repaired or guessed at: asking him again costs ten seconds,
-        # and pointing the app at the wrong folder costs a great deal more.
-        return {}
-    return data if isinstance(data, dict) else {}
+    """The settings, or {} when there is no file at all.
+
+    Raises state.StateUnreadable when the file is there and damaged. That is a
+    change from the first version of this module, which returned {} for both
+    cases. Returning {} for damage was wrong: it is the same answer as a fresh
+    machine, so a truncated file made the app ask him to choose his jobs folder
+    again with no explanation and no hint that anything had been lost. The file
+    itself is never repaired or guessed at, then or now.
+    """
+    return state.read_json(settings_file())
 
 
 def _write(data: dict) -> None:
-    path = settings_file()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # encoding is stated rather than left to the machine: Windows would
-    # otherwise pick a codepage that mangles an accented folder name.
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2),
-                    encoding="utf-8")
+    """Temporary file then replace, so a failure leaves the previous settings.
+
+    This used to write straight over the real file. His chosen jobs folder and
+    his active job list both live in here, so a half-written save lost both at
+    once.
+    """
+    state.write_json(settings_file(), state.without_schema(data))
 
 
 def saved_folder() -> str:
@@ -121,7 +122,7 @@ def forget_demo_state(parent: Optional[Path]) -> None:
             spaces.pop(str(Path(parent).resolve()), None)
         if not spaces:
             data.pop("workspaces", None)
-    if data:
+    if state.without_schema(data):
         _write(data)
     else:
         path = settings_file()

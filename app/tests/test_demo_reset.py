@@ -224,7 +224,11 @@ def test_other_settings_survive_and_the_file_stays(repo):
         encoding="utf-8")
     demo.reset()
     left = json.loads(Path(workspace.settings_file()).read_text(encoding="utf-8"))
-    assert left == {"something_else": "keep me"}
+    # The schema stamp Task 2 added is bookkeeping, not one of his settings.
+    # What this test is for is unchanged: the reset takes the demo's own keys
+    # and leaves every other setting exactly where it was.
+    assert {k: v for k, v in left.items() if k != "schema"} == {"something_else": "keep me"}
+    assert left["schema"] == 1
 
 
 def test_it_never_opens_the_key_file(repo, tmp_path, monkeypatch):

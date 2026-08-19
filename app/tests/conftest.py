@@ -53,6 +53,17 @@ def never_touch_the_real_home(tmp_path_factory, monkeypatch):
     box = tmp_path_factory.mktemp("home")
     monkeypatch.setenv("RRF_SETTINGS_FILE", str(box / ".rrf-app.json"))
     monkeypatch.setenv("RRF_KEY_FILE", str(box / ".rrf-app.env"))
+    # Every app-owned file, not only the two that already existed. The
+    # classification store was missing from this list and only individual
+    # tests overrode it, so any test that classified a file without setting
+    # RRF_CLASSIFY_FILE itself wrote into his real home. Task 2 added three
+    # more of these, and one forgotten line here would put every one of them
+    # in the same position, so the list is kept complete rather than added to
+    # a test at a time.
+    monkeypatch.setenv("RRF_CLASSIFY_FILE", str(box / ".rrf-classifications.json"))
+    monkeypatch.setenv("RRF_VERSION_FILE", str(box / ".rrf-app-version.json"))
+    monkeypatch.setenv("RRF_USAGE_FILE", str(box / ".rrf-ai-usage.json"))
+    monkeypatch.setenv("RRF_AI_POLICY_FILE", str(box / ".rrf-demo-ai-policy.json"))
 
 
 @pytest.fixture

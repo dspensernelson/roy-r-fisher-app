@@ -102,10 +102,24 @@ def test_saving_the_folder_leaves_other_settings_alone(clean):
     assert data["jobs_folder"] == "/somewhere"
 
 
-def test_an_unreadable_settings_file_counts_as_no_settings(clean):
-    Path(workspace.settings_file()).write_text("{not json at all", encoding="utf-8")
-    assert workspace.saved_folder() == ""
-    assert workspace.jobs_home() is None
+def test_an_unreadable_settings_file_is_refused_and_left_alone(clean):
+    """Changed in Task 2, deliberately. This used to assert that a damaged
+    settings file read as no settings at all, which is the same answer a brand
+    new machine gives. A truncated file therefore showed Mark the first-run
+    screen and let him believe the app had forgotten his jobs folder. Now it
+    refuses, says so once, and does not touch the file."""
+    import state
+    path = Path(workspace.settings_file())
+    damaged = "{not json at all"
+    path.write_text(damaged, encoding="utf-8")
+
+    with pytest.raises(state.StateUnreadable):
+        workspace.saved_folder()
+    with pytest.raises(state.StateUnreadable):
+        workspace.jobs_home()
+
+    # Never repaired, renamed, or deleted.
+    assert path.read_text(encoding="utf-8") == damaged
 
 
 # ------------------------------------------------------- looking at it ------

@@ -16,6 +16,7 @@ import inventory
 import jobs
 import sections
 import settings
+import state
 import workspace
 
 # Ships inside the app. It used to be read out of the client corpus, which
@@ -93,6 +94,23 @@ def create_app() -> FastAPI:
     @app.exception_handler(busy.Busy)
     def busy_handler(_request, exc: busy.Busy):
         """409, and a sentence saying nothing happened. Never a silent retry."""
+        return JSONResponse(status_code=409, content={"detail": exc.message})
+
+    @app.exception_handler(state.StateUnreadable)
+    def state_unreadable_handler(_request, exc: state.StateUnreadable):
+        """One of the app's own files is damaged. Say so in a sentence.
+
+        409 rather than 500: nothing crashed and nothing is broken in the code,
+        a file on disk cannot be trusted and the app declined to guess. The
+        body carries the approved sentence and never the traceback, the path,
+        or the JSON parser's own words. The technical reason stays on the
+        exception for tests and for Spenser.
+
+        Silence was the old behaviour and it was worse than an error: a
+        damaged settings file read as "he has not chosen a jobs folder yet",
+        which is the first-run screen, so the app appeared to have forgotten
+        his setup and offered no hint that anything had been lost.
+        """
         return JSONResponse(status_code=409, content={"detail": exc.message})
 
     @app.exception_handler(demo.DemoError)

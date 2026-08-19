@@ -15,6 +15,8 @@ Three rules this module exists to keep:
 import os
 from pathlib import Path
 
+import state
+
 KEY_NAME = "ANTHROPIC_API_KEY"
 
 
@@ -29,22 +31,33 @@ def key_file() -> Path:
 
 
 def _lines() -> list:
+    """Every line of the key file, or none when there is no file.
+
+    Deliberately tolerant, and deliberately not routed through the structured
+    reader: this is a text file, unknown lines in it are ordinary rather than
+    damage, and `errors="ignore"` keeps a stray byte from taking captions
+    offline. UTF-8 is now stated on the way in as well as the way out.
+    """
     path = key_file()
     if not path.is_file():
         return []
-    return path.read_text(errors="ignore").splitlines()
+    return path.read_text(encoding="utf-8", errors="ignore").splitlines()
 
 
 def _write(lines: list) -> None:
-    path = key_file()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(line for line in lines if line.strip()) + "\n")
-    try:
-        path.chmod(0o600)
-    except (OSError, NotImplementedError):
-        # Windows has no POSIX mode bits. The file still sits in the user's
-        # own profile folder, which is the protection that matters there.
-        pass
+    """Temporary file then replace, owner-only where the OS has such a thing.
+
+    This file stays plain text, not JSON: a shell wrote it once and a human may
+    edit it, and `stored_key` still understands every form either of them
+    produces. What changed is that the write no longer lands on the real file
+    directly, so a failure part way through can no longer leave him with a
+    truncated key and captions that stop working for no visible reason.
+
+    The encoding is stated. It was not before, so Windows would have picked a
+    codepage for a file the rest of this app reads as UTF-8.
+    """
+    body = "\n".join(line for line in lines if line.strip()) + "\n"
+    state.write_text(key_file(), body, owner_only=True)
 
 
 def _unquote(value: str) -> str:

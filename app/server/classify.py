@@ -14,12 +14,12 @@ A label is only ever chosen by Mark from the approved list. Nothing in this
 module reads a filename to guess one, and nothing may add to the list.
 """
 import datetime
-import json
 import os
 from pathlib import Path
 from typing import Optional
 
 import inventory
+import state
 
 STORE_NAME = ".rrf-classifications.json"
 
@@ -47,36 +47,25 @@ def store_file() -> Path:
 
 
 def _read() -> dict:
-    path = store_file()
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError, UnicodeDecodeError):
-        # A store we cannot read counts as no answers at all. It is never
-        # repaired or guessed at: a guessed classification is exactly the
-        # confident wrong answer this app must not produce.
-        return {}
-    return data if isinstance(data, dict) else {}
+    """Mark's answers, or {} when there is no store at all.
+
+    Raises state.StateUnreadable when the store is there and damaged. This
+    used to return {} for damage as well, which quietly presented every
+    classification he had given as never given. A guessed classification is
+    the confident wrong answer this app must not produce, and so is a silently
+    forgotten one. The damaged file is never repaired or guessed at.
+    """
+    return state.read_json(store_file())
 
 
 def _write(data: dict) -> None:
-    """Write through a temporary file in the same folder, then replace.
+    """Temporary file in the same folder, then replace.
 
-    A half-written store would lose every answer Mark has given. Writing
-    beside the real file and swapping means a failure leaves the previous
-    file exactly as it was.
+    This module already worked this way and the behaviour is unchanged. It now
+    shares one helper with the other app-owned files instead of keeping its own
+    copy, so the safe path is the only path any of them can take.
     """
-    path = store_file()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(path.name + ".writing")
-    try:
-        with temp.open("w", encoding="utf-8") as handle:
-            json.dump(data, handle, ensure_ascii=False, indent=2)
-        os.replace(str(temp), str(path))
-    finally:
-        if temp.exists():
-            temp.unlink()
+    state.write_json(store_file(), state.without_schema(data))
 
 
 def _key(job: Path) -> str:

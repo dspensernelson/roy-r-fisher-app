@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "app" / "server"))
 import classify  # noqa: E402
+import state  # noqa: E402
 from main import create_app  # noqa: E402
 
 
@@ -152,8 +153,13 @@ def test_a_failed_write_does_not_destroy_what_was_already_saved(store, tmp_path)
     # Its own context on purpose. Undoing the shared monkeypatch here would
     # also undo the fixture's RRF_CLASSIFY_FILE and point the next line at
     # the real store in the home folder.
+    #
+    # Task 2 moved the write into the shared helper, so the break moved with
+    # it. os.replace rather than the serializer on purpose: it fails after the
+    # temporary file has been created, so this still proves both halves, that
+    # the previous store survived and that no leftover was abandoned beside it.
     with pytest.MonkeyPatch.context() as broken:
-        broken.setattr(classify.json, "dump", explode)
+        broken.setattr(state.os, "replace", explode)
         with pytest.raises(OSError):
             classify.set_label(job, "Maps/aerial.jpg", "Aerial photo")
 
@@ -164,9 +170,19 @@ def test_a_failed_write_does_not_destroy_what_was_already_saved(store, tmp_path)
 
 
 def test_an_unreadable_store_is_never_repaired_or_guessed_at(store, tmp_path):
+    """Changed in Task 2, deliberately. The store used to answer {} when it
+    could not be read, which presented every classification Mark had given as
+    never given. Refusing is the honest answer, and the file is still never
+    repaired or guessed at, which is what this test was always named for."""
+    import state
     job = make_job(tmp_path)
-    store.write_text("{ not json")
-    assert classify.for_job(job) == {}
+    damaged = "{ not json"
+    store.write_text(damaged)
+
+    with pytest.raises(state.StateUnreadable):
+        classify.for_job(job)
+
+    assert store.read_text() == damaged
 
 
 # --- The screen's side of it: the three routes ------------------------------

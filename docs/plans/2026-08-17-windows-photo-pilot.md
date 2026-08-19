@@ -7,7 +7,8 @@ Reconciled 2026-08-18 with the product decisions Spenser approved that day.
 Reconciled again 2026-08-18, after an independent technical review of the
 packaging, launcher, updater, and state design, with the six recommendations
 Spenser approved from it and the report photo optimization he approved
-alongside them.
+alongside them. Corrected 2026-08-19 with the adaptive cost estimate and local
+run history, the package-integrity repair, and the execution plan.
 
 **Goal.** Mark receives a versioned Windows package that he unzips once,
 launches with one double-click, points at his jobs folder, sets up guarded AI
@@ -20,10 +21,11 @@ or PDF through COM. Not the complete handoff through Phase 3. Not Phase 5
 final packaging. No Description of Improvements work of any kind.
 
 **Status of this document.** A plan, not implementation authorization. The
-product decisions in it are approved. The technical direction in it is now
-approved too, which is a change from the previous revision. Approval of a
-technical direction is not proof that it works and is not a record that it
-was built. Nothing in this document has run on Windows.
+product decisions in it are approved. The technical direction in it is approved
+too. As of 2026-08-19 it also carries an execution plan, Section 25, with seven
+bounded tasks and four approval gates. Approval of a technical direction is not
+proof that it works and is not a record that it was built. Nothing in this
+document has run on Windows, and no task in Section 25 has started.
 
 ## How to read the labels
 
@@ -121,6 +123,18 @@ the document copy to RGB JPEG makes a HEIC source embeddable. It is recorded
 separately here so the fix is deliberate rather than incidental, and so the
 HEIC test in Section 7 is understood as testing a known failure rather than
 confirming a suspicion.
+
+**APPROVED sequencing, 2026-08-19.** The defect is live on the Mac today, so
+the question of when to fix it is real. The answer:
+
+- The fix lands **inside Task 4's photo-optimization work**, per Section 25.
+  Nothing separate is written for it.
+- **Do not create a separate Mac hotfix** unless Spenser later asks for one.
+- **HEIC dependency viability is still tested first, in Task 1**, because a
+  missing `pillow-heif` wheel changes the Windows packaging path and that
+  answer is needed before anything is packaged. Testing the dependency early
+  and fixing the defect later are two different things, and both are
+  deliberate.
 
 ## 2. Output naming
 
@@ -236,17 +250,11 @@ template, and the layout engine. No existing generated output is touched.
 **Sending.**
 
 - Maximum 60 photos per AI-caption run.
-- Show an estimated cost before sending, and the actual measured cost
-  afterward when provider usage data permits.
-- The estimate is **$0.05 per included photo**, calculated transparently and
-  shown as the arithmetic, not just a total:
-
-  | Included photos | Displayed estimate |
-  |---|---|
-  | 12 | 12 x $0.05 = $0.60 |
-  | 60 | 60 x $0.05 = $3.00 |
-
-- The figure is labeled on screen as an estimate.
+- Show an `Estimated maximum cost` before sending, and the calculated cost
+  from measured usage afterward. Both are defined in Section 3e.
+- The estimate starts at **$0.05 per included photo** and moves with evidence,
+  down or up, as measured runs accumulate. It is always shown as the
+  arithmetic, not just a total.
 - Use one API request when it fits. Split only when the provider's
   request-size constraints require it. Do not split into arbitrary batches of
   six.
@@ -266,22 +274,12 @@ template, and the layout engine. No existing generated output is touched.
 - Excluded photos do not require review.
 - Build stays unavailable until every included caption has been reviewed.
 
-**Note on the $0.05 figure, recorded so nobody mistakes it for a measurement.**
-It is a deliberately conservative placeholder, and it is very likely higher
-than the true per-photo cost. A 1024 pixel thumbnail runs roughly one to two
-thousand input tokens, which at Opus-class input pricing lands nearer two cents
-than five. Erring high is the safe direction for a number Mark reads before
-spending money, so the figure stands as approved. It is still an estimate, it
-is labeled as one, and the first real run records actual usage so it can be
-corrected against evidence rather than arithmetic.
-
-**OPEN, executor's question, not Spenser's.** The provider returns token usage
-per response, not dollars. Turning usage into a dollar figure needs a price
-table in the app, which goes stale when pricing changes. If a trustworthy
-dollar figure cannot be derived, the screen shows measured token usage and says
-plainly that the dollar figure is the estimate, not a measurement. That is what
-"when provider usage data permits" means above. Resolved during implementation,
-recorded in a code comment, no product decision required.
+**Why $0.05 is the starting figure and not a measurement.** It is a
+deliberately conservative placeholder, and it is very likely higher than the
+true per-photo cost. A 1024 pixel thumbnail runs roughly one to two thousand
+input tokens, which at Opus-class input pricing lands nearer two cents than
+five. Erring high is the safe direction for a number Mark reads before spending
+money. Section 3e is how that guess stops being a guess.
 
 ### 3d. Split runs and partial failure
 
@@ -301,12 +299,12 @@ split because of provider request-size constraints:
 - The screen shows which photos remain without a caption.
 - A deliberate `Retry remaining photos` action is offered.
 - Nothing retries automatically.
-- The retry estimate covers only the remaining photos, using the same
-  arithmetic as Section 3c.
+- The retry estimate covers only the remaining photos, using the learned rate
+  of Section 3e.
 - Photos that already have a caption are never sent again and never charged
   again.
-- Actual cost reporting distinguishes successful work from failed or unsent
-  work, when provider usage data permits.
+- Cost reporting distinguishes successful work from failed or unsent work. A
+  split run aggregates every request belonging to that run, per Section 3e.
 - Build remains governed by the per-photo review requirement in Section 3c.
   Remaining uncaptioned photos are handled by typing a caption or by excluding
   the photo, exactly as they are today.
@@ -324,6 +322,164 @@ split because of provider request-size constraints:
   arithmetic shown for that retry match only those photos.
 - A photo that already carries a caption is never included in a retry payload.
 - Retries are off at the client, so a failed request is attempted once.
+
+### 3e. The adaptive cost estimate
+
+**APPROVED, 2026-08-19.** The estimate is no longer a fixed figure. It starts
+conservative and learns from measured usage. This closes the OPEN item the
+previous revision left with the executor: post-run cost wording is now a
+product decision, and it is made here.
+
+**The starting prior.** The app begins as if it had already seen one expensive
+run:
+
+| Quantity | Value |
+|---|---|
+| Virtual photos | 60 |
+| Rate per virtual photo | $0.05 |
+| Total starting weight | $3.00 |
+
+**The learned rate.**
+
+```
+learned rate = ($3.00 + cumulative calculated API cost)
+               / (60 + cumulative successfully captioned photos)
+```
+
+With no evidence yet this is `$3.00 / 60`, which is `$0.05`, so the first run
+uses exactly the arithmetic already approved. The prior is deliberately heavy,
+so a single cheap run cannot swing the number far. Evidence moves it gradually.
+
+**Before a run:**
+
+- Multiply the learned rate by the number of included photos that will actually
+  be sent. Photos that already carry a caption are not counted, because they
+  are not sent.
+- Round the displayed run total **upward** to the nearest $0.05.
+- Label it **`Estimated maximum cost`**.
+- Show the arithmetic, not just a total.
+
+Worked examples, to make the behavior unambiguous:
+
+| State | Learned rate | Photos sent | Displayed |
+|---|---|---|---|
+| No measured runs yet | $0.0500 | 12 | 12 x $0.0500 = $0.60 |
+| No measured runs yet | $0.0500 | 60 | 60 x $0.0500 = $3.00 |
+| After 12 photos measured at $0.24 | $0.0450 | 12 | 12 x $0.0450 = $0.54, shown as $0.55 |
+| After a costlier run pulls it up | $0.0583 | 12 | 12 x $0.0583 = $0.70 |
+
+The estimate may move **upward** if measured usage turns out more expensive.
+Rounding is always upward, so the displayed figure is never lower than the
+arithmetic behind it. That is why it is called a maximum and not a prediction.
+
+**After a run:**
+
+- Show **`Calculated API cost from measured usage`**.
+- Also show measured input tokens, output tokens, and applicable cache tokens.
+- **Do not call the dollar figure `actual cost`.** It is this app's arithmetic
+  over a published price table, not a bill.
+- **Anthropic's billing console remains the invoice authority.** The screen
+  says so.
+- A response carrying no usage information is recorded as **`Cost unavailable`**,
+  never as `$0`.
+- Unknown-cost requests never pull the learned rate downward. A missing number
+  is not a cheap number.
+- A split run aggregates every request belonging to that run into one run
+  total.
+- A deliberate retry is a **new run, linked to the original run**, covering only
+  the remaining photos.
+
+**Resetting the learning bucket.** Observations made under different conditions
+are not comparable, so they are never mixed. A new bucket starts when any
+cost-driving configuration changes:
+
+- Model
+- Published pricing
+- Image-size or image-encoding settings
+- Cache-pricing behavior
+
+A new bucket restarts from the $3.00 over 60 prior. Prior buckets are retained
+in the history of Section 3f and are never deleted, so an old rate can still be
+inspected and recalculated.
+
+**TEST, required before acceptance.** In `test_cost_estimate.py`, all with a
+stand-in for the model so cost is zero:
+
+- The first run uses the full $0.05 prior.
+- The estimate declines gradually after cheaper measured runs, and the decline
+  matches the formula rather than jumping to the last observed rate.
+- The estimate increases after more expensive runs.
+- The displayed run total rounds upward to the nearest $0.05.
+- A split run aggregates every request into one run total.
+- Partial success counts only successfully captioned photos in the denominator.
+- A retry is recorded as a new run linked to its original.
+- A response with no usage is recorded as `Cost unavailable`.
+- An unknown cost never counts as zero and never lowers the learned rate.
+- Changing the model creates a new learning bucket.
+- Changing the pricing table creates a new learning bucket.
+- Changing image settings creates a new learning bucket.
+
+### 3f. Local AI Usage History
+
+**APPROVED, 2026-08-19.** The app keeps its own local record of AI runs, so the
+learned rate can be audited and recalculated rather than trusted.
+
+**Where it lives.** App-owned local state, outside every job folder, alongside
+the other app-owned files of Section 6 and written with the same atomic helper.
+Nothing about it is ever written into one of Mark's folders.
+
+**What each run record holds, and nothing more:**
+
+- Local run ID
+- Parent run ID, when the run is a deliberate retry
+- Timestamp
+- Model identifier
+- Pricing-table version and the effective rates used
+- Image-settings version
+- Number of photos requested
+- Number successfully captioned
+- Number remaining or failed
+- Number of API requests
+- Status: completed, partial, failed, or cost-unavailable
+- Pre-run estimate
+- Per-request input, output, and applicable cache-token usage
+- Per-request calculated cost, when available
+- Total calculated run cost, when available
+- Learned rate after the run
+
+**What it must never hold. This is the privacy boundary and it is a
+requirement, not a preference:**
+
+- No job names
+- No addresses
+- No photo filenames
+- No images
+- No captions
+- No prompts
+- No API keys
+- No client content of any kind
+
+A cost audit needs counts, tokens, and rates. It does not need to know what the
+photographs were of, and a file that knows costs nothing to leak only because
+it does not know.
+
+**Retention.** The app retains the underlying run records, not only the current
+average, so Spenser can inspect them and recalculate later. Recording the
+pricing-table version and the image-settings version on every run is what makes
+a recalculation meaningful afterward.
+
+**TEST, required before acceptance.** In `test_usage_history.py`:
+
+- A run record round-trips with every field above.
+- A retry record carries its parent run ID.
+- The learned rate stored on a run reproduces from that run's own fields.
+- The history survives an upgrade and a rollback, tested separately.
+- **No job name, address, photo filename, caption, prompt, image, or key
+  appears anywhere in the written file.** Asserted by scanning the file's bytes
+  for values known to be present in the test job.
+- A cost-unavailable run is stored as unavailable and is excluded from the
+  learned-rate arithmetic.
+- Records from a prior learning bucket are retained after a bucket reset.
 
 ## 4. API key and spending controls
 
@@ -437,10 +593,12 @@ two. Two app processes writing `~/.rrf-app.json` and
 - Bind to port `0` and let Windows select a free local port.
 - Keep the server bound to `127.0.0.1`, never `0.0.0.0`.
 - Record the chosen port in that version folder's own `runtime.json`, beside
-  the launcher, inside the package folder.
+  the launcher. It is created at runtime, is not part of the packaged set, and
+  is outside the immutable manifest and aggregate. Section 11 says why.
 - Open the browser at the port actually bound, never at an assumed port.
 - Before starting, inspect sibling version folders for a live RRF process, by
-  reading each `runtime.json` and probing the port it names.
+  reading each `runtime.json` and probing the port it names. A sibling that has
+  never been started has no `runtime.json`, which counts as not running.
 - The launcher must never accept another version's `/api/version` response as
   success.
 - If another version is running, refuse to start and show a plain message
@@ -677,12 +835,13 @@ open with the reason visible.
 
 `run_app.py` gains, in order:
 
-1. **Verify the package before importing any third-party dependency.** The
-   manifest check of Section 11, in standard-library Python only. A missing or
-   truncated file is named in plain language and the app does not start. This
-   is first because `run_app.py:7` imports uvicorn at module scope today, so a
-   damaged package currently produces a traceback before any of our code can
-   speak.
+1. **Verify the immutable package before importing any third-party
+   dependency.** The manifest check of Section 11, in standard-library Python
+   only, and before `runtime.json` exists or is touched. A missing, truncated,
+   moved, or corrupt file is named in plain language and the app does not
+   start. This is first because `run_app.py:7` imports uvicorn at module scope
+   today, so a damaged package currently produces a traceback before any of our
+   code can speak.
 2. **Refuse if another version is running.** The sibling scan of Section 5b.
    The message names the running version and its folder.
 3. **Detect this same version already running.** Read this folder's own
@@ -691,7 +850,10 @@ open with the reason visible.
    starting a second copy. A different version, or an answer that is not ours,
    is never accepted as success.
 4. **Bind port 0 and record it.** Write the bound port to this folder's
-   `runtime.json`. Never assume 8000. Never walk up.
+   `runtime.json`, creating it if this is the first start. This happens only
+   after step 1 passed, and `runtime.json` is outside the immutable set, so
+   writing it can never invalidate the package. Never assume 8000. Never walk
+   up.
 5. **Start, then wait for a real answer.** **FACT:** today the browser opens on
    a one-second timer (`run_app.py:12`), which is a guess. Instead poll
    `/api/version` on the bound port until it answers with this version, up to a
@@ -716,13 +878,15 @@ This is a pilot decision, revisited later.
 **DIRECTION for the layout, approved 2026-08-18.** One versioned top folder so
 nothing overwrites a prior pilot:
 
+The freshly built package, exactly as it leaves the packaging script. Every
+file here is immutable:
+
 ```
 Roy R. Fisher v0.1.0/
     Start Roy R. Fisher.bat
     README FIRST.txt          plain instructions for Mark
     VERSION                   the version string, read and shown on every screen
-    MANIFEST                  expected files and sizes, plus the aggregate hash
-    runtime.json              written at startup, holds the bound port
+    MANIFEST                  immutable file list with sizes, plus the aggregate hash
     python/                   embedded runtime + site-packages
     app/
         run_app.py
@@ -730,9 +894,15 @@ Roy R. Fisher v0.1.0/
         web/dist/
 ```
 
-**Included:** `run_app.py`, `app/data`, `app/engine`, `app/server`,
-`app/templates`, `app/web/dist`, the embedded runtime, the launcher, the
-readme, the version file, the manifest.
+**`runtime.json` is not in that tree.** It does not exist in a freshly built
+package. It is created at runtime inside the version folder, and only after
+immutable package validation has already succeeded. It is mutable by design,
+it is excluded from the manifest and from the aggregate hash, and Section 11
+says why that separation matters.
+
+**Included, and all immutable:** `run_app.py`, `app/data`, `app/engine`,
+`app/server`, `app/templates`, `app/web/dist`, the embedded runtime, the
+launcher, the readme, the version file, the manifest.
 
 **Excluded. The exclusion list itself is not a proposal: it is a requirement,
 and every line is asserted by a packaging test.**
@@ -745,6 +915,7 @@ and every line is asserted by a packaging test.**
 - `__pycache__/`, `.pytest_cache/`, `.DS_Store`
 - any `.env` file, any key, any cache, any thumbnail cache
 - `Start Roy R. Fisher.command` (the Mac launcher)
+- `runtime.json` (created at runtime, never packaged, never hashed)
 
 ### 10a. Removing demo.py correctly
 
@@ -777,48 +948,90 @@ hand, and proposed a test asserting "against a built package tree" without
 naming anything that builds it. A test that checks an artifact no script
 produces is a test that gets run once.
 
-**DIRECTION, approved 2026-08-18. Not built, not proven.**
+**FACT, 2026-08-19.** The previous revision put mutable `runtime.json` inside
+the package while also describing the package as manifest-checked and hashed,
+and it never said how the manifest avoids hashing itself. Both are
+contradictions: on the first normal startup the app would have invalidated its
+own package, and a manifest that contains its own hash cannot be computed.
+
+**DIRECTION, approved 2026-08-19. Not built, not proven.**
+
+**The immutable set.** Every packaged file is immutable. Exactly two things are
+outside the immutable set:
+
+| Outside the set | Why |
+|---|---|
+| `runtime.json` | Created at runtime, after validation succeeds. Holds the bound port. Never packaged, never listed, never hashed |
+| `MANIFEST` itself | A file cannot contain a hash of itself. It is excluded from its own aggregate |
 
 - Package creation is performed by a **committed, repeatable packaging
   script**, not by manual commands.
-- The script generates a package manifest during packaging.
-- The manifest identifies every expected packaged file and its size.
-- The script generates an aggregate SHA-256 integrity value over the package.
-- The launcher validates the package against the manifest **before importing
-  any third-party dependency**, per Section 9 step 1.
-- Missing, truncated, or corrupt files produce a plain-language error naming
-  the problem and the file.
+- The script generates the manifest during packaging, listing every **immutable**
+  file and its size.
+- The aggregate is defined **deterministically over the ordered paths, sizes,
+  and contents of all immutable packaged files**. Ordered, so two machines
+  produce the same value. Paths and sizes as well as contents, so a file moved
+  or truncated changes the aggregate even when the bytes elsewhere match.
+- The launcher recomputes that aggregate over the immutable files and compares
+  it with the value stored in the manifest.
+- Validation runs **before importing any third-party dependency**, per Section 9
+  step 1, and before `runtime.json` is created.
+- **Validation must not reject the package merely because `runtime.json` was
+  created or updated during normal use.** That is the whole reason it sits
+  outside the set.
+- Missing files, unexpected immutable-file size changes, and same-size byte
+  corruption all produce a plain-language error naming the problem and the file.
 - **Mark performs no manual checksum comparison.** The check is the launcher's
   job, never his. A checksum he is asked to compare is a second step on his
   machine, which the roadmap calls a defect. A checksum nobody checks is
   decoration. The launcher doing it himself is neither.
+- Running the packaging script twice from identical inputs must produce the
+  same immutable manifest.
 - The console stays visible during the pilot so those messages are readable.
+
+**What this check honestly does, and does not do.** It detects damaged or
+incomplete packages: an interrupted extraction, a truncated download, a
+corrupted file, a missing file. That is what it is for and it does that well.
+
+Without code signing it does **not** prove publisher identity, and it does
+**not** protect against deliberate replacement of both the files and the
+manifest together. Anyone able to rewrite the package can rewrite the manifest
+beside it. This is an integrity check against accident, not a security control
+against an adversary. Code signing is out for this pilot by decision, so that
+exposure is accepted and named rather than papered over.
 
 **Not in this pilot, by decision:** no MSI, no registry integration, no Windows
 service, no automatic updater, no automatic rollback, no code signing.
 
-**Why sizes plus one aggregate hash, and not a hash per file.** A package with
-an embedded runtime holds thousands of `site-packages` files. Per-file hashing
+**Why sizes plus one aggregate, and not a hash per file.** A package with an
+embedded runtime holds thousands of `site-packages` files. Per-file hashing
 would make every startup slow for no added protection that matters here. Sizes
 catch truncation, which is what an interrupted extraction produces. The
-aggregate hash catches corruption. Neither asks Mark for anything.
+aggregate over ordered paths, sizes, and contents catches the rest, including
+corruption that preserves file size.
 
 **TEST, required before acceptance.**
 
 - `test_package_manifest.py` runs **against output produced by the committed
-  packaging script**, never against a hand-assembled tree. This replaces the
-  previous revision's manually-assembled-tree test.
+  packaging script**, never against a hand-assembled tree.
 - The manifest includes every required path from Section 10.
 - The manifest excludes every path in the Section 10 exclusion list, asserted
   line by line.
-- A deliberately truncated file in a copied package is detected and named.
-- A deliberately missing file in a copied package is detected and named.
-- A byte-level corruption that preserves file size is caught by the aggregate
-  hash.
+- The manifest does not list `runtime.json`.
+- The manifest does not list itself, and the aggregate excludes itself.
+- A freshly built package validates.
+- **The same package still validates after a normal startup has created
+  `runtime.json`, and again after a second startup has updated it.**
+- A deliberately truncated immutable file is detected and named.
+- A deliberately missing immutable file is detected and named.
+- A byte-level corruption of an immutable file that preserves its size is
+  detected.
+- A file moved to a different path within the package is detected.
 - Validation happens before any third-party import, proven by removing a
   required wheel and confirming the plain message appears rather than an
   `ImportError` traceback.
-- Running the packaging script twice produces the same manifest.
+- Running the packaging script twice from identical inputs produces an
+  identical immutable manifest, aggregate included.
 
 ## 12. Report photo optimization
 
@@ -993,6 +1206,8 @@ Section 12 requires Spenser's screen review on real images.
 1. Clean installation and first launch, through the Section 14 delivery path.
 2. The exact SmartScreen and Mark-of-the-Web prompts, recorded word for word.
 3. Package validation catches a truncated file and names it in plain language.
+3a. The package still validates after normal startup has created and then
+    updated `runtime.json`.
 4. Visible version number on every screen, matching the folder launched.
 5. Launching a second version while one runs is **refused**, and the message
    names the running version.
@@ -1001,8 +1216,12 @@ Section 12 requires Spenser's screen review on real images.
 **Captions**
 
 7. API-key setup, and behavior with no key present.
-8. Estimated cost shown before the request.
-9. Actual cost or usage shown afterward.
+8. `Estimated maximum cost` shown before the request, with its arithmetic.
+9. `Calculated API cost from measured usage` shown afterward, with input,
+   output, and cache tokens, and never labeled `actual cost`.
+9a. A run whose response carries no usage reads `Cost unavailable`, never $0.
+9b. The learned rate moves after a measured run, and the usage history holds
+    the underlying record.
 10. Caption generation, and drafts persisting immediately.
 11. A split run that fails partway keeps every successful group's captions.
 12. Deliberate retry sends only the remaining photos.
@@ -1035,6 +1254,8 @@ Section 12 requires Spenser's screen review on real images.
     the four state files.
 30. A malformed settings file produces a clear recoverable error and is not
     mistaken for first-time setup.
+30a. The AI Usage History survives upgrade and rollback, and holds no job name,
+     address, photo filename, caption, prompt, or key.
 31. The last-known-good record reflects the version that actually ran, and a
     version that dies inside 20 seconds never records itself.
 
@@ -1058,9 +1279,11 @@ Everything below runs on the Mac and must be green before any package is sent.
 | `test_output_naming.py` | The Section 2 parsing cases: commas, unit numbers, missing values, older brief order, stored corrections winning, Windows-forbidden characters, numbered copy on collision, refusal rather than a guess |
 | `test_caption_guards.py` | 60 is the ceiling; 61 refuses before any request is attempted; retries are off; the count and the $0.05 arithmetic shown before sending match what would be sent |
 | `test_caption_split.py` | Section 3d: failure before any group succeeds, failure after partial success, refresh after partial success, deliberate retry of only remaining photos, and no photo sent twice |
+| `test_cost_estimate.py` | Section 3e: the $0.05 prior on the first run, gradual decline after cheaper runs, increase after costlier ones, upward rounding to $0.05, split aggregation, partial success in the denominator, retry linked to its original, missing usage as unavailable, unknown cost never zero, and a new bucket on a model, pricing, or image-settings change |
+| `test_usage_history.py` | Section 3f: every field round-trips, a retry carries its parent ID, the stored learned rate reproduces from the record, upgrade and rollback survival tested separately, prior-bucket records retained, and no job name, address, photo filename, caption, prompt, image, or key anywhere in the file |
 | `test_caption_errors.py` | Section 4a: each of the five failure kinds produces its own plain sentence, with a stand-in for the model |
 | `test_caption_review.py` | Drafts save immediately as unreviewed; a review marks one caption; editing a reviewed caption resets it; excluded photos never block; Build refuses while an included caption is unreviewed |
-| `test_package_manifest.py` | Run against output from the committed packaging script: every required path present, every Section 10 exclusion absent, truncation detected, missing file detected, corruption caught by the aggregate hash, validation before any third-party import, and a repeatable manifest |
+| `test_package_manifest.py` | Run against output from the committed packaging script: every required path present, every Section 10 exclusion absent, `runtime.json` and the manifest both outside the immutable set, still valid after startup creates and updates `runtime.json`, truncation and missing files and same-size corruption and a moved path all detected, validation before any third-party import, and an identical manifest from identical inputs |
 | `test_launcher.py` | Section 5b: bind port 0, record and re-read `runtime.json`, refuse on a live sibling of another version, ignore a stale sibling, never accept a foreign or wrong-version answer, bounded refusal under interference |
 | `test_settings_survive_upgrade.py` | Section 5c and 6: four literal filenames, last-good round-trip, no record from a process that dies inside 20 seconds, upgrade and rollback survival tested separately |
 | `test_state_atomicity.py` | Section 6: interrupted writes leave the previous file intact for all four files; malformed files produce a clear recoverable error; an unknown schema version is refused |
@@ -1203,10 +1426,12 @@ decision for an accident.
 | Version display | `VERSION` file plus `/api/version` | A source constant is rejected because packaging writes the file, rollback distinguishes it, and the endpoint is also the launcher's probe and the last-good check. Display was never the only purpose |
 | Last-good record | Its own `~/.rrf-app-version.json` | Inside `~/.rrf-app.json` is rejected: that file is written most often, written non-atomically, and fails silently, so the crash-recovery record would be lost by exactly the events it exists to survive |
 | Rollback | Manual, after closing the running version | Automatic rollback is rejected: a false positive would produce a failure Mark cannot describe, and Spenser is present during the pilot |
-| Integrity | Manifest of sizes plus one aggregate SHA-256, checked by the launcher | A checksum Mark compares by hand is rejected as a second step on his machine. Per-file hashing is rejected as slow across thousands of `site-packages` files for no protection that matters here |
+| Integrity | Immutable manifest of ordered paths and sizes plus one aggregate over paths, sizes, and contents, checked by the launcher. `runtime.json` and the manifest itself sit outside the set | A checksum Mark compares by hand is rejected as a second step on his machine. Per-file hashing is rejected as slow across thousands of `site-packages` files for no protection that matters here. Including `runtime.json` is rejected because the app would invalidate its own package on first startup |
 | Update delivery | Full package each time | A diff or patch is rejected: it is smaller but introduces exactly the interrupted-update failure mode the manifest check exists to catch |
 | Delivery path | Private download link | A shared folder or USB is rejected as a *test* path because it avoids the Mark of the Web and would pass while the real path fails |
 | Photo size in the document | Temporary optimized copies at 1,600 px, quality 85 | Recompressing the originals is rejected outright and is forbidden by the Never list. Relying on the existing AI thumbnail is rejected because it never reaches the document. Leaving it alone is rejected because a 60-photo report of phone photographs produces a file Word and email both struggle with |
+| Cost estimate | Adaptive rate from a heavy $3.00-over-60 prior, rounded up, labeled a maximum | A fixed $0.05 forever is rejected because the first real run makes it measurably wrong. Using only the last observed rate is rejected because one cheap run would swing the number Mark reads before spending money |
+| Post-run cost wording | `Calculated API cost from measured usage`, with tokens shown | `Actual cost` is rejected: it is this app's arithmetic over a price table, not a bill. The billing console stays the invoice authority |
 | Cross-process safety | Single-instance refusal | A lock file is rejected: it adds a stale-lock failure mode worse than what it prevents |
 
 **Not chosen on convenience.** Where the easier option was the worse one it is
@@ -1242,25 +1467,39 @@ Stop and report, without proceeding, when any of these is true:
 
 ## 24. Decisions still needed
 
-**From Spenser: none outstanding.** Every product question raised on 2026-08-17
-was answered on 2026-08-18. Every technical question the independent review
-raised on 2026-08-18 was answered the same day, and those answers are the
-DIRECTION items above. Recorded so nobody reopens them:
+**From Spenser: none outstanding. No OPEN item remains anywhere in this
+document.** Every product question raised on 2026-08-17 was answered on
+2026-08-18. Every technical question the independent review raised on
+2026-08-18 was answered the same day. The two OPEN items that survived that
+revision were both closed on 2026-08-19: post-run cost wording in Section 3e,
+and caption-versus-key failure messages in Section 4a. Recorded so nobody
+reopens them:
 
-- The estimate is $0.05 per included photo, shown as arithmetic.
+- The estimate starts at $0.05 per included photo and learns from measured
+  usage, rounded up, labeled `Estimated maximum cost` (Section 3e).
+- Post-run wording is `Calculated API cost from measured usage`, never
+  `actual cost`. The billing console is the invoice authority.
+- The app keeps a local AI Usage History holding counts, tokens, and rates, and
+  no job or client content (Section 3f).
 - The provider limit is $20 with notifications to Spenser.
 - `Planned workflows` shows Description of Improvements alone.
 - Version identity is a `VERSION` file plus `GET /api/version`.
 - The launcher binds port 0, records it, and refuses a second version.
 - Last-known-good lives in `~/.rrf-app-version.json`, at 20 seconds, recorded
   by the server, with no automatic rollback.
-- Packaging is a committed script with a manifest and an aggregate hash.
+- Packaging is a committed script with an immutable manifest and an aggregate
+  over ordered paths, sizes, and contents. `runtime.json` and the manifest sit
+  outside that set.
 - Delivery is a private download link, with one SmartScreen confirmation
   accepted for this pilot only.
 - A split run keeps paid work and retries only what remains.
 - Report photos are optimized as temporary copies at 1,600 px quality 85, and
   originals are never touched.
 - Code signing is out for the pilot and revisited before wider distribution.
+  The integrity check catches damage, not an adversary, and Section 11 says so.
+- The live HEIC defect is fixed inside Task 4, with no separate Mac hotfix,
+  while HEIC dependency viability is still proven first in Task 1.
+- The work runs as the seven tasks and four approval gates of Section 25.
 
 **Discovered during this revision, and needing Spenser only if the evidence
 comes back badly:**
@@ -1275,7 +1514,161 @@ comes back badly:**
 
 **Not authorization.** Approval of this plan's product decisions and technical
 direction is not approval to implement. Implementation waits on Spenser's
-review of this reconciled plan.
+explicit yes to begin Task 1 of Section 25, and then stops at Gate A.
+
+## 25. The execution plan
+
+**APPROVED, 2026-08-19.** Everything above this section is requirements. This
+section is the order the work is done in, the gates it stops at, and what each
+stop must produce. Without it the document says what to build and never says
+when to stop.
+
+**Nothing here is authorization to start.** Task 1 begins only on Spenser's
+explicit yes.
+
+### Rules that bind every task
+
+Every task, without exception:
+
+- Begins from a verified clean working tree on this branch.
+- Names the exact files it may change, before it changes any of them.
+- Runs its own focused tests **and** the full suite: `python3 -m pytest app/tests -q`
+- Includes a real screen review when visible behavior changes.
+- Commits only its bounded scope.
+- Returns the four-part Product Control Brief of `HOW-WE-WORK.md`.
+- Stops at every approval gate.
+- Never pushes, merges, delivers, or treats work as accepted without explicit
+  authorization.
+
+### Task 1: Prove Windows dependency viability
+
+- Check the targeted `win_amd64` wheels, `pillow-heif==1.1.1` first and alone
+  so its answer is unambiguous.
+- Decide the runtime version **from that evidence, not from preference**. The
+  withdrawn 3.12 claim of Section 7 is not a starting position.
+- Make no product compromise if HEIC fails.
+- **Stop and report if any required wheel or import path is unproven.**
+
+Files this task may change: none in `app/`. It produces evidence, not code.
+
+### Task 2: Make app-owned state safe
+
+- The shared atomic-write helper of Section 6.
+- Clear malformed-state recovery, replacing the silent empty-dict behavior.
+- Schema versions on structured JSON state.
+- The separate last-known-good file, `~/.rrf-app-version.json`.
+- The local AI Usage History storage structure of Section 3f.
+- Automated state, privacy, interruption, upgrade, and rollback tests. Upgrade
+  and rollback proven **separately**, never as one case.
+
+### Task 3: Build the Windows delivery spine
+
+- The reproducible packaging script of Section 11.
+- `VERSION` and `GET /api/version`.
+- The dynamic loopback port.
+- `runtime.json`, created after validation, outside the immutable set.
+- Single-instance refusal.
+- Immutable manifest validation.
+- Plain startup failures.
+- A self-contained Windows package.
+
+### Approval Gate A: Windows spine proof
+
+**Stop after the smallest Windows spike of Section 21.** Report what actually
+ran on Windows:
+
+- The SmartScreen experience, prompts recorded word for word.
+- Dependency imports.
+- Version identity, and that the version shown matches the folder launched.
+- State paths, and where `Path.home()` actually resolved.
+- Startup and shutdown.
+- Second-copy refusal.
+- The rollback premise.
+
+**Do not begin Photo Pilot feature implementation until Spenser approves
+continuing.**
+
+### Task 4: Implement the Photo Pilot backend
+
+- Output naming, and the confirmed city and address, parsed per Section 2.
+- The 60-photo ceiling.
+- Split requests and partial-failure preservation.
+- The adaptive pre-run estimate of Section 3e.
+- Measured usage capture and the local run history of Section 3f.
+- Unreviewed drafts and per-photo review state.
+- HEIC-safe temporary document copies. **This is where the Section 1b defect is
+  fixed.**
+- Photo optimization per Section 12.
+- Original-file fingerprints and safety tests.
+
+### Task 5: Implement the Photo Pilot frontend
+
+- `Estimated maximum cost` before sending, with its arithmetic.
+- `Calculated API cost from measured usage` and token usage afterward.
+- The partial-run and retry experience.
+- One-click `Reviewed` controls and visible progress.
+- Build gating.
+- Version display on every screen.
+- The `Planned workflows` band containing only Description of Improvements.
+- Clear errors, and no inactive controls that look clickable.
+
+### Approval Gate B: Spenser's Mac acceptance
+
+**Stop after automated tests and the real Mac screen walkthrough.** Spenser
+reviews:
+
+- Caption workflow
+- Review clicks
+- Cost language
+- Partial failures
+- Output naming
+- Word-document size
+- Photo quality
+- HEIC behavior
+- Planned-workflow presentation
+
+**Do not conduct a paid real-photo calibration, and do not create Mark's
+delivery package, until Spenser accepts the feature experience.**
+
+### Task 6: Bounded paid calibration
+
+- Use **only** a corpus Spenser explicitly approves for an external AI request.
+- Run the smallest useful paid test.
+- Record measured usage, calculated cost, the learned-rate change, caption
+  quality, and any failed request.
+- Do not exceed the approved $20 provider limit.
+- **Do not use client photographs without explicit corpus approval.**
+
+### Approval Gate C: Cost and caption acceptance
+
+**Stop and report the calibration evidence.** Spenser decides whether the
+estimate, the model, and the caption quality are acceptable.
+
+### Task 7: Windows package acceptance
+
+- Build the exact candidate package through the committed script.
+- Deliver through the approved private-download path of Section 14.
+- Test browser download, Explorer extraction, SmartScreen, startup, Word
+  output, PDF size, state survival, upgrade, rollback, and failure recovery.
+- Use the full acceptance checklist of Section 16.
+- **Record the exact package version and the immutable package aggregate.**
+
+### Approval Gate D: Exact package approval
+
+**Stop before sending anything to Mark.**
+
+Spenser approves or rejects **the exact tested package**. Approval of an
+earlier build, an earlier plan, or an earlier test does not authorize a
+different package. A rebuild is a new package and needs its own yes.
+
+### The gates at a glance
+
+| After | Gate | What it protects |
+|---|---|---|
+| Task 3 | A: Windows spine proof | No feature work is built on an unproven Windows foundation |
+| Task 5 | B: Mac acceptance | No money is spent, and no package is cut, before the experience is right |
+| Task 6 | C: Cost and caption acceptance | The estimate and the caption quality are judged on evidence |
+| Task 7 | D: Exact package approval | Mark receives only a package Spenser tested and named |
 
 ## Appendix: what this revision changed and why
 
@@ -1300,3 +1693,17 @@ legible without a diff.
 | Output naming reframed as parsing | Recovering two values from one joined string can be wrong, and the old wording read like a field read |
 | The two-copy spike criterion inverted | It scored a corruption test as a pass |
 | Section 22 records rejected options with reasons | So the decisions are not relitigated and are not mistaken for accidents |
+
+**Corrections of 2026-08-19.**
+
+| Change | Reason |
+|---|---|
+| Sections 3e and 3f: adaptive cost estimate and local AI Usage History | A fixed $0.05 is measurably wrong after the first real run. The heavy prior stops one cheap run from swinging the number, and the history makes the rate auditable rather than trusted |
+| Post-run wording fixed to `Calculated API cost from measured usage` | `Actual cost` claims a bill the app cannot produce. This closed the last OPEN item, which had been delegated to the executor |
+| `Cost unavailable`, never $0, and unknown costs never lower the rate | A missing number is not a cheap number, and treating it as one would bias the estimate downward exactly when evidence is weakest |
+| Usage history privacy boundary written as a requirement with a byte-scan test | A cost audit needs counts, tokens, and rates. It does not need to know what the photographs were of |
+| `runtime.json` removed from the packaged tree, created after validation, outside the immutable set | The previous revision would have had the app invalidate its own package on first startup |
+| The manifest excluded from its own aggregate, and the aggregate defined over ordered paths, sizes, and contents | A file cannot hash itself, and the previous wording never said how the aggregate was computed |
+| Section 11 now states plainly what the check does not do | Without code signing it detects damage, not an adversary who rewrites files and manifest together. Saying so is better than implying otherwise |
+| Section 25: seven tasks and four approval gates | The document was all requirements and no sequence, so nothing said where to stop |
+| HEIC sequencing recorded in Section 1b | The defect is live on the Mac, so when it gets fixed had to be a decision rather than a drift |

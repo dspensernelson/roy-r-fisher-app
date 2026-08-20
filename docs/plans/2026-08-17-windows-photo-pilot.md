@@ -1929,6 +1929,43 @@ launched.
 **Still unproven, and the reason Gate A exists.** None of it has run on
 Windows.
 
+**Task 3.1, 2026-08-19: the downloadable archive.** Task 3 produced a package
+folder. The approved delivery path in Section 14 is a private download link,
+and you cannot link to a folder, so the ZIP was missing.
+
+ZIP creation, the external SHA-256 sidecar, and a fresh-extraction check are
+now part of the same committed packaging script. One command produces the
+folder, `Roy R. Fisher v0.1.0.zip`, and `Roy R. Fisher v0.1.0.zip.sha256`.
+
+**The exact archive is identified by its external SHA-256.** That is how
+Spenser approves one build rather than a build, per Gate D. **Mark never
+compares a checksum**: the launcher checks the package's own MANIFEST after he
+unzips, and he is asked for nothing.
+
+**Two things found while making it reproducible, both fixed.**
+
+- **pip was writing the build machine's absolute paths into every installed
+  `RECORD`**, through byte-compilation into a randomly named temporary
+  directory. Spenser's username shipped inside the package, and the random
+  segment changed the bytes on every build, so the archive could never have had
+  a stable hash. Byte-compilation is now off, which is right anyway: a `.pyc`
+  built by this Mac's Python 3.9 is useless to a Windows 3.14 interpreter.
+- **`direct_url.json` recorded a `file:///Users/...` URL for every
+  distribution.** Optional metadata nothing reads at runtime, deleted after
+  install. It would also have made two different machines produce different
+  archives forever.
+
+**FACT, measured 2026-08-19.** Two full builds from the same cached inputs
+produce byte-identical archives. 34 MB, 2,440 entries, one top-level folder,
+no links, no path escaping it, no `runtime.json`, no build-machine paths.
+Fresh extraction validates against the package's own MANIFEST.
+
+**Mac extraction and manifest verification do not satisfy Gate A.** Python's
+`zipfile` on a Mac says nothing about Windows. **Gate A still requires the
+archive downloaded through a browser, extracted by Windows Explorer,
+SmartScreen observed and its exact wording recorded, and the app actually run
+on Windows.** Task 4 remains unauthorized.
+
 ### Approval Gate A: Windows spine proof
 
 **Stop after the smallest Windows spike of Section 21.** Report what actually

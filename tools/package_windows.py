@@ -21,10 +21,14 @@ Nothing here runs on Mark's machine. This is a development tool, and it is not
 in the package it produces.
 """
 import argparse
+import hashlib
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -304,6 +308,15 @@ def build(out: Path, work: Path, offline: bool) -> None:
              "--platform", "win_amd64", "--python-version", PYTHON_TAG,
              "--abi", PYTHON_ABI, "--implementation", "cp",
              "--only-binary=:all:", "--no-deps", "--upgrade",
+             # No byte-compilation, for two reasons that both matter.
+             # Any .pyc produced here is compiled by this Mac's Python 3.9 and
+             # is useless to a Windows 3.14 interpreter. And pip records the
+             # paths of the files it compiled into each RECORD, which on this
+             # machine are absolute paths through Spenser's own home folder
+             # and a randomly named temporary directory. That leaked his
+             # username into every package and changed the bytes on every
+             # build, so the archive could never have had a stable hash.
+             "--no-compile",
              # The wheels were already resolved for cp314 above. pip checks
              # Requires-Python against the interpreter running this script,
              # not against --python-version, so a package needing >=3.10 is
@@ -313,6 +326,9 @@ def build(out: Path, work: Path, offline: bool) -> None:
     else:
         say("offline: runtime and wheels skipped, layout and manifest only")
 
+    say("removing build-machine traces from the installed metadata")
+    strip_local_traces(python_dir / "site-packages")
+
     say("writing the manifest")
     (out / packaging.MANIFEST_NAME).write_text(packaging.build_manifest(out),
                                                encoding="utf-8")
@@ -321,10 +337,226 @@ def build(out: Path, work: Path, offline: bool) -> None:
     packaging.verify(out)
 
     listed = packaging.read_manifest(out)
+
+    say("making the archive")
+    zip_path = out.with_name(out.name + ".zip")
+    make_zip(out, zip_path)
+    sidecar = write_sidecar(zip_path)
+
+    say("extracting it somewhere new and checking it")
+    checked = verify_zip(out, zip_path)
+
     print()
     print("Built %s" % out)
-    print("  files     %d" % len(listed["files"]))
-    print("  aggregate %s" % listed["aggregate"])
+    print("  files      %d" % len(listed["files"]))
+    print("  aggregate  %s" % listed["aggregate"])
+    print()
+    print("Archive %s" % zip_path.name)
+    print("  size       %.1f MB" % (zip_path.stat().st_size / (1024 * 1024)))
+    print("  entries    %d" % checked["entries"])
+    print("  sha256     %s" % sha256_of(zip_path))
+    print("  sidecar    %s" % sidecar.name)
+    print("  extracted  %s" % checked["manifest"])
+    print()
+    print("This extraction was done on the Mac with Python's zipfile. It is not")
+    print("the Gate A test, which needs a browser download and Windows Explorer.")
+
+
+# ----------------------------------------------------------------- the zip --
+# The ZIP epoch. Every entry is stamped with this instead of its real mtime, so
+# two builds from the same inputs produce the same bytes. 1980-01-01 is the
+# earliest a ZIP can express, and any fixed value would do; what matters is
+# that it is fixed.
+ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
+
+# Stamped on every entry rather than copied from disk, for the same reason.
+FILE_MODE = 0o644
+DIR_MODE = 0o755
+
+
+class UnsafeArchivePath(Exception):
+    """Something in the tree would not be safe to write on extraction."""
+
+
+def _arcname(root: Path, path: Path, top: str) -> str:
+    """The name this file gets inside the archive, checked before it is used.
+
+    Every entry has to land inside the one top-level folder. An absolute path,
+    a parent traversal, or a backslash that Windows would read as a separator
+    are all refused here rather than trusted to the extractor, because the
+    extractor is Mark's copy of Explorer and not something we control.
+    """
+    rel = path.relative_to(root).as_posix()
+    name = "%s/%s" % (top, rel)
+    if rel.startswith("/") or ":" in rel or "\\" in rel:
+        raise UnsafeArchivePath("unsafe path in the package: %s" % rel)
+    parts = name.split("/")
+    if ".." in parts or "" in parts[1:]:
+        raise UnsafeArchivePath("unsafe path in the package: %s" % rel)
+    if parts[0] != top:
+        raise UnsafeArchivePath("path escapes the top folder: %s" % rel)
+    return name
+
+
+def _entries(root: Path):
+    """Every file, and any directory that would otherwise be lost, sorted.
+
+    Sorted so the archive is deterministic. Empty directories get an explicit
+    entry because nothing else would carry them, and the extraction check
+    compares trees.
+    """
+    root = Path(root)
+    files, empties = [], []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames
+                             if d not in packaging.NOISE_DIRS)
+        here = Path(dirpath)
+        keep = [f for f in sorted(filenames)
+                if f not in packaging.NOISE_FILES
+                # runtime.json is written at startup and is outside the
+                # immutable set. An archived one would carry a port from
+                # another machine into Mark's copy. verify_zip refuses it too,
+                # so this is the first of two doors rather than the only one.
+                and not (here == Path(root) and f == packaging.RUNTIME_NAME)
+                # The archive and its sidecar are siblings of this folder, not
+                # inside it, so they cannot be walked. Scoped to the top level
+                # anyway, and only there: python/python314.zip is the embedded
+                # standard library and dropping it broke the build once.
+                and not (here == Path(root) and f.endswith((".zip", ".sha256")))]
+        if not keep and not dirnames and here != root:
+            empties.append(here)
+        files.extend(here / f for f in keep)
+    return sorted(files), sorted(empties)
+
+
+def make_zip(folder: Path, zip_path: Path) -> None:
+    """One archive, one top-level folder, byte-identical between builds.
+
+    Written here rather than shelled out to `zip` or made in Finder, because
+    both stamp real timestamps and Finder adds its own metadata files. The
+    archive Spenser approves has to be the archive the hash names, and that
+    means the bytes cannot drift between two runs of the same build.
+    """
+    folder = Path(folder)
+    top = folder.name
+    files, empties = _entries(folder)
+
+    for path in files + empties:
+        if path.is_symlink():
+            raise UnsafeArchivePath(
+                "the package contains a link, which is never archived: %s"
+                % path.relative_to(folder))
+
+    if zip_path.exists():
+        zip_path.unlink()
+
+    # One sorted pass over files and empty directories together, so the order
+    # inside the archive is the sorted order of the names and does not depend
+    # on which kind of entry came first.
+    planned = sorted(
+        [(_arcname(folder, p, top), p, False) for p in files]
+        + [(_arcname(folder, p, top) + "/", p, True) for p in empties])
+
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED,
+                         compresslevel=9) as archive:
+        for name, path, is_dir in planned:
+            info = zipfile.ZipInfo(name, ZIP_EPOCH)
+            info.create_system = 3
+            if is_dir:
+                info.external_attr = (DIR_MODE << 16) | 0x10
+                archive.writestr(info, b"")
+            else:
+                info.external_attr = FILE_MODE << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                archive.writestr(info, path.read_bytes())
+
+
+def sha256_of(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_sidecar(zip_path: Path) -> Path:
+    """The conventional `sha256sum` line: hash, two spaces, filename.
+
+    This names the exact artifact so Spenser can approve one build rather than
+    a build. It is never a step for Mark: the launcher checks the package's own
+    MANIFEST after he unzips, and he is never asked to compare anything.
+    """
+    sidecar = zip_path.with_name(zip_path.name + ".sha256")
+    sidecar.write_text("%s  %s\n" % (sha256_of(zip_path), zip_path.name),
+                       encoding="utf-8")
+    return sidecar
+
+
+def verify_zip(folder: Path, zip_path: Path) -> dict:
+    """Extract the archive somewhere new and prove it is the package.
+
+    This is a Mac extraction with Python's own zipfile. It does not stand in
+    for Gate A, which needs the archive downloaded through a browser and
+    unzipped by Windows Explorer on Mark's kind of machine, with SmartScreen
+    watching. Nothing here says anything about that.
+    """
+    folder = Path(folder)
+    top = folder.name
+    facts = {}
+
+    with zipfile.ZipFile(zip_path) as archive:
+        names = archive.namelist()
+        facts["entries"] = len(names)
+
+        tops = {n.split("/")[0] for n in names}
+        if tops != {top}:
+            raise UnsafeArchivePath(
+                "the archive must hold exactly one folder, found: %s" % sorted(tops))
+        for name in names:
+            if name.startswith("/") or ".." in name.split("/"):
+                raise UnsafeArchivePath("unsafe path in the archive: %s" % name)
+            if not name.startswith(top + "/"):
+                raise UnsafeArchivePath("path escapes the top folder: %s" % name)
+        if any(n.endswith("/" + packaging.RUNTIME_NAME) for n in names):
+            raise UnsafeArchivePath(
+                "%s is created at startup and must never be archived"
+                % packaging.RUNTIME_NAME)
+
+        holder = tempfile.mkdtemp(prefix="rrf-zip-check-")
+        try:
+            archive.extractall(holder)
+            extracted = Path(holder) / top
+
+            packaging.verify(extracted)
+            facts["manifest"] = "the extracted package validates against its own MANIFEST"
+
+            if packaging.aggregate(extracted) != packaging.aggregate(folder):
+                raise UnsafeArchivePath(
+                    "the extracted package does not match the folder it came from")
+            facts["matches_folder"] = True
+        finally:
+            shutil.rmtree(holder, ignore_errors=True)
+    return facts
+
+
+def strip_local_traces(site_packages: Path) -> int:
+    """Delete the pip metadata that records where the wheels came from.
+
+    `direct_url.json` is optional PEP 610 metadata naming the exact file a
+    distribution was installed from. Installing from a local directory writes
+    an absolute `file:///Users/...` URL into it, so every one of these carries
+    the build machine's username and folder layout into the package Mark
+    unzips. Nothing reads them at runtime.
+
+    They are also why two different machines could never produce the same
+    archive, even after the byte-compilation fix, because the path differs per
+    machine rather than per build.
+    """
+    removed = 0
+    for found in sorted(Path(site_packages).glob("*.dist-info/direct_url.json")):
+        found.unlink()
+        removed += 1
+    return removed
 
 
 def readme_text() -> str:

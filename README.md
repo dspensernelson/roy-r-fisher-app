@@ -44,9 +44,11 @@ ready yet.
 
 ## What we know is missing
 
-- **There is no Windows launcher.** The only way to start it is a Mac shell
-  script. A `.bat` twin is a chore, not a hard problem, and nothing else is
-  Mac-specific in the app's path.
+- **Nothing has run on Windows yet.** There is now a Windows launcher, a
+  packaging script, and a package that builds and self-verifies on the Mac
+  (`tools/package_windows.py`). Whether the embedded interpreter starts, the
+  compiled wheels import, and Explorer's unzip leaves it whole are all still
+  unproven, and are the next thing to be tested.
 - **The design system has not been adopted.** The screens still run on the old
   stylesheet, whose brand red is wrong.
 - **No section other than photos builds.** The next cheapest family is the
@@ -65,8 +67,21 @@ so a fresh clone needs one step before the app will serve anything:
     cd app/web && npm ci && npm run build
 
 Then start it with `Start Roy R. Fisher.command` on a Mac, or
-`python3 app/run_app.py`.
+`python3 app/run_app.py`. Both take the same path now: the launcher picks a
+free port rather than assuming 8000, waits for the app to really answer before
+opening the browser, and refuses to start a second copy while another version
+is running.
 
 Mark will not have Node on his PC. Whatever we eventually hand him has to
 arrive with the interface already built, so that build is a packaging job for
 us and never a step for him.
+
+## Building the Windows package
+
+    python3 tools/package_windows.py
+
+Produces `build/windows/Roy R. Fisher vX.Y.Z/`: the app, the built interface,
+an embedded CPython 3.14, the whole runtime dependency closure resolved for
+`win_amd64`, and a MANIFEST the launcher checks before it imports anything.
+The build output is not committed. Add `--offline` to lay out and verify the
+package without downloading the interpreter and the wheels.

@@ -1902,6 +1902,33 @@ half that actually prevents data loss.
 - Plain startup failures.
 - A self-contained Windows package.
 
+**Built and Mac-tested 2026-08-19. Two defects found by running it, both
+fixed:**
+
+- **The manifest check refused to start in the development checkout**, which
+  has no MANIFEST and never will. It now skips there, decided by the presence
+  of `app/tests`, which is on the exclusion list and can never be in a
+  package. Deciding it by the absence of the manifest would have been wrong:
+  that is exactly what a half-finished unzip looks like, so it must stay an
+  error in anything shaped like a package.
+- **`main.py` imported `demo` unconditionally**, so excluding `demo.py` from
+  the package stopped the whole server importing and the app did not start at
+  all. Section 10a predicted this in words and nothing proved it until a
+  package was built and run. The import, the exception handler and both routes
+  are now conditional, and a test runs the packaged `main.py` to prove it.
+
+**FACT, measured on the Mac 2026-08-19.** The package builds and verifies
+itself: 2,472 files, embedded CPython 3.14.7, the full 33-distribution runtime
+closure resolved for `win_amd64` including `httpx`, with `uvloop` correctly
+absent and `demo.py` absent. A missing file, a truncated file, a same-size byte
+corruption and a moved file are each detected, and the missing one is named.
+Two package folders side by side refuse to run at once and name the running
+version; closing one and launching the other shows the version whose folder was
+launched.
+
+**Still unproven, and the reason Gate A exists.** None of it has run on
+Windows.
+
 ### Approval Gate A: Windows spine proof
 
 **Stop after the smallest Windows spike of Section 21.** Report what actually

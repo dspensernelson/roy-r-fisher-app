@@ -11,13 +11,24 @@ import browse
 import busy
 import captions
 import classify
-import demo
 import inventory
 import jobs
+import packaging
 import sections
 import settings
 import state
 import workspace
+
+# Spenser's testing tool, and the one module that is not in the package Mark
+# receives. It is excluded there, so this import has to be allowed to fail:
+# without the guard, removing the file stops the whole server importing and the
+# app does not start at all on his machine. `demo.enabled()` already gated the
+# button and the endpoint, so absence is the second half of the same answer,
+# not a new one.
+try:
+    import demo
+except ImportError:                                  # pragma: no cover - see test_packaged_app
+    demo = None
 
 # Ships inside the app. It used to be read out of the client corpus, which
 # only exists on the development Mac, so the first press of Build photo pages
@@ -122,12 +133,13 @@ def create_app() -> FastAPI:
                             content={"detail": exc.message,
                                      "state_unreadable": True})
 
-    @app.exception_handler(demo.DemoError)
-    def demo_error_handler(_request, exc: demo.DemoError):
-        """A reset that did not finish says so, and says where everything is.
-        It never reports a success it has not verified."""
-        return JSONResponse(status_code=500,
-                            content={"detail": exc.message, **exc.report})
+    if demo is not None:
+        @app.exception_handler(demo.DemoError)
+        def demo_error_handler(_request, exc: demo.DemoError):
+            """A reset that did not finish says so, and says where everything
+            is. It never reports a success it has not verified."""
+            return JSONResponse(status_code=500,
+                                content={"detail": exc.message, **exc.report})
 
     def home_or_400() -> Path:
         """The jobs folder, or a plain refusal. Nothing in the app invents
@@ -137,19 +149,37 @@ def create_app() -> FastAPI:
             raise HTTPException(400, "No jobs folder chosen yet.")
         return home
 
-    @app.get("/api/demo")
-    def demo_status():
-        """Whether the testing tool is configured on this computer. On Mark's
-        machine there is no configuration, so this always answers false and
-        the button never renders."""
-        return demo.status()
+    @app.get("/api/version")
+    def app_version():
+        """Which version is answering on this port.
 
-    @app.post("/api/demo/reset")
-    def demo_reset():
-        if not demo.enabled():
-            raise HTTPException(404, "Not found.")
-        with busy.resetting():
-            return demo.reset()
+        Three jobs, and it is the same answer to all of them. The screens show
+        it, so Mark can tell which folder he launched. The launcher probes it
+        to decide whether the thing on a port is us, which `/api/demo` could
+        never do because the demo routes are excluded from what he receives.
+        And it is what the last-good record is checked against before a version
+        is written down as one that started.
+
+        Empty when there is no VERSION file, which is what a checkout without
+        one looks like. Never guessed at.
+        """
+        return {"version": packaging.version_of(
+            Path(__file__).resolve().parents[2])}
+
+    if demo is not None:
+        @app.get("/api/demo")
+        def demo_status():
+            """Whether the testing tool is configured on this computer. On
+            Mark's machine the module is not there at all, so neither route is
+            registered and the button never renders."""
+            return demo.status()
+
+        @app.post("/api/demo/reset")
+        def demo_reset():
+            if not demo.enabled():
+                raise HTTPException(404, "Not found.")
+            with busy.resetting():
+                return demo.reset()
 
     @app.get("/api/browse")
     def browse_folders(path: str = ""):

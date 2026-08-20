@@ -54,3 +54,8 @@ sandbox/
 .rrf-app.json
 *.env
 !app/web/.env.example
+
+# The Windows package and its download cache (Task 3, 2026-08-19). Built by
+# tools/package_windows.py, carries an embedded interpreter and wheels, and is
+# never project content.
+build/

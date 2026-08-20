@@ -147,7 +147,12 @@ MAX_PER_RUN = 60
 # a single request at any realistic size, so a full run always splits. This is
 # deliberately well under the provider's own limit: the cost of one extra
 # request is small and the cost of a rejected oversized one is a whole run.
-MAX_REQUEST_BYTES = 12 * 1024 * 1024
+# RRF_MAX_REQUEST_BYTES lowers it, so a split can be forced on a handful of
+# photographs during calibration instead of having to send sixty to see one.
+# The same shape of override the state paths already use, and for the same
+# reason: proving a behaviour should not require staging the expensive
+# conditions that normally produce it.
+MAX_REQUEST_BYTES = int(os.environ.get("RRF_MAX_REQUEST_BYTES") or (12 * 1024 * 1024))
 
 # Retries are off. A failed request shows Mark a clear error and waits for him
 # to ask again, because an automatic retry spends money he has not agreed to

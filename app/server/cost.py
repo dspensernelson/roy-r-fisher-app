@@ -71,6 +71,32 @@ def learned_rate(bucket: str = "") -> float:
     return (PRIOR_DOLLARS + spent) / float(PRIOR_PHOTOS + photos)
 
 
+def rate_including(bucket: str, extra_cost, extra_photos: int) -> float:
+    """The learned rate once one more run is counted, before it is stored.
+
+    A run records the rate it produced, not the rate it started from, so the
+    history reads as a series of answers rather than a series of guesses. The
+    record cannot be read back for this because it is still being built.
+
+    A run with no calculated cost adds nothing, the same as everywhere else:
+    an unknown cost never moves the rate.
+    """
+    spent, photos = 0.0, 0
+    for run in usage_store.runs(bucket):
+        cost_of_run = run.get("calculated_cost")
+        if cost_of_run is None or run.get("status") == usage_store.COST_UNAVAILABLE:
+            continue
+        try:
+            spent += float(cost_of_run)
+            photos += int(run.get("photos_captioned") or 0)
+        except (TypeError, ValueError):
+            continue
+    if extra_cost is not None:
+        spent += float(extra_cost)
+        photos += int(extra_photos or 0)
+    return (PRIOR_DOLLARS + spent) / float(PRIOR_PHOTOS + photos)
+
+
 def round_up(amount: float) -> float:
     """Up to the next five cents. Never down."""
     return round(math.ceil((amount - 1e-9) / ROUNDING) * ROUNDING, 2)

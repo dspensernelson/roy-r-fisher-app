@@ -583,7 +583,12 @@ def create_app() -> FastAPI:
                 "estimate": shown["total"],
                 "token_usage": usages,
                 "calculated_cost": measured["calculated_cost"],
-                "learned_rate": round(cost.learned_rate(_bucket()), 6),
+                # The rate *after* this run, which means this run's own cost
+                # and photographs have to be counted in. Reading the stored
+                # runs here would give the rate before it, because the record
+                # being built is not saved yet.
+                "learned_rate": round(cost.rate_including(
+                    _bucket(), measured["calculated_cost"], done), 6),
             })
         except Exception:
             # Bookkeeping must never take the run down or lose paid captions.

@@ -2010,7 +2010,38 @@ archive downloaded through a browser, extracted by Windows Explorer,
 SmartScreen observed and its exact wording recorded, and the app actually run
 on Windows.** Task 4 remains unauthorized.
 
-### Approval Gate A: Windows spine proof
+### Approval Gate A: Windows spine proof. PASSED 2026-08-20
+
+**FACT, observed by Spenser on a real Windows computer, 2026-08-20.**
+
+- The ZIP was delivered by email, downloaded, and extracted successfully.
+- The application launched.
+- He entered the API key successfully.
+- The application generated real AI captions.
+- He completed the existing workflow from beginning to end.
+
+**What that proves.** The delivery spine works on Windows: the embedded
+runtime starts, the compiled wheels import, the launcher binds and opens the
+browser, `Path.home()` resolves somewhere writable, the key is entered and
+stored, and the provider is reachable from his machine.
+
+**What it does not prove.** Only what existed on 2026-08-20 was exercised. It
+says nothing about the cost ledger, the review state, the split-run handling,
+the retry, the photo optimization, the output naming, or the AI policy, because
+none of those were built when he ran it. Those are proven by this pass and are
+unproven on Windows until the completed candidate is run there.
+
+### Spenser's uninterrupted implementation pass, authorized 2026-08-20
+
+**APPROVED, 2026-08-20.** Gates B and C stop being approval stops and become
+**verification checkpoints inside one continuous pass**. Every acceptance
+criterion they carry is kept in full; what changes is that the work does not
+halt to wait for an approval between them.
+
+**Gate D is now the single final Spenser acceptance**, of the exact completed
+package, after he runs it on Windows himself. Nothing reaches Mark before that.
+
+The scope is the Photo Pilot. Description of Improvements does not begin.
 
 **Stop after the smallest Windows spike of Section 21.** Report what actually
 ran on Windows:
@@ -2120,7 +2151,7 @@ default. Nothing becomes AI-safe by being hydrated.
 - Every hydrated job is Local only under the Section 25 policy until
   explicitly allowlisted.
 
-### Approval Gate B: Spenser's hands-on sandbox session
+### Checkpoint B: hands-on sandbox session (verification, not a stop)
 
 **APPROVED, 2026-08-19. Stop after automated tests and a real hands-on session
 using the hydrated demo jobs of Task 6.** This is not a walkthrough of a script.
@@ -2152,7 +2183,8 @@ Demo Hydration comes first.
 A refinement is a separate bounded task, not a set of fixes folded quietly into
 whatever comes next. It is item 4 of the definition of done above.
 
-**Do not proceed to paid AI calibration until Gate B is explicitly accepted.**
+**Every criterion above is kept.** Since 2026-08-20 this is verified inside
+the continuous pass rather than waited on.
 Do not create Mark's delivery package before that either.
 
 ### Task 7: Bounded paid AI calibration
@@ -2178,10 +2210,11 @@ quality, and any failed request.
 
 **Do not use client photographs without explicit corpus approval.**
 
-### Approval Gate C: Cost and caption acceptance
+### Checkpoint C: cost and caption evidence (verification, not a stop)
 
-**Stop and report the calibration evidence.** Spenser decides whether the
-estimate, the model, and the caption quality are acceptable.
+**The calibration evidence is recorded and carried to Gate D.** Since
+2026-08-20 this no longer halts the pass; Spenser judges it with everything
+else at the final acceptance.
 
 **If the stress test reveals a usability problem, propose a bounded refinement
 and wait for approval. Do not proceed directly to the final Windows package.**

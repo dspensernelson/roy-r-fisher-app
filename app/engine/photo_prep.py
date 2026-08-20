@@ -31,6 +31,17 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 
+# HEIC is decoded by pillow-heif, which has to register itself with Pillow
+# before Image.open will recognise one. photos.py does this too, and until now
+# this module quietly depended on that having happened first. It is the module
+# that converts HEIC for the document, so it registers the codec itself rather
+# than relying on an import somewhere else having run.
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:                              # pragma: no cover - optional
+    pass
+
 # The settings, approved 2026-08-18. Named together so the usage history can
 # record which set a run was produced under, because a change to any of them
 # makes earlier cost observations incomparable.

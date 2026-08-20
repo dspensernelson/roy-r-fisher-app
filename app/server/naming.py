@@ -4,7 +4,7 @@
 about that are easy to get wrong and are worth stating plainly.
 
 The first is that this is parsing, not a lookup. The brief holds one joined
-string, "5675 Forest, Bettendorf, Iowa", written by the app in a known order.
+string, "100 Example Avenue, Anytown, Iowa", written by the app in a known order.
 Recovering the city and the street from it means splitting on commas, and a
 street containing a comma, a unit number, or a brief a human typed can all
 split another way. So the values are shown to Mark before Build and he can

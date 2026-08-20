@@ -89,7 +89,7 @@ export default function NewJob({ onCreated, onCancel }) {
           <div className="field"><label>Street address</label>
             <input value={form.street} onChange={set("street")} placeholder="4151 4th St SW" autoFocus /></div>
           <div className="field"><label>City</label>
-            <input value={form.city} onChange={set("city")} placeholder="Mason City" /></div>
+            <input value={form.city} onChange={set("city")} placeholder="City" /></div>
           <div className="field"><label>State</label>
             <input value={form.state} onChange={set("state")} /></div>
           <div className="field"><label>Kind of property</label>

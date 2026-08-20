@@ -1,10 +1,13 @@
 """Draft photo captions in one of the firm's two measured styles.
 
 Measured across the corpus 2026-08-10. Twelve photo documents; five carry real
-captions. Four of them (79 captions: Mason City Walmart, both Burlington
-documents, and one old report) write "View of <what> facing <direction>". The
-fifth (24 captions, 215 E 37th Street) writes a category, a dash, and a
-detail, and it is the only multi-family building among them.
+captions. Four of them, 79 captions between them, write "View of <what> facing
+<direction>". The fifth, 24 captions, writes a category, a dash, and a detail,
+and it is the only multi-family building among them.
+
+Which delivered reports those were is recorded in the development notes, not
+here. This file ships to Mark, and a client's town and tenant have no business
+travelling inside it just to explain where a default came from.
 
 So "View of" is the house default and the category form is offered where the
 property type suggests it. The category form rests on ONE delivered report and

@@ -31,7 +31,11 @@ import package_windows as pw  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 REAL = REPO / "build" / "windows"
-REAL_ZIP = REAL / "Roy R. Fisher v0.1.0.zip"
+# Read from VERSION rather than written here, so a version bump does not
+# silently turn every real-archive test into a skip. It did once.
+REAL_VERSION = packaging.version_of(REPO) or "0.0.0"
+REAL_NAME = "Roy R. Fisher v%s" % REAL_VERSION
+REAL_ZIP = REAL / ("%s.zip" % REAL_NAME)
 
 needs_real = pytest.mark.skipif(
     not REAL_ZIP.is_file(),
@@ -265,7 +269,7 @@ def test_no_source_demo_evidence_key_or_home_state_is_archived(fake):
 def test_the_real_archive_has_one_folder_and_no_unsafe_paths():
     with zipfile.ZipFile(REAL_ZIP) as archive:
         names = archive.namelist()
-    assert {n.split("/")[0] for n in names} == {"Roy R. Fisher v0.1.0"}
+    assert {n.split("/")[0] for n in names} == {REAL_NAME}
     for name in names:
         assert not name.startswith("/") and ".." not in name.split("/")
 

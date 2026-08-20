@@ -39,10 +39,17 @@ def built(tmp_path_factory):
     if not DIST.is_file():
         pytest.skip("app/web/dist is not built")
     out = tmp_path_factory.mktemp("package") / "Roy R. Fisher v0.1.0"
-    subprocess.run(
+    result = subprocess.run(
         [sys.executable, str(SCRIPT), "--out", str(out),
          "--work", str(out.parent / "cache"), "--offline"],
-        check=True, capture_output=True, text=True, cwd=str(REPO))
+        capture_output=True, text=True, cwd=str(REPO))
+    if result.returncode != 0:
+        # A stale dist is an ordinary state mid-edit, not a broken test. The
+        # script refuses to package one, correctly, and forty-five errors is
+        # the wrong way to say "rebuild the interface".
+        if "older than" in (result.stdout + result.stderr):
+            pytest.skip("app/web/dist is stale; run: cd app/web && npm run build")
+        raise AssertionError(result.stdout + result.stderr)
     return out
 
 

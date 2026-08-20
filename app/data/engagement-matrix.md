@@ -18,7 +18,7 @@
 | Subject Photographs | yes | yes | yes | yes | yes (subject + taking area) |
 | Statement of Appraisal Problem | yes | yes (+ appeal posture, Jan 1 effective date) | yes | condensed (Purpose and Intended Use) | yes (+ taking description) |
 | Salient Facts Summary | yes | yes | yes | yes | condensed |
-| Assessment and Taxes | optional, evidence thin | yes, folded into Salient Facts Summary, not its own section (corpus measurement, `section-rulebook.md` Salient Facts Summary block: Mason City, Kinze, and Marquette all carry the assessment grid on or immediately next to the Salient Facts page, three reports firm; a run that breaks it out as its own spine section is the invented-section case) | no | no | no |
+| Assessment and Taxes | optional, evidence thin | yes, folded into Salient Facts Summary, not its own section (corpus measurement, `section-rulebook.md` Salient Facts Summary block: three delivered reports all carry the assessment grid on or immediately next to the Salient Facts page, three reports firm; a run that breaks it out as its own spine section is the invented-section case) | no | no | no |
 | Regional and City Data | out-of-metro only | out-of-metro only | rarely | no | no |
 | Neighborhood Description | yes | yes | condensed | no | condensed |
 | Site Analysis | yes | yes | yes | no | yes (+ taking exhibit) |

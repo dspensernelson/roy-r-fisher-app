@@ -27,7 +27,7 @@ ASSIGNMENT_FIELDS = [
 FEE_POINTER = "see the engagement letter (pointer only, never the amount)"
 
 # A dollar amount can arrive through any free text field, not only the fee.
-# "City of Mason City, fee $4,500 per letter" typed into Client would put a
+# "City of Anytown, fee $4,500 per letter" typed into Client would put a
 # number in the brief just as surely as a Fee row would, and the brief is a
 # drafting input. The amount is not lost: it is in the engagement letter,
 # which this brief points at.

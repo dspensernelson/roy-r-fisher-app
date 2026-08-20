@@ -716,9 +716,13 @@ def create_app() -> FastAPI:
         # reaches a client.
         found = naming.facts_for(job)
         if not found["ready"]:
+            missing = found["missing"]
             raise HTTPException(
-                400, "The %s is missing, so the file cannot be named. Enter it "
-                     "next to Build and try again." % " and ".join(found["missing"]))
+                400, "The %s %s missing, so the file cannot be named. Enter %s "
+                     "next to Build and try again."
+                     % (" and ".join(missing),
+                        "is" if len(missing) == 1 else "are",
+                        "it" if len(missing) == 1 else "them"))
         out_base = naming.output_base(found["city"], found["address"])
 
         if not manifest_existed:

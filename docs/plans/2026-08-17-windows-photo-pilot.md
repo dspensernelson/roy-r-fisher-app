@@ -246,19 +246,59 @@ template, and the layout engine. No existing generated output is touched.
 
 ### 3c. The approved workflow
 
-**APPROVED, 2026-08-18:**
+**CORRECTED, Spenser, 2026-08-20.** The 60-photo ceiling was wrong and is
+withdrawn. A job never becomes unusable for holding more than sixty
+photographs, and 61 is no longer a refusal.
+
+| Was | Is |
+|---|---|
+| 60 photographs per run, 61 refuses | **No total ceiling on a job or a run** |
+| One request, split only if size forced it | **Sixty is the maximum size of one internal tranche** |
+| Mark meets the limit | **Mark clicks once; the tranches are the app's business** |
+
+Tranching is arithmetic, not a choice he makes: 61 goes 60 + 1, 100 goes
+60 + 40, 121 goes 60 + 60 + 1. Cost is calculated across the whole run, each
+tranche saves as it finishes, the next starts by itself, and a later failure
+keeps everything already paid for. Nothing retries on its own, and a manual
+retry sends only the photographs still without captions.
+
+**The 61-photo demo job is now a successful two-tranche run, not a refusal.**
+
+**APPROVED, 2026-08-20. A confirmation step above thirty.** The estimate keeps
+showing before every run. Above thirty unfinished photographs, clicking
+`Generate captions` opens a high-visibility window first, and no request is
+made until he confirms:
+
+```
+Generate captions for 61 photos?
+
+    Estimated maximum cost: $3.05
+
+The work may be divided into multiple requests. Captions are saved as each
+request finishes.
+
+If you continue, generating captions for 61 photos may cost up to $3.05.
+
+                                          [ Cancel ]  [ Generate captions ]
+```
+
+The count and the amount are calculated, never written into the screen. Thirty
+or fewer keeps the visible estimate and skips the extra step. **The window
+informs; it does not block, and it is not a second ceiling.**
+
+**APPROVED, 2026-08-18, unchanged except where the ceiling was:**
 
 **Sending.**
 
-- Maximum 60 photos per AI-caption run.
+- Sixty photographs is the largest internal tranche, not a limit on the job.
 - Show an `Estimated maximum cost` before sending, and the calculated cost
   from measured usage afterward. Both are defined in Section 3e.
 - The estimate starts at **$0.05 per included photo** and moves with evidence,
   down or up, as measured runs accumulate. It is always shown as the
   arithmetic, not just a total.
-- Use one API request when it fits. Split only when the provider's
-  request-size constraints require it. Do not split into arbitrary batches of
-  six.
+- Use one request when the whole run fits inside one tranche. Divide into
+  tranches of at most sixty otherwise, and also when the encoded size forces
+  a smaller one.
 - No automatic retries. A failed request shows a clear error and lets Mark
   retry deliberately.
 
@@ -1276,6 +1316,13 @@ what the optimization does to a delivered-shaped file.
 
 ## 13. Representing unfinished features honestly
 
+**APPROVED, Spenser, 2026-08-20. Photos is the only workflow in this pilot.**
+The section picker comes out of the experience: Photos is always present,
+always the active section, and Mark never chooses report sections or sees a
+multi-section configuration step. The underlying architecture stays, hidden
+rather than destroyed, because Phase 2 multiplies sections later. Description
+of Improvements remains the single disabled row below and is not implemented.
+
 **APPROVED, 2026-08-18:**
 
 - Unfinished capabilities sit in a visually separate section titled
@@ -1777,6 +1824,13 @@ other app-owned files of Section 6 and written with the same atomic helper.
   is no switch on a screen.
 - **AI-safe status is established only through the controlled demo-preparation
   workflow**, after Spenser approves the corpus.
+
+**APPROVED, Spenser, 2026-08-20.** The hydrated demo copies may be used for
+caption testing, by **naming each one on the allowlist**. The policy itself is
+not disabled and the demo root does not become safe wholesale: a new, renamed,
+moved or unrecognised job under that root is still Local only, the original
+`Report Examples` source is never allowlisted, and no source file is ever sent.
+Only the sanitised copies go anywhere.
 - **Naming alone never grants AI permission.** Not a folder name, not a
   filename, not a fixture label.
 
@@ -2135,9 +2189,25 @@ exercises something different rather than every job looking the same:
 **Every demo job must have enough photographs to make the workflow feel real.**
 A job with three photographs does not tell Spenser what sixty feels like.
 
-**Corpus classification is not optional here.** Everything hydrated from sample
-reports is **Local layout corpus** under Section 25 and is Local only by
-default. Nothing becomes AI-safe by being hydrated.
+**APPROVED, Spenser, 2026-08-20. Real photographs, not placeholders.** The
+first hydration filled the jobs with flat coloured panels, which made the demo
+useless for judging anything about layout or caption quality. Photographs are
+now copied from `RRF/Report Examples` into the disposable demo copies.
+
+The source stays strictly read-only: copy only, never move, rename, edit,
+delete, resize or rewrite, fingerprinted before and after and proven
+byte-identical. The copies have their EXIF and GPS stripped, get generic demo
+filenames, and carry no client document, address, caption or report content.
+Reusing the same safe set across several demo jobs is fine.
+
+A small number of synthetic fixtures stay, because each tests something a real
+photograph cannot: the tiny image that must not be enlarged, and a deliberately
+malformed file. Every one of them is unmistakably named and visibly labelled
+synthetic. **Placeholder panels are no longer the principal photo experience.**
+
+**Corpus classification is not optional here.** Hydrated copies are Local only
+by default under Section 25, and become sendable only by being named on the
+allowlist through the controlled workflow above.
 
 **TEST, required before acceptance.** In `test_demo_hydration.py`:
 

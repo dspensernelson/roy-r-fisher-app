@@ -106,7 +106,7 @@ def test_drafting_uses_the_style_recorded_on_the_job(client, monkeypatch):
 
     def spy(context, paths, style=captions.DEFAULT_STYLE):
         seen["style"] = style
-        return {"a.jpg": "Common Area - front entry"}
+        return {"a.jpg": "Common Area - front entry"}, {"input": 100, "output": 20}
 
     with patch.object(captions, "draft_captions", spy):
         client.post("/api/jobs/JOB1/captions")
@@ -121,7 +121,7 @@ def test_preview_captions_the_job_s_own_photos_in_both_styles(client, monkeypatc
 
     def spy(context, paths, style=captions.DEFAULT_STYLE):
         calls.append(style)
-        return {p.name: f"{style} caption for {p.name}" for p in paths}
+        return {p.name: f"{style} caption for {p.name}" for p in paths}, {"input": 100, "output": 20}
 
     with patch.object(captions, "draft_captions", spy):
         body = client.post("/api/jobs/JOB1/caption-preview").json()
@@ -144,7 +144,7 @@ def test_preview_never_writes_anything_to_the_job(client, monkeypatch, tmp_path)
     """It is a look, not a decision. Nothing is saved until he picks."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     before = (tmp_path / "jobs" / "JOB1" / "Photos" / "photo-manifest.json").read_text()
-    with patch.object(captions, "draft_captions", lambda c, p, style="view": {"a.jpg": "x"}):
+    with patch.object(captions, "draft_captions", lambda c, p, style="view": ({"a.jpg": "x"}, {"input": 100, "output": 20})):
         client.post("/api/jobs/JOB1/caption-preview")
     assert (tmp_path / "jobs" / "JOB1" / "Photos" / "photo-manifest.json").read_text() == before
 
@@ -172,11 +172,11 @@ def test_missing_key_degrades_gracefully(client):
 
 def test_captions_fill_only_blank_ones(client, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    with patch.object(captions, "draft_captions", return_value={"a.jpg": "View of front entrance"}):
+    with patch.object(captions, "draft_captions", return_value=({"a.jpg": "View of front entrance"}, {"input": 100, "output": 20})):
         body = client.post("/api/jobs/JOB1/captions").json()
     assert body["ai_available"] is True
     assert body["photos"][0]["caption"] == "View of front entrance"
     # Mark's edit wins: re-run must not touch a non-empty caption
-    with patch.object(captions, "draft_captions", return_value={"a.jpg": "SOMETHING ELSE"}):
+    with patch.object(captions, "draft_captions", return_value=({"a.jpg": "SOMETHING ELSE"}, {"input": 100, "output": 20})):
         body2 = client.post("/api/jobs/JOB1/captions").json()
     assert body2["photos"][0]["caption"] == "View of front entrance"

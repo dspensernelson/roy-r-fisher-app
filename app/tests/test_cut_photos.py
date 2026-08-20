@@ -160,7 +160,7 @@ def test_a_cut_photo_is_not_sent_for_captioning(client, home, monkeypatch):
 
     def fake(context, paths, style=None):
         seen.extend(p.name for p in paths)
-        return {p.name: "written" for p in paths}
+        return {p.name: "written" for p in paths}, {"input": 100, "output": 20}
 
     monkeypatch.setattr(captions, "draft_captions", fake)
     client.post("/api/jobs/A job/captions")
@@ -180,7 +180,7 @@ def test_captions_are_written_for_the_included_blanks_only(client, home, monkeyp
 
     def fake(context, paths, style=None):
         seen.extend(p.name for p in paths)
-        return {p.name: "written" for p in paths}
+        return {p.name: "written" for p in paths}, {"input": 100, "output": 20}
 
     monkeypatch.setattr(captions, "draft_captions", fake)
     client.post("/api/jobs/A job/captions")
@@ -193,7 +193,7 @@ def test_the_preview_only_shows_included_photos(client, home, monkeypatch):
     client.post("/api/jobs/A job/photos/a.jpg/cut")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setattr(captions, "draft_captions",
-                        lambda context, paths, style=None: {p.name: "x" for p in paths})
+                        lambda context, paths, style=None: ({p.name: "x" for p in paths}, {"input": 100, "output": 20}))
     body = client.post("/api/jobs/A job/caption-preview").json()
     assert "a.jpg" not in body["photos"]
     assert body["photos"] == ["b.jpg", "c.jpg", "d.jpg"]

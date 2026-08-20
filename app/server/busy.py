@@ -33,6 +33,20 @@ _writers = 0
 _resetting = False
 
 
+def check_not_resetting() -> None:
+    """Refuse now if a reset holds the floor, before doing any other work.
+
+    `writing()` already refuses, but a route that validates before it writes
+    would answer the validation first and tell Mark his captions need review
+    while the demo folders are being replaced underneath him. This lets such a
+    route refuse for the real reason, at the top, without holding the lock
+    through a long build.
+    """
+    with _lock:
+        if _resetting:
+            raise Busy(WRITE_REFUSED)
+
+
 @contextmanager
 def writing():
     """Held by every route that writes a job file or a setting."""

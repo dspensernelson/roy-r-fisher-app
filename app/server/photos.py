@@ -42,6 +42,60 @@ def is_cut(entry: dict) -> bool:
     return bool(entry.get("cut"))
 
 
+REVIEWED = "reviewed"
+
+
+def is_reviewed(entry: dict) -> bool:
+    """Whether Mark has looked at this caption and said so.
+
+    A missing key means not reviewed. Every manifest written before review
+    existed therefore reads as unreviewed, which is the safe direction: the
+    app asks him to look rather than assuming he already did.
+    """
+    return bool(entry.get(REVIEWED))
+
+
+def review_progress(manifest: dict) -> dict:
+    """`8 of 12 reviewed`, counting only the photographs that are in.
+
+    A photograph cut from the report needs no caption and no review, so it is
+    outside both halves of the count.
+    """
+    rows = included(manifest)
+    with_caption = [p for p in rows if str(p.get("caption", "")).strip()]
+    done = [p for p in with_caption if is_reviewed(p)]
+    outstanding = [p["file"] for p in rows if not is_reviewed(p)]
+    return {
+        "included": len(rows),
+        "reviewed": len(done),
+        "text": "%d of %d reviewed" % (len(done), len(rows)),
+        "all_reviewed": not outstanding,
+        "outstanding": outstanding,
+    }
+
+
+def reset_changed_reviews(existing: dict, incoming: dict) -> None:
+    """Any caption whose words changed goes back to needing review.
+
+    Editing a caption is the moment a reviewed one stops being reviewed, and
+    it has to happen here rather than on the screen: the manifest is also
+    hand-editable on disk, and a caption changed that way must not keep a tick
+    it was given for different words.
+    """
+    was = {}
+    for entry in (existing or {}).get("photos", []) or []:
+        if isinstance(entry, dict) and entry.get("file"):
+            was[entry["file"]] = str(entry.get("caption", ""))
+
+    for entry in (incoming or {}).get("photos", []) or []:
+        if not isinstance(entry, dict) or not entry.get("file"):
+            continue
+        before = was.get(entry["file"])
+        now = str(entry.get("caption", ""))
+        if before is not None and before != now:
+            entry.pop(REVIEWED, None)
+
+
 def included(manifest: dict) -> list:
     """The photos that go in the report, in order.
 
@@ -282,6 +336,8 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
             return f"Photo file name {name!r} must be a bare filename with no path separators."
         if _resolve_confined(photos_dir / name, photos_dir) is None:
             return f"Photo file name {name!r} resolves outside the Photos folder."
+        if REVIEWED in entry and not isinstance(entry[REVIEWED], bool):
+            return "A photo's reviewed flag must be true or false."
         if "cut" in entry and not isinstance(entry["cut"], bool):
             return "A photo's 'cut' must be true or false."
     return None
@@ -312,9 +368,44 @@ def put_manifest(name: str, manifest: dict):
     error = _validate_manifest_shape(job, manifest)
     if error:
         raise HTTPException(400, error)
+    # An edited caption is no longer the caption he reviewed, so the tick comes
+    # off here, against what is actually on disk, rather than being trusted to
+    # whatever sent this.
+    reset_changed_reviews(load_manifest(job), manifest)
     with busy.writing():
         save_manifest(job, manifest)
-    return {"ok": True}
+    return {"ok": True, "review": review_progress(manifest)}
+
+
+def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
+    """Tick or untick one caption. Touches that one key and nothing else."""
+    manifest = load_manifest(job)
+    name = Path(file).name
+    for entry in manifest["photos"]:
+        if entry.get("file") == name:
+            if reviewed:
+                if not str(entry.get("caption", "")).strip():
+                    raise HTTPException(400, "Write a caption before marking it reviewed.")
+                entry[REVIEWED] = True
+            else:
+                entry.pop(REVIEWED, None)
+            with busy.writing():
+                save_manifest(job, manifest)
+            return {**manifest, "review": review_progress(manifest)}
+    raise HTTPException(404, "That photo is not in this job.")
+
+
+@router.post("/api/jobs/{name}/photos/{file}/reviewed")
+def mark_reviewed(name: str, file: str):
+    """One click, one caption. Deliberately not called Approve, and there is
+    deliberately no way to do all of them at once."""
+    return _set_reviewed(_job_or_404(name), file, True)
+
+
+@router.post("/api/jobs/{name}/photos/{file}/unreviewed")
+def mark_unreviewed(name: str, file: str):
+    """Undo the tick. The same click again, so nothing is a trap."""
+    return _set_reviewed(_job_or_404(name), file, False)
 
 
 def _set_cut(job: Path, file: str, cut: bool) -> dict:

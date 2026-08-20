@@ -197,8 +197,19 @@ def test_the_photo_document_builds_from_the_shipped_dataset(client, built):
     assert client.put("/api/jobs/%s/manifest" % demo_job.JOB_NAME,
                       json=manifest).status_code == 200
 
+    # Build is gated on review now, which is the approved behaviour.
+    blocked = client.post("/api/jobs/%s/build" % demo_job.JOB_NAME)
+    assert blocked.status_code == 400
+    assert "reviewed" in blocked.json()["detail"]
+
+    for photo in manifest["photos"]:
+        assert client.post("/api/jobs/%s/photos/%s/reviewed"
+                           % (demo_job.JOB_NAME, photo["file"])).status_code == 200
+
     created = client.post("/api/jobs/%s/build" % demo_job.JOB_NAME)
-    assert created.status_code == 200
+    assert created.status_code == 200, created.json()
+    # named from the brief, never from the folder
+    assert created.json()["created"] == "Anytown_100 Example Avenue Photos (Complete).docx"
 
     out = built / "Photos" / created.json()["created"]
     assert out.is_file()
@@ -213,6 +224,9 @@ def test_using_the_demo_never_touches_an_original_photograph(client, built):
     for photo in manifest["photos"]:
         photo["caption"] = "a caption"
     client.put("/api/jobs/%s/manifest" % demo_job.JOB_NAME, json=manifest)
+    for photo in manifest["photos"]:
+        client.post("/api/jobs/%s/photos/%s/reviewed"
+                    % (demo_job.JOB_NAME, photo["file"]))
     client.post("/api/jobs/%s/build" % demo_job.JOB_NAME)
 
     for name, body in before.items():

@@ -229,16 +229,44 @@ def test_task_two_introduces_no_client_and_no_request():
         assert forbidden not in imported
 
 
-def test_the_caption_route_is_not_guarded_yet_and_task_four_must_do_it():
-    """A deliberate record, not an oversight. Task 2 builds the policy and
-    Task 4 wires it in, so until that lands nothing consults this and no
-    report may describe the caption route as guarded. When Task 4 lands, this
-    test is the one that should fail and be rewritten."""
-    main_source = (Path(__file__).resolve().parents[1] / "server" / "main.py") \
-        .read_text(encoding="utf-8")
-    assert "aipolicy" not in main_source
+def test_the_caption_route_asks_the_policy_before_it_builds_a_client():
+    """Task 4 landed, and this test flipped as it was written to.
 
-    # And the thing Task 4 has to call is already here, ready, named, and
-    # asks permission rather than asking for a refusal.
-    assert aipolicy.may_send_to_ai.__doc__
-    assert callable(aipolicy.may_send_to_ai)
+    Its earlier form asserted that main.py did not mention aipolicy, and
+    recorded that the caption route could not be called guarded until Task 4
+    wired it in. It now asserts the opposite, and the ordering that makes the
+    guard worth having: the verdict is read before anything constructs an
+    Anthropic client, so a refusal reaches no network and costs nothing.
+    """
+    import ast
+
+    source = (Path(__file__).resolve().parents[1] / "server" / "main.py") \
+        .read_text(encoding="utf-8")
+    assert "aipolicy" in source
+
+    tree = ast.parse(source)
+    route = [n for n in ast.walk(tree)
+             if isinstance(n, ast.FunctionDef) and n.name == "draft_job_captions"][0]
+    body = ast.dump(route)
+
+    assert "classify_job" in body
+    assert "LOCAL_ONLY" in body
+    # the policy is consulted before ai_available, which is the first thing
+    # that touches the key at all
+    assert body.index("classify_job") < body.index("ai_available")
+
+
+def test_the_refusal_wording_is_exactly_what_spenser_approved():
+    """Asserted against the constants the route actually raises, not against
+    the source text: the sentences are written across two lines there, and a
+    test that matched the file would break on a reflow and pass on a reword."""
+    assert aipolicy.UNREADABLE_MESSAGE == (
+        "The demo AI safety settings could not be read. "
+        "No photos were sent. Contact Spenser.")
+    assert "not sent" in aipolicy.LOCAL_ONLY_MESSAGE
+    assert "Nothing was charged" in aipolicy.LOCAL_ONLY_MESSAGE
+
+    source = (Path(__file__).resolve().parents[1] / "server" / "main.py") \
+        .read_text(encoding="utf-8")
+    assert "aipolicy.UNREADABLE_MESSAGE" in source
+    assert "aipolicy.LOCAL_ONLY_MESSAGE" in source

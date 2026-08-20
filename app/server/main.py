@@ -1,3 +1,4 @@
+import datetime
 import os
 from pathlib import Path
 
@@ -10,8 +11,14 @@ import brief
 import browse
 import busy
 import captions
+import aipolicy
 import classify
+import cost
 import inventory
+import jobfacts
+import naming
+import pricing
+import usage as usage_store
 import jobs
 import packaging
 import sections
@@ -72,6 +79,11 @@ class Classification(BaseModel):
 
 class FileOnly(BaseModel):
     file: str
+
+
+class JobFacts(BaseModel):
+    city: str = ""
+    address: str = ""
 
 
 class ProposeName(BaseModel):
@@ -429,41 +441,189 @@ def create_app() -> FastAPI:
             brief.write_brief(job, {}, sections=[s.strip() for s in body.sections if s.strip()])
         return {"ok": True}
 
-    @app.post("/api/jobs/{name}/captions")
-    def draft_job_captions(name: str):
+    def _uncaptioned(job: Path, manifest: dict) -> list:
+        """The included photographs still waiting for words, as real paths.
+
+        Never trusts a filename string from the manifest: each one is resolved
+        and confirmed to sit inside this job's Photos folder before it can be
+        opened, using photos.py's own confinement helper rather than a
+        parallel path check. A photo that already has a caption is not here,
+        which is what makes a retry send only what is left and never pay for
+        the same picture twice.
+        """
+        photos_dir = jobs.photos_dir(job)
+        waiting = []
+        for entry in photos_routes.included(manifest):
+            if str(entry.get("caption", "")).strip():
+                continue
+            candidate = photos_dir / Path(entry["file"]).name
+            resolved = photos_routes._resolve_confined(candidate, photos_dir)
+            if resolved is not None and resolved.is_file():
+                waiting.append(resolved)
+        return waiting
+
+    def _image_settings_version() -> str:
+        from photo_prep import SETTINGS_VERSION
+        return SETTINGS_VERSION
+
+    def _bucket() -> str:
+        return cost.bucket_name(captions.MODEL, _image_settings_version())
+
+    @app.get("/api/jobs/{name}/caption-estimate")
+    def caption_estimate(name: str):
+        """What a run would send and what it would cost, before he asks for it.
+
+        Reports the ceiling and the refusal without touching the network, so
+        the screen can show the number and the block for free.
+        """
         job = photos_routes._job_or_404(name)
         manifest = photos_routes.load_manifest(job)
+        waiting = _uncaptioned(job, manifest)
+        allowed = aipolicy.classify_job(job)
+        return {
+            "photos_to_send": len(waiting),
+            "over_ceiling": len(waiting) > captions.MAX_PER_RUN,
+            "ceiling": captions.MAX_PER_RUN,
+            "estimate": cost.estimate(len(waiting), _bucket()),
+            "ai_available": captions.ai_available(),
+            "policy": allowed,
+            "may_send": aipolicy.may_send_to_ai(job) or allowed == aipolicy.NOT_DEMO,
+            "review": photos_routes.review_progress(manifest),
+        }
+
+    @app.post("/api/jobs/{name}/captions")
+    def draft_job_captions(name: str):
+        """Caption every included photograph that has none, and stop there.
+
+        The order below is the safety. Nothing reaches the network until the
+        policy has allowed it, the ceiling has been checked, and the count is
+        known, and every batch that succeeds is written to disk before the
+        next one is sent.
+        """
+        job = photos_routes._job_or_404(name)
+        manifest = photos_routes.load_manifest(job)
+
+        # 1. May this job's photographs leave the machine at all? Asked before
+        #    a client is constructed, so a refusal costs nothing.
+        try:
+            verdict = aipolicy.classify_job(job)
+        except state.StateUnreadable:
+            raise HTTPException(409, aipolicy.UNREADABLE_MESSAGE)
+        if verdict == aipolicy.LOCAL_ONLY:
+            raise HTTPException(403, aipolicy.LOCAL_ONLY_MESSAGE)
+
         if not captions.ai_available():
             return {**manifest, "ai_available": False}
 
-        # Never trust a filename string from the manifest: resolve the real
-        # path and confirm it stays inside this job's Photos folder before
-        # handing it to draft_captions() to open. Reuses photos.py's own
-        # confinement helper rather than a parallel path check.
-        photos_dir = jobs.photos_dir(job)
-        blanks = []
-        for p in photos_routes.included(manifest):
-            if p["caption"].strip():
-                continue
-            candidate = photos_dir / Path(p["file"]).name
-            resolved = photos_routes._resolve_confined(candidate, photos_dir)
-            if resolved is not None and resolved.is_file():
-                blanks.append(resolved)
+        waiting = _uncaptioned(job, manifest)
+        if not waiting:
+            return {**manifest, "ai_available": True,
+                    "review": photos_routes.review_progress(manifest)}
 
-        if blanks:
-            drafted = captions.draft_captions(
-                manifest.get("context", ""), blanks,
-                style=manifest.get("caption_style", captions.DEFAULT_STYLE))
-            # Only the write is guarded. Asking the model takes real seconds
-            # and holding the floor for all of it would make a reset wait on
-            # the network.
+        # 2. The ceiling, checked before the client exists so the refusal path
+        #    never reaches the network and costs nothing to prove.
+        if len(waiting) > captions.MAX_PER_RUN:
+            raise HTTPException(
+                400, "This job has %d photos still needing captions and the "
+                     "limit for one run is %d. Cut some photos, or caption "
+                     "some by hand, then try again. Nothing was sent."
+                     % (len(waiting), captions.MAX_PER_RUN))
+
+        shown = cost.estimate(len(waiting), _bucket())
+        batches = captions.plan_batches(waiting)
+
+        done, usages, failure = 0, [], None
+        for batch in batches:
+            try:
+                drafted, used = captions.draft_captions(
+                    manifest.get("context", ""), batch,
+                    style=manifest.get("caption_style", captions.DEFAULT_STYLE))
+            except captions.CaptionError as exc:
+                # 3. Everything already paid for stays. Only the batch that
+                #    failed and the ones never sent are left without words.
+                failure = exc
+                break
+
+            usages.append(used)
+            # 4. Saved immediately, as unreviewed drafts, before the next
+            #    request goes out. A refresh, a crash or a later failure
+            #    cannot lose work that has already been charged for.
             with busy.writing():
-                for p in photos_routes.included(manifest):
-                    if not p["caption"].strip():
-                        p["caption"] = drafted.get(p["file"], "")
+                for entry in photos_routes.included(manifest):
+                    if not str(entry.get("caption", "")).strip():
+                        fresh = drafted.get(entry["file"], "")
+                        if fresh:
+                            entry["caption"] = fresh
+                            entry.pop(photos_routes.REVIEWED, None)
+                            done += 1
                 photos_routes.save_manifest(job, manifest)
 
-        return {**manifest, "ai_available": True}
+        measured = cost.measured(captions.MODEL, usages)
+        remaining = [p.name for p in _uncaptioned(job, photos_routes.load_manifest(job))]
+
+        # 5. Recorded whatever happened, so the estimate can learn and so the
+        #    run can be audited later. Counts, tokens and rates only.
+        try:
+            usage_store.open_bucket(_bucket())
+            usage_store.record_run({
+                "run_id": "%s-%d" % (_bucket().split("/")[0], len(usage_store.runs()) + 1),
+                "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+                "model": captions.MODEL,
+                "pricing_version": measured["pricing_version"],
+                "pricing_rates": pricing.rates_for(captions.MODEL) or {},
+                "image_settings_version": _image_settings_version(),
+                "photos_requested": len(waiting),
+                "photos_captioned": done,
+                "photos_remaining": len(remaining),
+                "api_requests": len(usages),
+                "status": ("completed" if failure is None and not remaining else
+                           "failed" if done == 0 else "partial")
+                          if measured["calculated_cost"] is not None
+                          else usage_store.COST_UNAVAILABLE,
+                "estimate": shown["total"],
+                "token_usage": usages,
+                "calculated_cost": measured["calculated_cost"],
+                "learned_rate": round(cost.learned_rate(_bucket()), 6),
+            })
+        except Exception:
+            # Bookkeeping must never take the run down or lose paid captions.
+            pass
+
+        fresh_manifest = photos_routes.load_manifest(job)
+        answer = {**fresh_manifest, "ai_available": True,
+                  "estimate_shown": shown,
+                  "measured": measured,
+                  "captioned": done,
+                  "remaining": remaining,
+                  "review": photos_routes.review_progress(fresh_manifest)}
+        if failure is not None:
+            answer["error"] = failure.message
+            answer["error_kind"] = failure.kind
+            answer["partial"] = done > 0
+        return answer
+
+    @app.get("/api/jobs/{name}/facts")
+    def job_facts(name: str):
+        """The city and address Build will use, and where they came from.
+
+        Shown near the Build action so a wrong split is visible before it
+        reaches a filename rather than afterwards.
+        """
+        job = photos_routes._job_or_404(name)
+        found = naming.facts_for(job)
+        try:
+            found["filename"] = naming.output_base(found["city"], found["address"]) + ".docx"
+        except ValueError:
+            found["filename"] = ""
+        return found
+
+    @app.put("/api/jobs/{name}/facts")
+    def correct_job_facts(name: str, body: JobFacts):
+        """His correction, stored app-side and never in his job folder."""
+        job = photos_routes._job_or_404(name)
+        with busy.writing():
+            jobfacts.save(job, body.city, body.address)
+        return job_facts(name)
 
     @app.post("/api/jobs/{name}/caption-preview")
     def preview_captions(name: str):
@@ -493,13 +653,16 @@ def create_app() -> FastAPI:
         for style in captions.STYLES:
             try:
                 drafted[style] = captions.draft_captions(
-                    manifest.get("context", ""), paths, style=style)
+                    manifest.get("context", ""), paths, style=style)[0]
             except Exception as exc:
                 raise HTTPException(502, f"Could not write the sample captions: {type(exc).__name__}")
         return {"ai_available": True, "photos": names, "captions": drafted}
 
     @app.post("/api/jobs/{name}/build")
     def build_photos(name: str):
+        # First, before any validation. A reset replacing the folders under
+        # him is a better answer than "your captions need review".
+        busy.check_not_resetting()
         job = photos_routes._job_or_404(name)
         manifest_file = photos_routes.manifest_path(job)
         manifest_existed = manifest_file.is_file()
@@ -532,6 +695,25 @@ def create_app() -> FastAPI:
         if error:
             raise HTTPException(400, error)
 
+        # Every included caption has to have been looked at. This is the gate,
+        # and it is here rather than only on the screen because the manifest is
+        # hand-editable and the screen is courtesy.
+        progress = photos_routes.review_progress(manifest)
+        if not progress["all_reviewed"]:
+            raise HTTPException(
+                400, "%s. Tick every photo you have read before building."
+                     % progress["text"])
+
+        # The name comes from the brief or from his correction, and never from
+        # the folder. Refusing costs ten seconds; a confidently wrong filename
+        # reaches a client.
+        found = naming.facts_for(job)
+        if not found["ready"]:
+            raise HTTPException(
+                400, "The %s is missing, so the file cannot be named. Enter it "
+                     "next to Build and try again." % " and ".join(found["missing"]))
+        out_base = naming.output_base(found["city"], found["address"])
+
         if not manifest_existed:
             # build_photo_docx (below) reads manifest_file straight off
             # disk, not this in-memory reconciliation, so a job with no
@@ -550,11 +732,19 @@ def create_app() -> FastAPI:
         from photo_pages import build_photo_docx  # sys.path set up by the photos import above
 
         template = Path(os.environ.get("RRF_PHOTO_TEMPLATE", DEFAULT_PHOTO_TEMPLATE))
+        from photo_prep import Workspace
+
         with busy.writing():
-            try:
-                out = build_photo_docx(manifest_file, template)
-            except Exception as exc:
-                raise HTTPException(500, f"Build failed: {exc}")
+            # The copies live in the workspace and go with it, on the way out
+            # of the try and on the way out of an exception alike. The
+            # originals are only ever read.
+            with Workspace() as bench:
+                try:
+                    out = build_photo_docx(manifest_file, template,
+                                           prepare=bench.copy_for_document,
+                                           out_base=out_base)
+                except Exception as exc:
+                    raise HTTPException(500, f"Build failed: {exc}")
         return {"created": out.name}
 
     # Any /api request using a write method (POST/PUT/PATCH/DELETE) that

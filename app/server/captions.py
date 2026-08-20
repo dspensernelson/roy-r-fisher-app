@@ -139,8 +139,89 @@ def _thumb_b64(path: Path) -> str:
     return base64.standard_b64encode(buf.getvalue()).decode()
 
 
-def draft_captions(context: str, photo_paths: list[Path],
-                   style: str = DEFAULT_STYLE) -> dict[str, str]:
+# The hard ceiling on one run, approved 2026-08-18. Checked before a client is
+# ever constructed, so refusing costs nothing and reaches no network.
+MAX_PER_RUN = 60
+
+# How much encoded image one request may carry. Sixty thumbnails do not fit in
+# a single request at any realistic size, so a full run always splits. This is
+# deliberately well under the provider's own limit: the cost of one extra
+# request is small and the cost of a rejected oversized one is a whole run.
+MAX_REQUEST_BYTES = 12 * 1024 * 1024
+
+# Retries are off. A failed request shows Mark a clear error and waits for him
+# to ask again, because an automatic retry spends money he has not agreed to
+# spend and can do it while he is looking at an error message.
+MAX_RETRIES = 0
+
+
+class CaptionError(Exception):
+    """A caption run failed, already worded the way Mark should read it."""
+
+    def __init__(self, message: str, kind: str = "failed"):
+        super().__init__(message)
+        self.message = message
+        self.kind = kind
+
+
+def plan_batches(photo_paths: list, encoded: dict = None) -> list:
+    """Split the photographs into as few requests as will actually fit.
+
+    One request when it fits, which is the approved rule, and more only when
+    the encoded size forces it. Never a fixed batch size: batching into sixes
+    for its own sake would triple the request count on a small job.
+    """
+    batches, current, running = [], [], 0
+    for path in photo_paths:
+        size = len((encoded or {}).get(str(path), "")) or _encoded_size(path)
+        if current and running + size > MAX_REQUEST_BYTES:
+            batches.append(current)
+            current, running = [], 0
+        current.append(path)
+        running += size
+    if current:
+        batches.append(current)
+    return batches
+
+
+def _encoded_size(path) -> int:
+    try:
+        return len(_thumb_b64(Path(path)))
+    except Exception:
+        # Unreadable here is not fatal: the request itself will fail and say
+        # so. Assume a large one so a bad file cannot silently overfill a batch.
+        return MAX_REQUEST_BYTES // 4
+
+
+def _usage_of(response) -> dict:
+    """What the provider said this request used, as plain numbers.
+
+    Missing counters stay missing rather than becoming zero, because the cost
+    ledger has to be able to tell "no cache was read" from "we were not told".
+    """
+    found = getattr(response, "usage", None)
+    if found is None:
+        return {}
+    def number(*names):
+        for name in names:
+            value = getattr(found, name, None)
+            if value is not None:
+                return int(value)
+        return None
+    return {"input": number("input_tokens"),
+            "output": number("output_tokens"),
+            "cache_write": number("cache_creation_input_tokens") or 0,
+            "cache_read": number("cache_read_input_tokens") or 0}
+
+
+def draft_captions(context: str, photo_paths: list,
+                   style: str = DEFAULT_STYLE) -> tuple:
+    """Caption one batch. Returns (captions by filename, usage for this request).
+
+    One request. Splitting across requests is `plan_batches` and the caller's
+    loop, so that a failure part way through a split run loses only the batch
+    that failed and never the ones already paid for.
+    """
     import anthropic
     import settings
 
@@ -148,17 +229,43 @@ def draft_captions(context: str, photo_paths: list[Path],
     # environment, which would work only when something outside the program
     # had put the key there. The key goes no further than this call: it is
     # never printed, logged, returned or written into a job.
-    client = anthropic.Anthropic(api_key=settings.active_key())
+    client = anthropic.Anthropic(api_key=settings.active_key(),
+                                 max_retries=MAX_RETRIES)
     content = [{"type": "text", "text": f"Job context: {context or 'not provided'}. Caption each photo."}]
     for p in photo_paths:
         content.append({"type": "text", "text": f"Photo filename: {p.name}"})
         content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": _thumb_b64(p)}})
-    response = client.messages.parse(
-        model=MODEL,
-        max_tokens=4096,
-        system=system_prompt(style),
-        messages=[{"role": "user", "content": content}],
-        output_format=CaptionSheet,
-    )
+
+    try:
+        response = client.messages.parse(
+            model=MODEL,
+            max_tokens=4096,
+            system=system_prompt(style),
+            messages=[{"role": "user", "content": content}],
+            output_format=CaptionSheet,
+        )
+    except anthropic.AuthenticationError:
+        raise CaptionError("That API key was not accepted. Open Settings and "
+                           "paste it again.", "bad_key")
+    except anthropic.PermissionDeniedError:
+        raise CaptionError("That API key does not have access to write "
+                           "captions. Contact Spenser.", "no_access")
+    except anthropic.RateLimitError:
+        raise CaptionError("Anthropic is busy or the account has hit a limit. "
+                           "Nothing was changed. Try again in a minute.", "rate")
+    except anthropic.APIStatusError as exc:
+        status = getattr(exc, "status_code", None)
+        if status in (400, 413):
+            raise CaptionError("That request was too large to send. Cut some "
+                               "photos and try again.", "too_large")
+        raise CaptionError("Anthropic refused the request. This can mean the "
+                           "spending limit has been reached. Contact Spenser.",
+                           "refused")
+    except anthropic.APIConnectionError:
+        raise CaptionError("Could not reach Anthropic. Check the internet "
+                           "connection and try again. Nothing was sent twice.",
+                           "unreachable")
+
     sheet = response.parsed_output
-    return {c.filename: c.caption for c in sheet.captions} if sheet else {}
+    captions = {c.filename: c.caption for c in sheet.captions} if sheet else {}
+    return captions, _usage_of(response)

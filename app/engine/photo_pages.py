@@ -51,16 +51,20 @@ def exif_order(paths):
     return sorted(paths, key=key)
 
 
-def next_output_name(photos_dir: Path) -> str:
+DEFAULT_OUTPUT_BASE = "Photo (RRF App)"
+
+
+def next_output_name(photos_dir: Path, base: str = DEFAULT_OUTPUT_BASE) -> str:
     """Pick a save-as name for the built file that never collides with anything
     already in photos_dir, including Mark's own hand-built Photo.docx.
 
-    Starts from "Photo (RRF App).docx" so it sorts next to Mark's file in
-    Explorer and is unmistakably the app's output, not an overwrite of his.
-    If that name is taken, counts up ("Photo (RRF App 2).docx", "... 3)", ...)
-    until it finds one that is free. Never returns an existing filename.
+    The base name is the caller's now. It is `City_Address Photos (Complete)`
+    for a job whose brief yields both values, and the old `Photo (RRF App)`
+    remains the default so the command-line entry point and anything else that
+    does not know a city still works. The counting is unchanged: if the name is
+    taken it counts up until it finds one that is free, and it never returns an
+    existing filename.
     """
-    base = "Photo (RRF App)"
     candidate = f"{base}.docx"
     n = 2
     while (photos_dir / candidate).exists():
@@ -299,7 +303,19 @@ def _shrink_tables(doc: Document, needed: int):
     _merge_orphaned_section(doc)
 
 
-def build_photo_docx(manifest_path: Path, template_path: Path) -> Path:
+def build_photo_docx(manifest_path: Path, template_path: Path,
+                     prepare=None, out_base: str = DEFAULT_OUTPUT_BASE) -> Path:
+    """Build the document. `prepare` decides what bytes actually go in.
+
+    Without it the original file is embedded, which is what the command-line
+    entry point still does. The app passes a preparer that hands back a
+    temporary RGB JPEG: capped at 1,600 pixels, oriented by its EXIF, quality
+    85. That is what keeps a sixty-photo report a sensible size, and it is also
+    what lets a HEIC build at all, because python-docx cannot embed one.
+
+    The originals are never given to `prepare` to modify. It returns a path to
+    a copy somewhere else and the copies are deleted by the caller afterwards.
+    """
     manifest = json.loads(Path(manifest_path).read_text())
     photos_dir = Path(manifest_path).parent
     # Photos cut from the report are skipped before anything is counted, so
@@ -316,13 +332,14 @@ def build_photo_docx(manifest_path: Path, template_path: Path) -> Path:
     for i, entry in enumerate(photos):
         table = doc.tables[i // PHOTOS_PER_TABLE]
         row = table.rows[i % PHOTOS_PER_TABLE]
-        _fill_cell_image(row.cells[0], photos_dir / entry["file"])
+        source = photos_dir / entry["file"]
+        _fill_cell_image(row.cells[0], prepare(source) if prepare else source)
         _fill_cell_caption(row.cells[1], entry.get("caption", ""))
 
     if manifest.get("report_year"):
         _set_copyright_year(doc, int(manifest["report_year"]))
 
-    out = photos_dir / next_output_name(photos_dir)
+    out = photos_dir / next_output_name(photos_dir, out_base)
     doc.save(str(out))
     return out
 

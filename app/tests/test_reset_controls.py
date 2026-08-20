@@ -217,7 +217,7 @@ def test_captions_can_be_written_again_afterwards(client, home, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     import captions
     monkeypatch.setattr(captions, "draft_captions",
-                        lambda context, paths, style=None: {p.name: "fresh caption" for p in paths})
+                        lambda context, paths, style=None: ({p.name: "fresh caption" for p in paths}, {"input": 100, "output": 20}))
 
     r = client.post("/api/jobs/A job/captions")
     assert r.status_code == 200

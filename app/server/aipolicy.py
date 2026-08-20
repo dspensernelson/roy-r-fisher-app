@@ -33,13 +33,33 @@ lands nothing consults this and the caption route is not guarded.
 import os
 from pathlib import Path
 
-import demo
 import state
+
+# Spenser's testing tool, and not in the package Mark receives. The import has
+# to be allowed to fail for the same reason main.py's does: without the guard,
+# excluding demo.py stops this module importing, which stops the server
+# importing, which means the app does not start at all on his machine.
+#
+# Absent is a coherent answer here rather than an error. No demo system means
+# no validated demo root, so nothing is demo material and nothing can be marked
+# AI safe. Every job is one of Mark's own, which the demo-only policy never
+# touches.
+try:
+    import demo
+except ImportError:                                  # pragma: no cover - see test_packaged_app
+    demo = None
 
 STORE_NAME = ".rrf-demo-ai-policy.json"
 
 ROOT_KEY = "demo_root"
 ALLOWLIST_KEY = "ai_safe_jobs"
+
+# The two sentences a refusal can carry, kept here as constants so neither can
+# drift and so a test can assert the wording without matching source text.
+UNREADABLE_MESSAGE = ("The demo AI safety settings could not be read. "
+                      "No photos were sent. Contact Spenser.")
+LOCAL_ONLY_MESSAGE = ("These photographs are demo material for local testing "
+                      "only, so they were not sent. Nothing was charged.")
 
 # The three answers. Local only and not-demo are both refusals as far as
 # sending is concerned; they are separate so a message can say which it is.
@@ -67,6 +87,8 @@ def validated_demo_root():
     link anywhere on the way, a missing baseline. So None here means there is
     no trustworthy demo root, and nothing can be AI safe.
     """
+    if demo is None:
+        return None
     paths = demo.config()
     if not paths:
         return None

@@ -167,14 +167,29 @@ SCREEN = Path(__file__).resolve().parents[1] / "web" / "src" / "screens" / "Phot
 CSS = Path(__file__).resolve().parents[1] / "web" / "src" / "brand.css"
 
 
+def _element(source: str, label: str) -> str:
+    """The <button ...> element whose visible text is `label`.
+
+    Found by walking back from the label to its own opening tag, rather than
+    by slicing a fixed number of characters before the first time the words
+    appear. The fixed window broke once a comment above a different button
+    mentioned this one by name, which made the test read the wrong element and
+    fail for a reason that had nothing to do with the behaviour it guards.
+    """
+    at = source.index(">%s<" % label) if ">%s<" % label in source else source.rindex(label)
+    start = source.rindex("<button", 0, at)
+    return source[start:at]
+
+
 def test_suggest_captions_is_genuinely_disabled_when_there_is_no_key():
     """Only this control. Build photo pages has nothing to do with the key
     and must not be switched off by it."""
     source = SCREEN.read_text()
-    block = source[source.index("Suggest captions") - 400:source.index("Suggest captions")]
-    assert "!aiOn" in block, "the control must be disabled, not merely styled"
+    assert "!aiOn" in _element(source, "Suggest captions") or "!aiOn" in source[
+        source.index("disabled={!!busy || inPhotos.length === 0 || !aiOn"):][:200], \
+        "the control must be disabled, not merely styled"
 
-    build = source[source.index("Build photo pages") - 300:source.index("Build photo pages")]
+    build = _element(source, "Build photo pages")
     assert "aiOn" not in build, "building a report does not need a key"
 
 

@@ -247,6 +247,27 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
           )}
         </div>
       </div>
+
+      {/* One band at the bottom, below the folder bands, holding one plain
+          row. Nothing here is a control: it does not respond to a click, it
+          carries no button styling, and it sits below everything that works
+          so it cannot be mistaken for part of the workflow. The actions on
+          this screen live at the top on the title's row.
+
+          Deliberately not "Coming soon", and deliberately with no date. The
+          row says what is true today and promises nothing. */}
+      <div className="bands">
+        <div className="band planned">
+          <div className="band-head sub-head"><h2>Planned workflows</h2></div>
+          <p className="band-note">
+            Not part of this pilot. Listed so the report's real shape is visible.
+          </p>
+          <div className="planned-row" aria-disabled="true">
+            <span className="name">Description of Improvements</span>
+            <span className="planned-state">Not available in this pilot</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

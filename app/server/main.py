@@ -654,8 +654,15 @@ def create_app() -> FastAPI:
             try:
                 drafted[style] = captions.draft_captions(
                     manifest.get("context", ""), paths, style=style)[0]
-            except Exception as exc:
-                raise HTTPException(502, f"Could not write the sample captions: {type(exc).__name__}")
+            except captions.CaptionError as exc:
+                # Written for Mark already. Before Task 4 this path could only
+                # show the exception's class name, because whatever the SDK
+                # raised was not fit to read; now there is a sentence, so the
+                # sentence is what he gets.
+                raise HTTPException(502, exc.message)
+            except Exception:
+                raise HTTPException(502, "Could not write the sample captions. "
+                                         "Nothing was changed. Try again in a moment.")
         return {"ai_available": True, "photos": names, "captions": drafted}
 
     @app.post("/api/jobs/{name}/build")

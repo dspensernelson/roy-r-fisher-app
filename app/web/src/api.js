@@ -30,6 +30,17 @@ export const setClassification = (name, file, label) =>
 export const clearClassification = (name, file) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/classification`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file }) }).then(j);
 export const captionStyles = () => fetch("/api/caption-styles").then(j);
+export const appVersion = () => fetch("/api/version").then(j);
+export const captionEstimate = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/caption-estimate`).then(j);
+export const markReviewed = (name, file) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/reviewed`, { method: "POST" }).then(j);
+export const markUnreviewed = (name, file) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/unreviewed`, { method: "POST" }).then(j);
+export const jobFacts = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/facts`).then(j);
+export const putJobFacts = (name, body) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/facts`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);
 export const proposeName = (body) =>
   fetch("/api/intake/propose-name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);
 export const createIntake = (body) =>

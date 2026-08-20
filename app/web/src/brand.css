@@ -399,3 +399,83 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .say-what { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 3px 0; }
 .say-what button { font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.22); background: transparent; color: var(--box-ink); cursor: pointer; }
 .say-what button:hover { border-color: var(--brand); background: rgba(255, 255, 255, 0.06); }
+
+/* ---- Task 5: version, review, cost, planned workflows -------------------- */
+
+/* The installed version, on every screen because the masthead is. Quiet on
+   purpose: it is for telling two folders apart, not for reading. */
+.masthead .version {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: #8a8a8a;
+  padding: 2px 8px;
+  border: 1px solid #e2e0dc;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.masthead .reset-demo + .version, .masthead .version + .reset-demo { margin-left: 10px; }
+
+/* The reviewed control sits directly under its caption, is a real target
+   rather than a tick in the corner, and says what it is in words. */
+.review-line { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.review-btn {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid #d7d4cf;
+  background: #fff;
+  color: #4a4a4a;
+  cursor: pointer;
+  min-height: 32px;
+}
+.review-btn:hover { border-color: #b9b5ae; }
+.review-btn.is-reviewed {
+  background: #eef5ee;
+  border-color: #b9d3b9;
+  color: #2f5d33;
+  font-weight: 600;
+}
+.review-btn:disabled { opacity: .45; cursor: not-allowed; }
+.review-progress { font-size: 13px; color: #6b6b6b; }
+.review-progress.is-done { color: #2f5d33; font-weight: 600; }
+
+/* The cost step. Arithmetic on its own line, big enough to read before
+   spending money. */
+.cost-line { font-size: 15px; margin: 0 0 6px; }
+.cost-arith {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  background: #f6f4f0;
+  border: 1px solid #e6e3de;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: inline-block;
+}
+.cost-after { font-size: 13px; color: #5a5a5a; margin-top: 8px; }
+.cost-after code { background: #f6f4f0; padding: 1px 5px; border-radius: 4px; }
+.cost-unavailable { color: #8a5a1a; }
+
+/* Planned workflows: a band, and a row that is plainly not a control. */
+.band.planned { opacity: .85; }
+.planned-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed #ddd9d3;
+  border-radius: 8px;
+  background: #faf9f7;
+  color: #7a7a7a;
+  cursor: default;
+}
+.planned-row .name { font-weight: 600; color: #6a6a6a; }
+.planned-state { font-size: 13px; color: #8a8a8a; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .planned-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .review-line { flex-wrap: wrap; }
+}

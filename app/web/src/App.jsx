@@ -7,7 +7,7 @@ import Settings from "./screens/Settings.jsx";
 import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
-import { getWorkspace, getDemo, resetDemo } from "./api.js";
+import { getWorkspace, getDemo, resetDemo, appVersion } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
 
@@ -20,6 +20,7 @@ export default function App() {
   const [resetting, setResetting] = useState("");
   const [resetError, setResetError] = useState("");
   const [wsError, setWsError] = useState("");
+  const [version, setVersion] = useState("");
 
   // Two different failures, and they used to read the same. A damaged
   // settings file is not an unreachable server, and telling Mark to restart
@@ -35,6 +36,9 @@ export default function App() {
       .catch((e) => setWsError(
         e && e.status === 409 && e.stateUnreadable && e.message ? e.message : CANNOT_REACH));
     getDemo().then(setDemo).catch(() => {});
+    // Shown on every screen, because the masthead is on every screen. It is
+    // how Spenser tells which installed folder he actually launched.
+    appVersion().then((v) => setVersion(v.version || "")).catch(() => {});
   }, []);
 
   async function runReset() {
@@ -60,6 +64,7 @@ export default function App() {
       </div>
       {/* Only ever here when this computer is explicitly set up for testing.
           Mark's install has no demo configuration, so it never renders. */}
+      {version && <span className="version" title="Installed version">v{version}</span>}
       {demo.demo_mode && (
         <button className="reset-demo" onClick={() => setAsking(true)} disabled={!!resetting}>
           {resetting ? "Resetting..." : "Reset demo"}

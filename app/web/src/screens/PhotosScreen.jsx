@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, captionPreview, clearCaptions, cutPhoto, uncutPhoto } from "../api.js";
+import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, captionPreview, clearCaptions, cutPhoto, uncutPhoto,
+         captionEstimate, markReviewed, markUnreviewed, jobFacts, putJobFacts } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -16,10 +17,22 @@ export default function PhotosScreen({ job }) {
   const [showCut, setShowCut] = useState(false);    // the Cut photos section
   const [cutNote, setCutNote] = useState("");
   const [aiOn, setAiOn] = useState(true);   // until the app says otherwise
+  const [quote, setQuote] = useState(null);   // what a run would send and cost
+  const [spent, setSpent] = useState(null);   // what the last run did cost
+  const [facts, setFacts] = useState(null);   // city and address for the filename
+  const [fixing, setFixing] = useState(false);
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
   useEffect(() => { getManifest(job).then(setManifest).catch((e) => setError(e.message)); }, [job]);
+  useEffect(() => { jobFacts(job).then(setFacts).catch(() => {}); }, [job]);
+
+  // Refreshed whenever the photos change, so the number he is shown before
+  // spending money is the number for what is actually there now.
+  const refreshQuote = React.useCallback(() => {
+    captionEstimate(job).then(setQuote).catch(() => {});
+  }, [job]);
+  useEffect(() => { if (manifest) refreshQuote(); }, [manifest, refreshQuote]);
   useEffect(() => {
     captionStyles()
       .then((r) => { setStyles(r.styles); setAiOn(r.ai_available); })
@@ -57,18 +70,34 @@ export default function PhotosScreen({ job }) {
 
   async function runCaptions(style) {
     setAsking(false);
-    setBusy("Writing captions..."); setError(null);
+    setBusy("Writing captions..."); setError(null); setSpent(null);
     try {
       if (style && style !== manifest.caption_style) {
         await save({ ...manifest, caption_style: style });
       }
       const m = await draftCaptions(job);
       setManifest(m);
+      // What it actually cost, kept on screen next to what was estimated.
+      if (m.measured) setSpent({ ...m.measured, captioned: m.captioned, remaining: m.remaining || [] });
+      if (m.error) setError(m.error);
       if (!m.ai_available) {
         setError("Writing captions needs a key on this computer. You can still type them in yourself.");
       }
     } catch (e) { setError(e.message); }
     setBusy("");
+    refreshQuote();
+  }
+
+  async function onReview(file, already) {
+    setError(null);
+    try {
+      setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
+    } catch (e) { setError(e.message); }
+  }
+
+  async function onFixFacts(city, address) {
+    try { setFacts(await putJobFacts(job, { city, address })); setFixing(false); }
+    catch (e) { setError(e.message); }
   }
 
   async function onCut(file) {
@@ -141,6 +170,17 @@ export default function PhotosScreen({ job }) {
   const inPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => !x.p.cut);
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
   const pagesIn = Math.max(1, Math.ceil(inPhotos.length / 3));
+
+  // Review, counted from the manifest so the screen and the server agree even
+  // if one of them is a moment stale.
+  const reviewedCount = inPhotos.filter((x) => x.p.reviewed).length;
+  const allReviewed = inPhotos.length > 0 && reviewedCount === inPhotos.length;
+  const reviewText = `${reviewedCount} of ${inPhotos.length} reviewed`;
+
+  const buildReady = inPhotos.length > 0 && allReviewed && !(facts && !facts.ready);
+  const toSend = quote ? quote.photos_to_send : inPhotos.filter((x) => !(x.p.caption || "").trim()).length;
+  const ceiling = quote ? quote.ceiling : 60;
+  const overCeiling = !!(quote && quote.over_ceiling);
   const chosen = manifest.caption_style || "view";
   // The one this job starts on is shown first, whichever it is.
   const ordered = [...styles].sort((a, b) => (b.key === chosen) - (a.key === chosen));
@@ -170,6 +210,18 @@ export default function PhotosScreen({ job }) {
             {" "}· about {pagesIn} {pagesIn === 1 ? "page" : "pages"}.
             {" "}Drag a photo to reorder it.
           </p>
+          {inPhotos.length > 0 && (
+            <p className={`sub review-progress${allReviewed ? " is-done" : ""}`} style={{ margin: "6px 0 0" }}>
+              {reviewText}{allReviewed ? ". Ready to build." : ". Build waits until you have read them all."}
+            </p>
+          )}
+          {overCeiling && (
+            <p className="sub off-note" style={{ margin: "6px 0 0" }}>
+              {toSend} photos are waiting for captions and {ceiling} is the most
+              that can be written in one go. Cut some, or type some in yourself,
+              then try again. Nothing has been sent.
+            </p>
+          )}
           {!aiOn && (
             <p className="sub off-note" style={{ margin: "6px 0 0" }}>
               Writing captions for you is off: no key is set up on this computer.
@@ -179,16 +231,25 @@ export default function PhotosScreen({ job }) {
         </div>
         <div className="screen-actions">
           <div className="action-row">
-            <button className="button" onClick={onBuild}
-                    disabled={!!busy || inPhotos.length === 0}>
+            {/* Off means off, and it looks off. The brand red at half opacity
+                still reads as a button he should be able to press, which is
+                the same defect the Suggest captions button was given `is-off`
+                to avoid. Found by looking at the screen, not by a test. */}
+            <button className={`button${buildReady ? "" : " is-off"}`} onClick={onBuild}
+                    disabled={!!busy || !buildReady}
+                    title={inPhotos.length === 0 ? "No photos in the report yet"
+                           : !allReviewed ? "Tick every caption you have read first"
+                           : facts && !facts.ready ? "The file cannot be named yet" : ""}>
               Build photo pages
             </button>
             {/* Off means off, and it looks off. A blue button at half opacity
                 still reads as a button he should be able to press. */}
-            <button className={`button secondary${aiOn ? "" : " is-off"}`} onClick={openChooser}
-                    disabled={!!busy || inPhotos.length === 0 || !aiOn}
-                    title={aiOn ? "" : "Needs a key on this computer"}>
-              Suggest captions
+            <button className={`button secondary${aiOn && !overCeiling ? "" : " is-off"}`} onClick={openChooser}
+                    disabled={!!busy || inPhotos.length === 0 || !aiOn || toSend === 0 || overCeiling}
+                    title={!aiOn ? "Needs a key on this computer"
+                           : overCeiling ? `Too many at once: ${toSend} waiting, ${ceiling} is the limit`
+                           : toSend === 0 ? "Every included photo already has a caption" : ""}>
+              {toSend > 0 && aiOn && !overCeiling ? `Suggest captions (${toSend})` : "Suggest captions"}
             </button>
             <button className="linky" style={{ marginLeft: 0 }} onClick={() => filePicker.current?.click()}>
               Add photos
@@ -238,6 +299,81 @@ export default function PhotosScreen({ job }) {
         </div>
       )}
 
+      {/* What the last run cost, from what the provider reported. Kept next to
+          what was estimated so the two can be compared, and never called an
+          actual cost, because it is this app's arithmetic and not a bill. */}
+      {spent && (
+        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+          <strong>{spent.label}</strong>
+          {spent.calculated_cost !== null && spent.calculated_cost !== undefined ? (
+            <> : <code>${spent.calculated_cost.toFixed(2)}</code> for {spent.captioned}{" "}
+              {spent.captioned === 1 ? "caption" : "captions"}.</>
+          ) : (
+            <span className="cost-unavailable"> . {spent.note}</span>
+          )}
+          <div className="cost-after">
+            {spent.tokens && (
+              <>Measured usage: <code>{spent.tokens.input.toLocaleString()}</code> input tokens,{" "}
+                <code>{spent.tokens.output.toLocaleString()}</code> output tokens
+                {spent.tokens.cache_read ? <>, <code>{spent.tokens.cache_read.toLocaleString()}</code> cached</> : null}.
+              </>
+            )}
+            {" "}{spent.calculated_cost !== null && spent.calculated_cost !== undefined ? spent.note : ""}
+          </div>
+          {spent.remaining && spent.remaining.length > 0 && (
+            <div className="cost-after">
+              <strong>{spent.remaining.length}</strong>{" "}
+              {spent.remaining.length === 1 ? "photo is" : "photos are"} still without a caption:{" "}
+              {spent.remaining.join(", ")}. The captions already written are saved and
+              will not be paid for again.
+              <div style={{ marginTop: 8 }}>
+                <button className="button secondary" disabled={!!busy}
+                        onClick={() => runCaptions(manifest.caption_style)}>
+                  Retry remaining {spent.remaining.length}{" "}
+                  {spent.remaining.length === 1 ? "photo" : "photos"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* The city and the address the built file will be named from, next to
+          the action that uses them. Read out of the brief, which means split
+          out of one line of text, so a wrong split has to be visible before it
+          becomes a filename rather than after. */}
+      {facts && inPhotos.length > 0 && (
+        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+          {facts.ready ? (
+            <>Will be saved as <strong>{facts.filename}</strong>.</>
+          ) : (
+            <span className="cost-unavailable">
+              The {facts.missing.join(" and ")} could not be read from this job's
+              brief, so the file cannot be named yet.
+            </span>
+          )}
+          {!fixing && (
+            <button className="linky" style={{ marginLeft: 8 }} onClick={() => setFixing(true)}>
+              {facts.ready ? "Not right?" : "Enter it"}
+            </button>
+          )}
+          {fixing && (
+            <div className="setting-actions" style={{ marginTop: 10, gap: 8, flexWrap: "wrap" }}>
+              <label className="setting-fine">City
+                <input defaultValue={facts.city} id="fix-city" style={{ marginLeft: 6 }} />
+              </label>
+              <label className="setting-fine">Street address
+                <input defaultValue={facts.address} id="fix-address" style={{ marginLeft: 6 }} />
+              </label>
+              <button className="button" onClick={() => onFixFacts(
+                document.getElementById("fix-city").value,
+                document.getElementById("fix-address").value)}>Save</button>
+              <button className="linky" onClick={() => setFixing(false)}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {cutNote && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{cutNote}</div>}
 
       {done && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
@@ -273,9 +409,22 @@ export default function PhotosScreen({ job }) {
               <textarea value={p.caption} placeholder="Caption..." rows={2}
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => save(manifest)} />
-              <button className="linky cut-link" onClick={() => onCut(p.file)}>
-                Cut from report
-              </button>
+              {/* Directly under the caption, and a real target rather than a
+                  tick in a corner. It is not called Approve, and there is
+                  deliberately no way to do all of them at once: the point is
+                  that he has read each one. */}
+              <div className="review-line">
+                <button className={`review-btn${p.reviewed ? " is-reviewed" : ""}`}
+                        disabled={!(p.caption || "").trim()}
+                        title={(p.caption || "").trim() ? "" : "Write a caption first"}
+                        onClick={() => onReview(p.file, !!p.reviewed)}>
+                  {p.reviewed ? "Reviewed" : "Mark reviewed"}
+                </button>
+                <button className="linky cut-link" style={{ marginLeft: 0 }}
+                        onClick={() => onCut(p.file)}>
+                  Cut from report
+                </button>
+              </div>
             </figure>
           ))}
         </div>
@@ -329,6 +478,25 @@ export default function PhotosScreen({ job }) {
             <p className="sub" style={{ margin: "0 0 16px" }}>
               Your own photos, written both ways. This is how the printed page is laid out.
             </p>
+
+            {/* The money, before the button that spends it, and shown as the
+                arithmetic rather than as a total he has to take on trust. It
+                is a maximum: the rounding only ever goes up, and the rate
+                starts high and comes down as real runs are measured. */}
+            {quote && quote.estimate && toSend > 0 && (
+              <div className="confirm" style={{ margin: "0 0 16px" }}>
+                <p className="cost-line" style={{ margin: "0 0 8px" }}>
+                  <strong>{quote.estimate.label}</strong> for{" "}
+                  {toSend} {toSend === 1 ? "photo" : "photos"}:
+                </p>
+                <div className="cost-arith">{quote.estimate.arithmetic}</div>
+                <p className="setting-fine" style={{ margin: "10px 0 0" }}>
+                  An estimate, rounded up. The real cost is measured from what
+                  Anthropic reports and shown here afterwards. Photos that already
+                  have a caption are not sent and are not charged for again.
+                </p>
+              </div>
+            )}
 
             {/* One page, as a table: photo cells on the left, caption cells on
                 the right with a rule between them, exactly the way

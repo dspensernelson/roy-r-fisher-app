@@ -268,6 +268,20 @@ def copy_app(out: Path) -> None:
     shutil.copytree(check_web_build(), app_out / "web" / "dist")
 
 
+def add_demo_job(out: Path) -> Path:
+    """The practice job, generated fresh into the package.
+
+    Generated rather than copied, so nothing from `Report Examples/`,
+    `locker/`, the development `RRF Demo Jobs/` or any client folder can reach
+    it even by accident. It is not the development demo system: `demo.py`,
+    `/api/demo` and Reset Demo are still excluded, and this job is not marked
+    AI safe.
+    """
+    import demo_job
+
+    return demo_job.build(out)
+
+
 def build(out: Path, work: Path, offline: bool) -> None:
     if out.exists():
         shutil.rmtree(out)
@@ -325,6 +339,9 @@ def build(out: Path, work: Path, offline: bool) -> None:
             + [str(w) for w in downloaded])
     else:
         say("offline: runtime and wheels skipped, layout and manifest only")
+
+    say("generating the practice job")
+    add_demo_job(out)
 
     say("removing build-machine traces from the installed metadata")
     strip_local_traces(python_dir / "site-packages")
@@ -571,6 +588,24 @@ def readme_text() -> str:
         "\n"
         "3. Your browser opens by itself. Leave the black window open while you\n"
         "   work. To stop the app, close that window.\n"
+        "\n"
+        "Trying it out\n"
+        "-------------\n"
+        "\n"
+        "This package comes with a practice job so you can try everything\n"
+        "straight away.\n"
+        "\n"
+        "1. Start the app.\n"
+        "2. When it asks where your jobs live, choose the \"Demo Jobs\" folder\n"
+        "   inside this one.\n"
+        "3. Open the job called \"ANYTOWN_100 Example Avenue - 2026\".\n"
+        "4. Go to its Photos folder and build a Subject Photographs document.\n"
+        "\n"
+        "That job and all twelve of its photographs are made up. There is no\n"
+        "real property, no client and no personal information in any of it,\n"
+        "and nothing in it is sent anywhere. Practise on it as much as you\n"
+        "like. When you want to work on a real job, start the app again and\n"
+        "point it at your own jobs folder instead.\n"
         "\n"
         "Windows may say it protected your PC the first time. Click More info,\n"
         "then Run anyway. Spenser will be on the call the first time.\n"

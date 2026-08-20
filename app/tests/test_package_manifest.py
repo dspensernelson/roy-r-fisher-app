@@ -196,6 +196,53 @@ def test_the_package_still_verifies_after_a_normal_start(copy):
     packaging.verify(copy)                       # and after the second
 
 
+# --- the practice job ------------------------------------------------------
+
+@needs_dist
+def test_the_practice_job_ships_beside_the_launcher(built):
+    demo = built / "Demo Jobs"
+    assert demo.is_dir()
+    jobs = [p for p in demo.iterdir() if p.is_dir()]
+    assert len(jobs) == 1
+    assert (jobs[0] / "job-brief.md").is_file()
+    assert len(list((jobs[0] / "Photos").iterdir())) == 12
+
+
+@needs_dist
+def test_the_practice_job_is_not_in_the_immutable_manifest(built):
+    """Shipped content, but Mark's to work in. Opening it writes a photo
+    manifest and building writes a document, and a listed folder would mean
+    the app refused to start the moment he used the demo it came with."""
+    listed = packaging.read_manifest(built)
+    assert not [p for p in listed["files"] if p.startswith("Demo Jobs/")]
+
+
+@needs_dist
+def test_the_package_still_verifies_after_the_demo_is_used(copy):
+    """The defect this closes was found by shipping the folder and then
+    using it: a photo manifest and a built document appear inside Demo Jobs,
+    and verify() counts anything unlisted as a damaged package."""
+    packaging.verify(copy)
+
+    job = next(p for p in (copy / "Demo Jobs").iterdir() if p.is_dir())
+    (job / "Photos" / "photo-manifest.json").write_text("{}", encoding="utf-8")
+    (job / "Photos" / "Photo (RRF App).docx").write_bytes(b"a built document")
+    (job / "Photos" / ".rrf-thumbs").mkdir()
+    (job / "Photos" / ".rrf-thumbs" / "01.jpg").write_bytes(b"a thumbnail")
+
+    packaging.verify(copy)
+
+
+@needs_dist
+def test_the_development_demo_system_did_not_come_back(built):
+    """A practice dataset is not Reset Demo. demo.py, the routes and the
+    baseline all stay out."""
+    assert not (built / "app" / "server" / "demo.py").exists()
+    assert not (built / ".rrf-demo.json").exists()
+    assert not (built / ".rrf-demo-baseline").exists()
+    assert not (built / "RRF Demo Jobs").exists()
+
+
 # --- the package actually runs ----------------------------------------------
 
 @needs_dist

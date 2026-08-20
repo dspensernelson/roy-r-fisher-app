@@ -14,6 +14,7 @@ nothing about Windows Explorer, SmartScreen, or whether the embedded
 interpreter starts.
 """
 import hashlib
+import io
 import shutil
 import subprocess
 import sys
@@ -318,6 +319,46 @@ def test_the_real_sidecar_matches_the_real_archive():
     digest, name = sidecar.read_text(encoding="utf-8").strip().split("  ")
     assert name == REAL_ZIP.name
     assert digest == pw.sha256_of(REAL_ZIP)
+
+
+@needs_real
+def test_the_real_archive_carries_the_practice_job():
+    with zipfile.ZipFile(REAL_ZIP) as archive:
+        names = archive.namelist()
+    photos = [n for n in names
+              if "/Demo Jobs/" in n and "/Photos/" in n and not n.endswith("/")]
+    assert len(photos) == 12
+    assert [n for n in names if n.endswith("/Demo Jobs/READ ME.txt")]
+    assert [n for n in names if "/Demo Jobs/" in n and n.endswith("job-brief.md")]
+
+
+@needs_real
+def test_the_practice_job_photos_carry_no_metadata():
+    """Checked in the archive itself, not in the folder it was built from."""
+    from PIL import Image
+
+    with zipfile.ZipFile(REAL_ZIP) as archive:
+        for name in archive.namelist():
+            if "/Demo Jobs/" not in name or not name.lower().endswith((".jpg", ".png")):
+                continue
+            with Image.open(io.BytesIO(archive.read(name))) as image:
+                exif = image.getexif()
+            assert not exif, name
+            assert 0x8825 not in exif, name
+
+
+@needs_real
+def test_the_archive_carries_no_client_material_from_the_corpus():
+    """Names of real jobs, addresses and clients, checked as bytes across
+    every file in the archive."""
+    with zipfile.ZipFile(REAL_ZIP) as archive:
+        for name in archive.namelist():
+            if name.endswith("/") or "/Demo Jobs/" not in name:
+                continue
+            blob = archive.read(name)
+            for forbidden in (b"Bettendorf", b"Davenport", b"Mason City",
+                              b"Walmart", b"Brady Street", b"sk-ant"):
+                assert forbidden not in blob, "%s in %s" % (forbidden, name)
 
 
 @needs_real

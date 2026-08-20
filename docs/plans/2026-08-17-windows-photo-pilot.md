@@ -1027,7 +1027,9 @@ and every line is asserted by a packaging test.**
 - `app/tests` and every test artifact
 - `app/web/src`, `app/web/node_modules`, `package.json`, `package-lock.json`
 - `app/server/demo.py` and both demo routes (development-only control)
-- `RRF Demo Jobs/` and any demo or client material
+- `RRF Demo Jobs/` and any client material, and the development demo system:
+  `demo.py`, `.rrf-demo.json`, `.rrf-demo-baseline/`. **One named exception,
+  approved 2026-08-20: see Section 10b**
 - `brand/`, `docs/`, `.git/`, and anything from `Report Examples/` or `locker/`
 - `__pycache__/`, `.pytest_cache/`, `.DS_Store`
 - any `.env` file, any key, any cache, any thumbnail cache
@@ -1056,6 +1058,48 @@ breaks.
 **TEST.** A packaged tree with `demo.py` absent imports, starts, serves
 `/api/version`, and renders every screen. This test runs against output from
 the packaging script, per Section 11.
+
+### 10b. The one demo exception: a synthetic practice job
+
+**APPROVED, Spenser, 2026-08-20.** The blanket exclusion of demo material
+stands with exactly one exception, and the distinction is the point.
+
+| Stays excluded | Ships |
+|---|---|
+| The development demo system: `demo.py`, `/api/demo`, Reset Demo, `.rrf-demo.json`, `.rrf-demo-baseline/` | Nothing of it. None of these come back |
+| The development `RRF Demo Jobs/`, which holds copies of Mark's real folders | Nothing of it |
+| Anything derived from `Report Examples/`, `locker/`, or a client folder | Nothing of it |
+| | **One purpose-built synthetic practice job**, generated from nothing by `tools/demo_job.py` |
+
+**What ships.** A folder named `Demo Jobs` beside the launcher, holding one
+job, `ANYTOWN_100 Example Avenue - 2026`: Mark's eight standard folders, a
+brief written by the app's own writer, and twelve generated images of varied
+size and orientation, each carrying its number, its label, and the words
+SYNTHETIC DEMO IMAGE and NOT A REAL PROPERTY drawn into the pixels. About
+260 KB in total. No EXIF and no location on any of them, because they were
+drawn rather than photographed and never had either.
+
+**Why it is here.** Without it the first thing Mark sees after launching is a
+folder picker pointing at nothing, and the Subject Photographs workflow cannot
+be tried at all until he has a real job open.
+
+**What it is not.**
+
+- It is **not** the development demo system, and does not bring any part of it
+  back.
+- It is **not** marked AI safe. Section 25's policy is unchanged, this job is
+  Local only like everything else, and nothing in the generator touches
+  captions, the policy, or the network.
+- It does **not** contain a HEIC. A HEIC placed directly into a Photos folder
+  still fails Build (Section 1b) until Task 4 fixes it, and shipping one would
+  hand Mark a demo with a broken button in it.
+
+**FACT, 2026-08-20.** `Demo Jobs` is shipped content but is **not** in the
+immutable manifest. Opening the job writes a photo manifest, and building
+writes a document, both inside that folder. Listing it would mean `verify()`
+counted those as a damaged package and the app refused to start the moment
+Mark used the demo it came with. This was found by shipping it and then using
+it, and it is the same reasoning that puts `runtime.json` outside the set.
 
 ## 11. Reproducible packaging and integrity check
 

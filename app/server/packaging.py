@@ -35,6 +35,13 @@ MANIFEST_NAME = "MANIFEST"
 VERSION_NAME = "VERSION"
 RUNTIME_NAME = "runtime.json"
 
+# The practice job that ships in the package. It is Mark's to work in: opening
+# it writes a photo manifest, captions land in it, and built documents are
+# saved into its Photos folder. So it is shipped content but it is not
+# immutable content, and listing it would mean the app refused to start the
+# moment he used the demo it came with.
+DEMO_DIR = "Demo Jobs"
+
 # Never listed, never hashed. See the module docstring for why each one.
 OUTSIDE_THE_SET = (MANIFEST_NAME, RUNTIME_NAME)
 
@@ -113,6 +120,10 @@ def _walk(root: Path):
     found = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in NOISE_DIRS)
+        if Path(dirpath) == root:
+            # Working data, not package content. Everything else under the
+            # root is code or runtime and never changes after it is unzipped.
+            dirnames[:] = [d for d in dirnames if d != DEMO_DIR]
         for name in sorted(filenames):
             if name in NOISE_FILES:
                 continue

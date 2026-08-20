@@ -72,8 +72,11 @@ def stand_in(monkeypatch, usage=None, fail_after=None):
     return calls
 
 
-def caption_all(client, job_name=JOB):
-    return client.post("/api/jobs/%s/captions" % job_name)
+def caption_all(client, job_name=JOB, confirmed=False):
+    url = "/api/jobs/%s/captions" % job_name
+    if confirmed:
+        url += "?confirmed=true"
+    return client.post(url)
 
 
 def review_all(client, manifest, job_name=JOB):
@@ -81,31 +84,118 @@ def review_all(client, manifest, job_name=JOB):
         client.post("/api/jobs/%s/photos/%s/reviewed" % (job_name, photo["file"]))
 
 
-# --- the ceiling ------------------------------------------------------------
+# --- tranches, and the absence of a ceiling -------------------------------
 
-def test_sixty_photos_is_accepted(client, home, monkeypatch):
-    make_job(home, 60)
+@pytest.mark.parametrize("photos,tranches", [
+    (1, 1), (30, 1), (31, 1), (60, 1), (61, 2), (100, 2), (121, 3),
+])
+def test_a_run_of_any_size_is_divided_and_never_refused(client, home, monkeypatch,
+                                                        photos, tranches):
+    """The 60-photo ceiling was withdrawn on 2026-08-20. A job holding more
+    than sixty photographs used to be uncaptionable, which made the app
+    useless for exactly the jobs that need it most."""
+    make_job(home, photos)
+    calls = stand_in(monkeypatch)
+
+    answer = caption_all(client, confirmed=True)
+    assert answer.status_code == 200, answer.json()
+    body = answer.json()
+
+    assert body["captioned"] == photos
+    assert body["remaining"] == []
+    assert len(calls["sent"]) == tranches
+    assert max(len(batch) for batch in calls["sent"]) <= captions.MAX_PER_TRANCHE
+    assert sum(len(batch) for batch in calls["sent"]) == photos
+
+
+def test_the_tranches_are_exactly_the_approved_arithmetic():
+    def sizes(n):
+        # A real, small encoded size for each one, so the count is what
+        # divides the run and not the byte budget. Keyed by str(path),
+        # which is what plan_tranches looks up.
+        photos = list(range(n))
+        encoded = {str(i): "x" for i in photos}
+        return [len(t) for t in captions.plan_tranches(photos, encoded)]
+    assert sizes(61) == [60, 1]
+    assert sizes(100) == [60, 40]
+    assert sizes(121) == [60, 60, 1]
+
+
+def test_sixty_one_photos_is_a_successful_run_not_a_refusal(client, home, monkeypatch):
+    make_job(home, 61)
+    calls = stand_in(monkeypatch)
+    body = caption_all(client, confirmed=True).json()
+    assert body["captioned"] == 61
+    assert body["tranches_planned"] == 2
+    assert [len(b) for b in calls["sent"]] == [60, 1]
+
+
+def test_nothing_anywhere_still_calls_sixty_a_limit_on_a_job():
+    server = Path(__file__).resolve().parents[1] / "server"
+    assert not hasattr(captions, "MAX_PER_RUN")
+    for name in ("main.py", "captions.py"):
+        text = (server / name).read_text(encoding="utf-8")
+        assert "MAX_PER_RUN" not in text
+        assert "limit for one run" not in text
+
+
+# --- the confirmation above thirty ----------------------------------------
+
+@pytest.mark.parametrize("photos,needed", [(29, False), (30, False), (31, True), (61, True)])
+def test_confirmation_is_required_only_above_thirty(client, home, monkeypatch,
+                                                    photos, needed):
+    make_job(home, photos)
+    stand_in(monkeypatch)
+    body = client.get("/api/jobs/%s/caption-estimate" % JOB).json()
+    assert body["needs_confirmation"] is needed
+    assert body["confirm_above"] == 30
+
+
+def test_an_unconfirmed_large_run_sends_nothing_and_costs_nothing(client, home, monkeypatch):
+    make_job(home, 61)
+    calls = stand_in(monkeypatch)
+
+    refused = caption_all(client)                    # no confirmed flag
+    assert refused.status_code == 409
+    assert "61 photos will be sent" in refused.json()["detail"]
+    assert calls["batches"] == 0, "an unconfirmed run reached the model"
+    assert usage_store.runs() == [] if usage_store.buckets() else True
+
+
+def test_thirty_or_fewer_needs_no_confirmation_to_run(client, home, monkeypatch):
+    make_job(home, 30)
     calls = stand_in(monkeypatch)
     assert caption_all(client).status_code == 200
-    assert sum(len(b) for b in calls["sent"]) == 60
+    assert calls["batches"] == 1
 
 
-def test_sixty_one_refuses_before_anything_is_sent(client, home, monkeypatch):
+def test_the_confirmation_figures_are_calculated_not_written_down(client, home, monkeypatch):
     make_job(home, 61)
-    calls = stand_in(monkeypatch)
-    answer = caption_all(client)
-    assert answer.status_code == 400
-    assert "61" in answer.json()["detail"] and "60" in answer.json()["detail"]
-    assert calls["batches"] == 0, "the refusal reached the model"
-
-
-def test_the_estimate_endpoint_reports_the_block_without_sending(client, home, monkeypatch):
-    make_job(home, 61)
-    calls = stand_in(monkeypatch)
+    stand_in(monkeypatch)
     body = client.get("/api/jobs/%s/caption-estimate" % JOB).json()
-    assert body["over_ceiling"] is True
     assert body["photos_to_send"] == 61
-    assert calls["batches"] == 0
+    assert body["estimate"]["arithmetic"] == "61 x $0.0500 = $3.05"
+    assert body["estimate"]["total"] == 3.05
+    assert body["tranches"] == 2
+
+
+def test_every_grey_control_says_why(client, home, monkeypatch):
+    """Missing key, policy refusal and nothing-to-do are different states and
+    the screen is told which one it is looking at."""
+    job = make_job(home, 4)
+    stand_in(monkeypatch)
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(captions, "ai_available", lambda: False)
+    assert client.get("/api/jobs/%s/caption-estimate" % JOB).json()["blocked_because"] == "no_key"
+
+    monkeypatch.setattr(captions, "ai_available", lambda: True)
+    monkeypatch.setattr(aipolicy, "classify_job", lambda j: aipolicy.LOCAL_ONLY)
+    assert client.get("/api/jobs/%s/caption-estimate" % JOB).json()["blocked_because"] == aipolicy.LOCAL_ONLY
+
+    monkeypatch.setattr(aipolicy, "classify_job", lambda j: aipolicy.NOT_DEMO)
+    caption_all(client)
+    assert client.get("/api/jobs/%s/caption-estimate" % JOB).json()["blocked_because"] == "nothing_to_do"
 
 
 # --- the money --------------------------------------------------------------

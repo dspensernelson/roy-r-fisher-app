@@ -200,51 +200,31 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
           )}
         </div>
 
+        {/* Photos is the whole pilot. The section picker is bypassed rather
+            than deleted: `sections` and the chooser screen still exist behind
+            this, because Phase 2 multiplies sections and rebuilding the
+            machinery then would be worse than hiding it now.
+
+            Approved 2026-08-20. Mark does not choose report sections, does not
+            see a multi-section configuration step, and does not meet an empty
+            "no sections chosen yet" state before he can do the one thing the
+            app does. He opens a job and Photos is there. */}
         <div>
           <div className="band-head">
             <h2>The report</h2>
-            <span className="note">
-              {sections.length > 0 ? `${sections.length} sections, in print order` : "not chosen yet"}
-            </span>
-            <button className="linky" onClick={onEditSections}>
-              {sections.length > 0 ? "Change sections" : "Choose sections"}
-            </button>
+            <span className="note">Subject Photographs</span>
           </div>
 
-          {/* Said once, quietly, instead of stamping a Not yet chip on
-              sixteen rows. The dimmed rows already read as unavailable. */}
-          {sections.length > 1 && (
-            <p className="band-note">Subject Photographs is the only one that builds so far.</p>
-          )}
-
-          {sections.length === 0 && (
-            <div className="empty-note">
-              <div className="name">No sections chosen yet</div>
-              <div className="state">
-                Choose the sections this report needs and they will be listed here.
-              </div>
-            </div>
-          )}
-
-          {sections.map((name, i) =>
-            name === BUILDABLE ? (
-              <button className="section-row live" key={name} onClick={onOpenPhotos}>
-                <span className="num">{i + 1}</span>
-                <span>
-                  <span className="name">{name}</span>
-                  <span className="state">
-                    {detail.photo_count} {detail.photo_count === 1 ? "photo" : "photos"} in the folder
-                  </span>
-                </span>
-                <span className="chip">Open</span>
-              </button>
-            ) : (
-              <div className="section-row soon" key={name}>
-                <span className="num">{i + 1}</span>
-                <span className="name">{name}</span>
-              </div>
-            )
-          )}
+          <button className="section-row live" onClick={onOpenPhotos}>
+            <span className="num">1</span>
+            <span>
+              <span className="name">{BUILDABLE}</span>
+              <span className="state">
+                {detail.photo_count} {detail.photo_count === 1 ? "photo" : "photos"} in the folder
+              </span>
+            </span>
+            <span className="chip">Open</span>
+          </button>
         </div>
       </div>
 

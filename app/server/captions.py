@@ -142,9 +142,17 @@ def _thumb_b64(path: Path) -> str:
     return base64.standard_b64encode(buf.getvalue()).decode()
 
 
-# The hard ceiling on one run, approved 2026-08-18. Checked before a client is
-# ever constructed, so refusing costs nothing and reaches no network.
-MAX_PER_RUN = 60
+# The largest number of photographs in one provider request. Corrected
+# 2026-08-20: this used to be a ceiling on the whole run, and a job holding 61
+# photographs simply could not be captioned, which made the app useless for
+# exactly the jobs that need it most. It is now the size of a tranche and
+# nothing more. A run of any size is divided into tranches of at most this
+# many, automatically, and Mark never has to know.
+MAX_PER_TRANCHE = 60
+
+# Above this many unfinished photographs the screen asks him to confirm the
+# spend before anything is sent. It informs; it never refuses.
+CONFIRM_ABOVE = 30
 
 # How much encoded image one request may carry. Sixty thumbnails do not fit in
 # a single request at any realistic size, so a full run always splits. This is
@@ -172,24 +180,30 @@ class CaptionError(Exception):
         self.kind = kind
 
 
-def plan_batches(photo_paths: list, encoded: dict = None) -> list:
-    """Split the photographs into as few requests as will actually fit.
+def plan_tranches(photo_paths: list, encoded: dict = None) -> list:
+    """Divide the run into requests: at most sixty each, smaller if size forces it.
 
-    One request when it fits, which is the approved rule, and more only when
-    the encoded size forces it. Never a fixed batch size: batching into sixes
-    for its own sake would triple the request count on a small job.
+    Two limits, and they are different kinds of thing. Sixty is the provider's
+    practical comfort for one request and is the one Mark would otherwise have
+    met as a wall. The byte limit is about what actually fits on the wire, and
+    a tranche is cut short when the encoded images reach it.
+
+    The whole run always goes somewhere: 61 becomes 60 + 1, 100 becomes
+    60 + 40, 121 becomes 60 + 60 + 1. Nothing is refused for being large.
     """
-    batches, current, running = [], [], 0
+    tranches, current, running = [], [], 0
     for path in photo_paths:
         size = len((encoded or {}).get(str(path), "")) or _encoded_size(path)
-        if current and running + size > MAX_REQUEST_BYTES:
-            batches.append(current)
+        too_many = len(current) >= MAX_PER_TRANCHE
+        too_big = current and running + size > MAX_REQUEST_BYTES
+        if too_many or too_big:
+            tranches.append(current)
             current, running = [], 0
         current.append(path)
         running += size
     if current:
-        batches.append(current)
-    return batches
+        tranches.append(current)
+    return tranches
 
 
 def _encoded_size(path) -> int:
@@ -226,7 +240,7 @@ def draft_captions(context: str, photo_paths: list,
                    style: str = DEFAULT_STYLE) -> tuple:
     """Caption one batch. Returns (captions by filename, usage for this request).
 
-    One request. Splitting across requests is `plan_batches` and the caller's
+    One request. Dividing a run across requests is `plan_tranches` and the caller's
     loop, so that a failure part way through a split run loses only the batch
     that failed and never the ones already paid for.
     """

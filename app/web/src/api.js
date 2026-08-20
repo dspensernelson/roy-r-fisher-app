@@ -20,7 +20,8 @@ export const jobDetail = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}`
 export const getManifest = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/manifest`).then(j);
 export const putManifest = (name, m) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/manifest`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(m) }).then(j);
-export const draftCaptions = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/captions`, { method: "POST" }).then(j);
+export const draftCaptions = (name, confirmed) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/captions${confirmed ? "?confirmed=true" : ""}`, { method: "POST" }).then(j);
 export const build = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/build`, { method: "POST" }).then(j);
 export const thumbUrl = (name, file) => `/api/jobs/${encodeURIComponent(name)}/thumb/${encodeURIComponent(file)}`;
 export const jobFolders = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/folders`).then(j);

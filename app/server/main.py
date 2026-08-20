@@ -480,19 +480,28 @@ def create_app() -> FastAPI:
         manifest = photos_routes.load_manifest(job)
         waiting = _uncaptioned(job, manifest)
         allowed = aipolicy.classify_job(job)
+        tranches = captions.plan_tranches(waiting) if waiting else []
+        blocked = (aipolicy.LOCAL_ONLY if allowed == aipolicy.LOCAL_ONLY
+                   else "no_key" if not captions.ai_available()
+                   else "nothing_to_do" if not waiting
+                   else "")
         return {
             "photos_to_send": len(waiting),
-            "over_ceiling": len(waiting) > captions.MAX_PER_RUN,
-            "ceiling": captions.MAX_PER_RUN,
+            "tranches": len(tranches),
+            "tranche_size": captions.MAX_PER_TRANCHE,
+            "needs_confirmation": len(waiting) > captions.CONFIRM_ABOVE,
+            "confirm_above": captions.CONFIRM_ABOVE,
             "estimate": cost.estimate(len(waiting), _bucket()),
             "ai_available": captions.ai_available(),
             "policy": allowed,
-            "may_send": aipolicy.may_send_to_ai(job) or allowed == aipolicy.NOT_DEMO,
+            "may_send": allowed != aipolicy.LOCAL_ONLY,
+            # One reason, so no control is ever grey without saying why.
+            "blocked_because": blocked,
             "review": photos_routes.review_progress(manifest),
         }
 
     @app.post("/api/jobs/{name}/captions")
-    def draft_job_captions(name: str):
+    def draft_job_captions(name: str, confirmed: bool = False):
         """Caption every included photograph that has none, and stop there.
 
         The order below is the safety. Nothing reaches the network until the
@@ -520,20 +529,19 @@ def create_app() -> FastAPI:
             return {**manifest, "ai_available": True,
                     "review": photos_routes.review_progress(manifest)}
 
-        # 2. The ceiling, checked before the client exists so the refusal path
-        #    never reaches the network and costs nothing to prove.
-        if len(waiting) > captions.MAX_PER_RUN:
+        # 2. Above thirty, he has to have said yes. There is no ceiling: the
+        #    confirmation informs, it does not refuse, and the screen sends
+        #    confirmed=true once he has seen the number.
+        if len(waiting) > captions.CONFIRM_ABOVE and not confirmed:
             raise HTTPException(
-                400, "This job has %d photos still needing captions and the "
-                     "limit for one run is %d. Cut some photos, or caption "
-                     "some by hand, then try again. Nothing was sent."
-                     % (len(waiting), captions.MAX_PER_RUN))
+                409, "This run needs confirming first. %d photos will be sent."
+                     % len(waiting))
 
         shown = cost.estimate(len(waiting), _bucket())
-        batches = captions.plan_batches(waiting)
+        tranches = captions.plan_tranches(waiting)
 
         done, usages, failure = 0, [], None
-        for batch in batches:
+        for tranche_number, batch in enumerate(tranches, start=1):
             try:
                 drafted, used = captions.draft_captions(
                     manifest.get("context", ""), batch,
@@ -600,6 +608,9 @@ def create_app() -> FastAPI:
                   "measured": measured,
                   "captioned": done,
                   "remaining": remaining,
+                  "requested": len(waiting),
+                  "tranches_planned": len(tranches),
+                  "tranches_done": len(usages),
                   "review": photos_routes.review_progress(fresh_manifest)}
         if failure is not None:
             answer["error"] = failure.message

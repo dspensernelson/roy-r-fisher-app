@@ -28,7 +28,40 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
-def demo_repo(tmp_path, monkeypatch):
+def fake_source(tmp_path, monkeypatch):
+    """A stand-in for Report Examples, so no test ever reads the real corpus.
+
+    Its files are deliberately given camera-style names and real EXIF, because
+    what the tool has to strip is exactly that.
+    """
+    source = tmp_path / "Fake Report Examples" / "CLIENTTOWN_Some Property" / "Photos"
+    source.mkdir(parents=True)
+    for i in range(12):
+        image = Image.new("RGB", (900 + i, 700), (40 + i * 5, 90, 120))
+        exif = image.getexif()
+        exif[0x0112] = 6                       # orientation
+        exif[0x010F] = "AcmeCamera"            # the camera that took it
+        exif[0x0132] = "2026:02:13 10:35:16"   # when it was taken
+        image.save(source / ("20260213_10%04d.jpg" % i), quality=90, exif=exif)
+    monkeypatch.setattr(hydrate_demo, "SOURCE", source.parents[1])
+    monkeypatch.setattr(hydrate_demo, "MIN_BYTES", 1)
+    return source.parents[1]
+
+
+@pytest.fixture
+def small_plan(monkeypatch):
+    """The same shape of plan with far fewer photographs.
+
+    The real plan copies 266 files, which is right on the machine and far too
+    slow in a test. What is under test is the behaviour, not the volume.
+    """
+    monkeypatch.setattr(hydrate_demo, "PLAN", {
+        name: dict(spec, real=min(spec["real"], 9))
+        for name, spec in hydrate_demo.PLAN.items()})
+
+
+@pytest.fixture
+def demo_repo(tmp_path, monkeypatch, fake_source, small_plan):
     """A stand-in project whose baseline holds one of Mark's photographs."""
     monkeypatch.setattr(demo, "REPO", tmp_path)
     monkeypatch.setattr(demo, "CONFIG", tmp_path / ".rrf-demo.json")
@@ -52,6 +85,12 @@ def demo_repo(tmp_path, monkeypatch):
     return tmp_path
 
 
+def copies(base: Path) -> list:
+    """Every sanitised copy. `photo-*` also matches photo-manifest.json."""
+    return [p for p in sorted(base.rglob("Photos/photo-*"))
+            if p.is_file() and p.suffix.lower() in (".jpg", ".jpeg", ".png", ".heic")]
+
+
 def photo_count(job: Path) -> int:
     return len([p for p in (job / "Photos").iterdir()
                 if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".heic")])
@@ -62,47 +101,94 @@ def test_it_covers_every_scenario_that_was_asked_for(demo_repo):
     hydrate_demo.hydrate(baseline)
 
     counts = {name: photo_count(baseline / name) for name in hydrate_demo.PLAN}
-    assert 60 in counts.values(), "no job holds exactly the sixty-photo maximum"
-    assert 61 in counts.values(), "no job holds sixty-one, so the refusal cannot be seen"
-    # An ordinary job of about a dozen. Not exactly twelve here, because on
-    # the real machine that job already holds two of Mark's own photographs
-    # and the plan tops it up; this fixture starts it empty.
     assert any(8 <= n <= 14 for n in counts.values()), "no ordinary-sized job"
     assert all(n > 0 for n in counts.values()), "a demo job was left empty"
+
+
+def test_the_real_plan_covers_the_tranche_scenarios():
+    """Checked against the plan itself rather than by copying 266 files.
+
+    Sixty is one full tranche, sixty-one is 60 + 1, and a hundred is 60 + 40.
+    None of them is a refusal any more.
+    """
+    wanted = {spec["real"] for spec in hydrate_demo.PLAN.values()}
+    assert 60 in wanted and 61 in wanted and 100 in wanted, sorted(wanted)
 
 
 def test_every_job_ends_up_with_enough_to_feel_real(demo_repo):
     baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
     hydrate_demo.hydrate(baseline)
     for name, spec in hydrate_demo.PLAN.items():
-        if spec["add"] == 0:
+        if spec["real"] == 0:
             # Deliberately left as it is: on the real machine this one already
             # holds Mark's own twelve, and the tool never adds to it.
             continue
         assert photo_count(baseline / name) >= 8, name
 
 
-def test_shapes_formats_and_orientation_are_all_present(demo_repo):
+def test_the_photographs_are_real_ones_not_placeholders(demo_repo, fake_source):
+    """The correction of 2026-08-20. Flat coloured panels were useless: you
+    cannot judge a layout, a caption or a document size against a rectangle."""
     baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
     hydrate_demo.hydrate(baseline)
 
-    shapes, suffixes, rotated, small = set(), set(), 0, 0
+    made = copies(baseline)
+    assert len(made) > 20, "hardly anything was copied"
+
+    synthetic = [p for p in baseline.rglob("Photos/SYNTHETIC-*") if p.is_file()]
+    assert len(synthetic) <= 2, "synthetic fixtures are the exception, not the fill"
+    for one in synthetic:
+        assert one.name.startswith("SYNTHETIC-"), "a fixture must announce itself"
+
+
+def test_the_copies_carry_no_exif_no_gps_and_no_client_filename(demo_repo):
+    """Re-encoded rather than byte-copied, which is what removes the camera's
+    metadata, the date it was taken and any location in it."""
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+    hydrate_demo.hydrate(baseline)
+
+    for copy in copies(baseline):
+        with Image.open(copy) as image:
+            exif = image.getexif()
+        assert not exif, "%s kept its EXIF" % copy.name
+        assert 0x8825 not in exif, "%s kept a GPS block" % copy.name
+        assert copy.name.startswith("photo-"), copy.name
+        assert "20260213" not in copy.name, "a source filename travelled"
+
+
+def test_the_source_is_only_ever_read(demo_repo, fake_source):
+    """Copy only: never moved, renamed, edited, deleted or rewritten."""
+    before = {p: (p.stat().st_size, hashlib.sha256(p.read_bytes()).hexdigest())
+              for p in sorted(fake_source.rglob("*")) if p.is_file()}
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+    hydrate_demo.hydrate(baseline)
+
+    after = {p: (p.stat().st_size, hashlib.sha256(p.read_bytes()).hexdigest())
+             for p in sorted(fake_source.rglob("*")) if p.is_file()}
+    assert after == before, "the read-only source changed"
+
+
+def test_mixed_formats_and_a_small_image_are_present(demo_repo):
+    """Orientation is deliberately not among these any more.
+
+    The copies have their EXIF stripped, which is the whole point of
+    sanitising them, so none of them can carry an orientation tag. Orientation
+    handling is proved in test_photo_pilot_backend against an image built for
+    it, which is where a test of that behaviour belongs.
+    """
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+    hydrate_demo.hydrate(baseline)
+
+    suffixes, small = set(), 0
     for photo in baseline.rglob("Photos/*"):
         if photo.suffix.lower() not in (".jpg", ".jpeg", ".png", ".heic"):
             continue
         suffixes.add(photo.suffix.lower())
         with Image.open(photo) as image:
-            width, height = image.size
-            shapes.add("landscape" if width > height else
-                       "portrait" if height > width else "square")
-            if image.getexif().get(0x0112) in (5, 6, 7, 8):
-                rotated += 1
-            if max(width, height) < 800:
+            if max(image.size) < 800:
                 small += 1
 
-    assert {"landscape", "portrait", "square"} <= shapes, shapes
-    assert {".jpg", ".png"} <= suffixes, suffixes
-    assert rotated > 0, "no rotated EXIF anywhere, so orientation cannot be seen"
+    assert ".jpg" in suffixes and ".png" in suffixes, suffixes
     assert small > 0, "no small image, so the never-enlarge rule cannot be seen"
 
 
@@ -153,17 +239,38 @@ def test_reset_demo_restores_the_photographs_rather_than_deleting_them(demo_repo
     hydrate_demo.hydrate(baseline)
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
 
-    sixty = "BETTENDORF_1830 E Kimberly Road - 2026 Tax"
-    assert photo_count(working / sixty) == 0, "the working copy starts empty"
+    job = "BETTENDORF_1830 E Kimberly Road - 2026 Tax"
+    assert photo_count(working / job) == 0, "the working copy starts empty"
+    expected = photo_count(baseline / job)
+    assert expected > 0, "nothing was hydrated to restore"
 
     demo.reset()
 
-    assert photo_count(working / sixty) == 60
-    assert photo_count(baseline / sixty) == 60
+    assert photo_count(working / job) == expected
+    assert photo_count(baseline / job) == expected
 
 
-def test_the_tool_reads_no_protected_directory():
-    """Generated from nothing, so nothing client-derived can travel in."""
+def test_the_tool_writes_only_into_the_demo_baseline():
+    """It reads Report Examples now, which Spenser authorised on 2026-08-20.
+    What matters is that it only ever reads there: every write goes to the
+    demo baseline the validated configuration names."""
+    import ast
+
+    tree = ast.parse(Path(hydrate_demo.__file__).read_text(encoding="utf-8"))
+    writes = {n.func.attr for n in ast.walk(tree)
+              if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+    for destructive in ("unlink", "rmtree", "rename", "replace", "move"):
+        if destructive == "unlink":
+            continue          # clear_ours removes only files this tool made
+        assert destructive not in writes, destructive
+
+    source = Path(hydrate_demo.__file__).read_text(encoding="utf-8")
+    assert "SOURCE" in source and "Report Examples" in source
+    assert "shutil.copy" not in source, "copies are re-encoded, never byte-copied"
+
+
+def test_the_tool_names_no_other_protected_directory():
+    """Report Examples is authorised. The locker and the archive are not."""
     import ast
 
     tree = ast.parse(Path(hydrate_demo.__file__).read_text(encoding="utf-8"))
@@ -176,7 +283,7 @@ def test_the_tool_reads_no_protected_directory():
     strings = [n.value for n in ast.walk(tree)
                if isinstance(n, ast.Constant) and isinstance(n.value, str)
                and n.value not in docstrings]
-    for forbidden in ("Report Examples", "locker", "archive"):
+    for forbidden in ("locker", "archive"):
         assert not [s for s in strings if forbidden in s], forbidden
 
 

@@ -181,16 +181,35 @@ def _element(source: str, label: str) -> str:
     return source[start:at]
 
 
-def test_suggest_captions_is_genuinely_disabled_when_there_is_no_key():
+def test_generating_captions_is_genuinely_disabled_when_there_is_no_key():
     """Only this control. Build photo pages has nothing to do with the key
-    and must not be switched off by it."""
+    and must not be switched off by it.
+
+    The control was renamed from Suggest captions to Generate captions on
+    2026-08-20, to match the wording of the spend confirmation.
+    """
     source = SCREEN.read_text()
-    assert "!aiOn" in _element(source, "Suggest captions") or "!aiOn" in source[
-        source.index("disabled={!!busy || inPhotos.length === 0 || !aiOn"):][:200], \
+
+    # It is disabled through canGenerate, which is false whenever the server
+    # gives a reason: no key, a local-only job, or nothing left to caption.
+    assert "disabled={!!busy || !canGenerate}" in source, \
         "the control must be disabled, not merely styled"
+    assert 'blockedBecause === "no_key"' in source, \
+        "a missing key must be one of the named reasons"
+    assert "const canGenerate = inPhotos.length > 0 && !blockedBecause" in source
 
     build = _element(source, "Build photo pages")
     assert "aiOn" not in build, "building a report does not need a key"
+    assert "canGenerate" not in build, "building a report does not need the key either"
+
+
+def test_a_grey_generate_button_always_says_why():
+    """The defect this closes: Spenser met a grey button, read it as the app
+    being broken, and went looking for his API key. The key was fine; a
+    fixture had put 61 photos in that job and the old ceiling refused it."""
+    source = SCREEN.read_text()
+    for reason in ("no_key", "local_only", "nothing_to_do"):
+        assert 'blockedBecause === "%s"' % reason in source, reason
 
 
 def test_the_unavailable_control_does_not_look_like_a_live_button():

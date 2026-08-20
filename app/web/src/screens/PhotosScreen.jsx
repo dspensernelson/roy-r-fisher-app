@@ -21,6 +21,7 @@ export default function PhotosScreen({ job }) {
   const [spent, setSpent] = useState(null);   // what the last run did cost
   const [facts, setFacts] = useState(null);   // city and address for the filename
   const [fixing, setFixing] = useState(false);
+  const [confirming, setConfirming] = useState(null);  // the spend confirmation
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
@@ -68,14 +69,24 @@ export default function PhotosScreen({ job }) {
     setPreviewing(false);
   }
 
-  async function runCaptions(style) {
+  // Above thirty photographs he sees the number in a window of its own before
+  // anything is sent. Below that the estimate on the step is enough: the point
+  // is proportion, not a second hurdle on a small job.
+  function beginCaptions(style) {
+    setAsking(false);
+    if (needsConfirm) { setConfirming({ style }); return; }
+    runCaptions(style, false);
+  }
+
+  async function runCaptions(style, confirmed) {
+    setConfirming(null);
     setAsking(false);
     setBusy("Writing captions..."); setError(null); setSpent(null);
     try {
       if (style && style !== manifest.caption_style) {
         await save({ ...manifest, caption_style: style });
       }
-      const m = await draftCaptions(job);
+      const m = await draftCaptions(job, confirmed || needsConfirm);
       setManifest(m);
       // What it actually cost, kept on screen next to what was estimated.
       if (m.measured) setSpent({ ...m.measured, captioned: m.captioned, remaining: m.remaining || [] });
@@ -177,10 +188,18 @@ export default function PhotosScreen({ job }) {
   const allReviewed = inPhotos.length > 0 && reviewedCount === inPhotos.length;
   const reviewText = `${reviewedCount} of ${inPhotos.length} reviewed`;
 
-  const buildReady = inPhotos.length > 0 && allReviewed && !(facts && !facts.ready);
+  // Everything the server told us about this run, read before anything that
+  // depends on it. Declared out of order once and the whole screen went blank
+  // on a temporal-dead-zone error, which no test caught because none of them
+  // render React.
   const toSend = quote ? quote.photos_to_send : inPhotos.filter((x) => !(x.p.caption || "").trim()).length;
-  const ceiling = quote ? quote.ceiling : 60;
-  const overCeiling = !!(quote && quote.over_ceiling);
+  const ceiling = quote ? quote.tranche_size : 60;
+  const tranches = quote ? quote.tranches : 1;
+  const needsConfirm = !!(quote && quote.needs_confirmation);
+  const blockedBecause = quote ? quote.blocked_because : "";
+
+  const buildReady = inPhotos.length > 0 && allReviewed && !(facts && !facts.ready);
+  const canGenerate = inPhotos.length > 0 && !blockedBecause && toSend > 0;
   const chosen = manifest.caption_style || "view";
   // The one this job starts on is shown first, whichever it is.
   const ordered = [...styles].sort((a, b) => (b.key === chosen) - (a.key === chosen));
@@ -215,11 +234,31 @@ export default function PhotosScreen({ job }) {
               {reviewText}{allReviewed ? ". Ready to build." : ". Build waits until you have read them all."}
             </p>
           )}
-          {overCeiling && (
+          {/* Whenever the button is off, this says why in words. A grey
+              control that leaves him guessing is the defect this replaced:
+              the old copy here announced a 60-photo wall that no longer
+              exists, and he read it as the app being broken. */}
+          {blockedBecause === "no_key" && (
             <p className="sub off-note" style={{ margin: "6px 0 0" }}>
-              {toSend} photos are waiting for captions and {ceiling} is the most
-              that can be written in one go. Cut some, or type some in yourself,
-              then try again. Nothing has been sent.
+              Writing captions needs a key on this computer. Open Settings to
+              add one. You can still type every caption in yourself.
+            </p>
+          )}
+          {blockedBecause === "local_only" && (
+            <p className="sub off-note" style={{ margin: "6px 0 0" }}>
+              These photos are demo material kept for local testing, so they
+              are not sent anywhere. Everything else on this screen works.
+            </p>
+          )}
+          {blockedBecause === "nothing_to_do" && inPhotos.length > 0 && (
+            <p className="sub off-note" style={{ margin: "6px 0 0" }}>
+              Every photo in the report already has a caption.
+            </p>
+          )}
+          {toSend > 0 && tranches > 1 && (
+            <p className="sub" style={{ margin: "6px 0 0" }}>
+              {toSend} photos will be written in {tranches} goes of up to{" "}
+              {ceiling}. Captions are saved as each one finishes.
             </p>
           )}
           {!aiOn && (
@@ -244,12 +283,12 @@ export default function PhotosScreen({ job }) {
             </button>
             {/* Off means off, and it looks off. A blue button at half opacity
                 still reads as a button he should be able to press. */}
-            <button className={`button secondary${aiOn && !overCeiling ? "" : " is-off"}`} onClick={openChooser}
-                    disabled={!!busy || inPhotos.length === 0 || !aiOn || toSend === 0 || overCeiling}
-                    title={!aiOn ? "Needs a key on this computer"
-                           : overCeiling ? `Too many at once: ${toSend} waiting, ${ceiling} is the limit`
-                           : toSend === 0 ? "Every included photo already has a caption" : ""}>
-              {toSend > 0 && aiOn && !overCeiling ? `Suggest captions (${toSend})` : "Suggest captions"}
+            <button className={`button secondary${canGenerate ? "" : " is-off"}`} onClick={openChooser}
+                    disabled={!!busy || !canGenerate}
+                    title={blockedBecause === "no_key" ? "Needs a key on this computer"
+                           : blockedBecause === "local_only" ? "Demo photos are not sent anywhere"
+                           : blockedBecause === "nothing_to_do" ? "Every photo already has a caption" : ""}>
+              {canGenerate ? `Generate captions (${toSend})` : "Generate captions"}
             </button>
             <button className="linky" style={{ marginLeft: 0 }} onClick={() => filePicker.current?.click()}>
               Add photos
@@ -471,6 +510,42 @@ export default function PhotosScreen({ job }) {
 
       {/* The caption style is asked here, as a step, because it is a question
           about the thing he just clicked. Parked on the page it was invisible. */}
+      {/* The spend, in a window of its own, with the count and the amount
+          calculated rather than written here. Nothing is sent until he
+          presses the button on the right. */}
+      {confirming && quote && (
+        <div className="sheet-back" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(null); }}>
+          <div className="sheet spend" role="dialog" aria-modal="true"
+               aria-label={`Generate captions for ${toSend} photos?`}>
+            <h2>Generate captions for {toSend} {toSend === 1 ? "photo" : "photos"}?</h2>
+
+            <div className="spend-figure">
+              <span className="spend-label">Estimated maximum cost</span>
+              <span className="spend-amount">${quote.estimate.total.toFixed(2)}</span>
+            </div>
+
+            <p className="setting-fine" style={{ margin: "14px 0 0" }}>
+              {tranches > 1
+                ? `The work is divided into ${tranches} requests of up to ${ceiling} photos. Captions are saved as each request finishes.`
+                : "The work may be divided into multiple requests. Captions are saved as each request finishes."}
+            </p>
+
+            <div className="spend-warning">
+              If you continue, generating captions for {toSend}{" "}
+              {toSend === 1 ? "photo" : "photos"} may cost up to{" "}
+              <strong>${quote.estimate.total.toFixed(2)}</strong>.
+            </div>
+
+            <div className="setting-actions" style={{ marginTop: 18 }}>
+              <button className="linky" onClick={() => setConfirming(null)}>Cancel</button>
+              <button className="button" onClick={() => runCaptions(confirming.style, true)}>
+                Generate captions
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {asking && (
         <div className="sheet-back" onClick={(e) => { if (e.target === e.currentTarget) setAsking(false); }}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="How should the captions read?">
@@ -555,7 +630,7 @@ export default function PhotosScreen({ job }) {
 
             <div className="sheet-foot">
               <p className="keep-note">Captions you have already typed are never changed.</p>
-              <button className="button" onClick={() => runCaptions(showing)} disabled={previewing}>
+              <button className="button" onClick={() => beginCaptions(showing)} disabled={previewing}>
                 Use this style
               </button>
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>

@@ -2066,24 +2066,43 @@ on Windows.** Task 4 remains unauthorized.
 
 ### Approval Gate A: Windows spine proof. PASSED 2026-08-20
 
-**FACT, observed by Spenser on a real Windows computer, 2026-08-20.**
+**CORRECTED by Spenser, 2026-08-20.** This entry originally recorded that he
+entered an API key and that the app generated real AI captions on Windows.
+**Neither happened.** That run was on his **work computer**, which is
+employer-owned, and he deliberately put no personal API key on it. The
+corrected record stands below; the withdrawn claims are named here so nobody
+later reads the old version and believes the key path was proven.
+
+**FACT, observed by Spenser on a work Windows computer, 2026-08-20.**
 
 - The ZIP was delivered by email, downloaded, and extracted successfully.
 - The application launched.
-- He entered the API key successfully.
-- The application generated real AI captions.
-- He completed the existing workflow from beginning to end.
+- He completed the workflow that needs no key, from beginning to end.
 
 **What that proves.** The delivery spine works on Windows: the embedded
 runtime starts, the compiled wheels import, the launcher binds and opens the
-browser, `Path.home()` resolves somewhere writable, the key is entered and
-stored, and the provider is reachable from his machine.
+browser, and `Path.home()` resolves somewhere writable.
 
-**What it does not prove.** Only what existed on 2026-08-20 was exercised. It
-says nothing about the cost ledger, the review state, the split-run handling,
+**What it does not prove, and this is the part that was overstated.** No API
+key was entered, so nothing about key entry, key storage, key persistence
+across an update, provider reachability, or AI caption generation was observed
+on Windows at all. Those remain **technically tested in isolated automated
+tests with a dummy key, and not yet observed by a human on Windows.**
+
+It also says nothing about the cost ledger, the review state, the tranching,
 the retry, the photo optimization, the output naming, or the AI policy, because
-none of those were built when he ran it. Those are proven by this pass and are
-unproven on Windows until the completed candidate is run there.
+none of those were built when he ran it.
+
+**APPROVED, 2026-08-20. Two environments, kept apart on purpose.**
+
+| Machine | What happens there |
+|---|---|
+| **Work Windows computer**, employer-owned | Installation, startup, and the whole no-key path. **No personal API key is ever entered on it** |
+| **A trusted personal Windows computer**, possibly Mark's during a supervised install | The dedicated RRF pilot key, the estimate, the cancel, the real 61-photo run, and the first human-observed key state |
+
+A personal API key never goes on an employer-owned machine to satisfy a
+checklist. The work-computer test stops before AI captioning by design, not by
+omission.
 
 ### Spenser's uninterrupted implementation pass, authorized 2026-08-20
 

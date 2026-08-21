@@ -56,6 +56,12 @@ APP_PARTS = ("data", "engine", "server", "templates")
 
 SKIP_SERVER_FILES = {"demo.py"}
 
+# Named here so the readme and the generator cannot disagree about them.
+sys.path.insert(0, str(REPO / "tools"))
+import demo_job as _demo_job  # noqa: E402
+ORDINARY_NAME = _demo_job.ORDINARY["name"]
+LARGE_NAME = _demo_job.LARGE["name"]
+
 
 def say(message: str) -> None:
     print("  %s" % message)
@@ -585,9 +591,20 @@ def strip_local_traces(site_packages: Path) -> int:
 
 
 def readme_text() -> str:
+    """What Mark and Spenser read first, in the package.
+
+    Rewritten 2026-08-20. The earlier version told every tester to paste an
+    API key. Spenser tested on his work computer, which his employer owns, and
+    correctly declined to put a personal key on it. Instructions that push
+    somebody toward doing that anyway are a defect, so the key is now plainly
+    optional and the machine it belongs on is named.
+    """
     return (
         "Roy R. Fisher\n"
         "=============\n"
+        "\n"
+        "Getting started\n"
+        "---------------\n"
         "\n"
         "1. Unzip this folder somewhere in your own account, for example your\n"
         "   Desktop or your Documents folder. Do not put it in Program Files.\n"
@@ -597,32 +614,70 @@ def readme_text() -> str:
         "3. Your browser opens by itself. Leave the black window open while you\n"
         "   work. To stop the app, close that window.\n"
         "\n"
+        "Windows may say it protected your PC the first time. Click More info,\n"
+        "then Run anyway. Spenser will be on the call the first time.\n"
+        "\n"
+        "\n"
         "Trying it out\n"
         "-------------\n"
         "\n"
-        "This package comes with a practice job so you can try everything\n"
+        "Two practice jobs come with this package so you can try everything\n"
         "straight away.\n"
         "\n"
         "1. Start the app.\n"
         "2. When it asks where your jobs live, choose the \"Demo Jobs\" folder\n"
         "   inside this one.\n"
-        "3. Open the job called \"ANYTOWN_100 Example Avenue - 2026\".\n"
-        "4. Go to its Photos folder and build a Subject Photographs document.\n"
+        "3. Open either job and go to its Photos folder.\n"
         "\n"
-        "That job and all twelve of its photographs are made up. There is no\n"
-        "real property, no client and no personal information in any of it,\n"
-        "and nothing in it is sent anywhere. Practise on it as much as you\n"
-        "like. When you want to work on a real job, start the app again and\n"
-        "point it at your own jobs folder instead.\n"
+        "  " + ORDINARY_NAME + "\n"
+        "      12 photos. The ordinary job.\n"
         "\n"
-        "Windows may say it protected your PC the first time. Click More info,\n"
-        "then Run anyway. Spenser will be on the call the first time.\n"
+        "  " + LARGE_NAME + "\n"
+        "      61 photos, for testing a big job.\n"
+        "\n"
+        "The jobs, the addresses and the client are invented. The photographs\n"
+        "are real building photographs with their camera information removed,\n"
+        "so there is no location, no date and no file name from anybody's job\n"
+        "in any of them.\n"
+        "\n"
+        "\n"
+        "About the AI captions, and your API key\n"
+        "--------------------------------------\n"
+        "\n"
+        "AI captions are OPTIONAL. Everything else works without them.\n"
+        "\n"
+        "With no key set up:\n"
+        "\n"
+        "  - your photographs stay on this computer and are never sent anywhere\n"
+        "  - nothing is sent automatically, ever\n"
+        "  - you type the captions yourself\n"
+        "  - reviewing and building the Word document work normally\n"
+        "  - the app says plainly that captions need a key, rather than just\n"
+        "    going grey on you\n"
+        "\n"
+        "ONLY enter an API key on a personal computer you trust.\n"
+        "\n"
+        "NEVER enter a personal API key on a computer your employer owns, or on\n"
+        "any machine you do not control. A key can spend money and it belongs to\n"
+        "whoever holds it.\n"
+        "\n"
+        "Spenser's first test of this package is on a work computer, and it\n"
+        "deliberately stops before AI captions for that reason. That is the plan\n"
+        "working, not something missing.\n"
+        "\n"
+        "Mark: your installation will be done with Spenser on a call, and the AI\n"
+        "key is set up separately then. There is nothing for you to do about it\n"
+        "here.\n"
+        "\n"
+        "\n"
+        "If something goes wrong\n"
+        "-----------------------\n"
         "\n"
         "Keep the previous version's folder until this one has worked once.\n"
         "Only one version can run at a time.\n"
         "\n"
-        "If anything goes wrong, the black window says what happened. Send\n"
-        "Spenser a photo of it and do not delete the folder.\n")
+        "The black window says what happened. Send Spenser a photo of it and do\n"
+        "not delete the folder.\n")
 
 
 def main() -> int:

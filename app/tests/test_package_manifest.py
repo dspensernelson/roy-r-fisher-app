@@ -258,6 +258,33 @@ def test_the_development_demo_system_did_not_come_back(built):
     assert not (built / "RRF Demo Jobs").exists()
 
 
+# --- what the instructions tell a tester ------------------------------------
+
+@needs_dist
+def test_the_readme_never_pushes_a_key_onto_an_untrusted_machine(built):
+    """Corrected 2026-08-20. The earlier wording told every tester to paste a
+    key. Spenser tested on his employer's computer and rightly declined."""
+    readme = (built / "README FIRST.txt").read_text(encoding="utf-8")
+
+    assert "OPTIONAL" in readme
+    assert "ONLY enter an API key on a personal computer you trust." in readme
+    assert "NEVER enter a personal API key on a computer your employer owns" in readme
+    assert "never sent anywhere" in readme
+    assert "deliberately stops before AI captions" in readme
+    assert "set up separately" in readme
+
+    # and it must not read like an instruction to go and do it
+    assert "paste your key" not in readme.lower()
+    assert "enter your api key" not in readme.lower()
+
+
+@needs_dist
+def test_the_readme_names_both_practice_jobs(built):
+    readme = (built / "README FIRST.txt").read_text(encoding="utf-8")
+    for job in sorted(p.name for p in (built / "Demo Jobs").iterdir() if p.is_dir()):
+        assert job in readme, job
+
+
 # --- the package actually runs ----------------------------------------------
 
 @needs_dist

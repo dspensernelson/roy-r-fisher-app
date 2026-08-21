@@ -206,13 +206,21 @@ def test_the_package_still_verifies_after_a_normal_start(copy):
 # --- the practice job ------------------------------------------------------
 
 @needs_dist
-def test_the_practice_job_ships_beside_the_launcher(built):
+def test_both_practice_jobs_ship_beside_the_launcher(built):
+    """Twelve for the ordinary run, sixty-one for the confirmation and the
+    60 + 1 tranching. Spenser can try both on Windows without staging
+    anything himself."""
     demo = built / "Demo Jobs"
     assert demo.is_dir()
-    jobs = [p for p in demo.iterdir() if p.is_dir()]
-    assert len(jobs) == 1
-    assert (jobs[0] / "job-brief.md").is_file()
-    assert len(list((jobs[0] / "Photos").iterdir())) == 12
+    jobs = sorted(p for p in demo.iterdir() if p.is_dir())
+    assert len(jobs) == 2
+
+    counts = {}
+    for job in jobs:
+        assert (job / "job-brief.md").is_file()
+        counts[job.name] = len(list((job / "Photos").iterdir()))
+    assert sorted(counts.values()) == [12, 61], counts
+    assert any("61 Photo Test" in n for n in counts)
 
 
 @needs_dist

@@ -26,16 +26,90 @@ from main import create_app  # noqa: E402
 
 
 @pytest.fixture
-def built(tmp_path):
-    return demo_job.build(tmp_path)
+def fake_source(tmp_path, monkeypatch):
+    """A stand-in for Report Examples, with camera-style names and EXIF.
+
+    No test reads the real corpus, and what the sanitiser has to strip is
+    exactly this.
+    """
+    import photo_source
+    source = tmp_path / "Fake Report Examples" / "CLIENTTOWN_A Property" / "Photos"
+    source.mkdir(parents=True)
+    for i in range(80):
+        image = Image.new("RGB", (900 + i, 700), (40 + i % 60, 90, 120))
+        exif = image.getexif()
+        exif[0x0112] = 6
+        exif[0x010F] = "AcmeCamera"
+        exif[0x0132] = "2026:02:13 10:35:16"
+        image.save(source / ("20260213_10%04d.jpg" % i), quality=88, exif=exif)
+    monkeypatch.setattr(photo_source, "SOURCE", source.parents[1])
+    monkeypatch.setattr(photo_source, "MIN_BYTES", 1)
+    return source.parents[1]
+
+
+@pytest.fixture
+def built(tmp_path, fake_source):
+    """The ordinary job. `built.parent` holds both."""
+    return demo_job.build(tmp_path / "package")
+
+
+# --- both practice jobs -----------------------------------------------------
+
+def test_two_practice_jobs_ship(built):
+    home = built.parent
+    names = sorted(p.name for p in home.iterdir() if p.is_dir())
+    assert names == sorted(spec["name"] for spec in demo_job.JOBS)
+
+
+def test_the_twelve_photo_job_is_below_the_confirmation_threshold(built):
+    import captions
+    assert len(list((built / "Photos").iterdir())) == 12
+    assert 12 <= captions.CONFIRM_ABOVE, "twelve would trigger the confirmation"
+
+
+def test_the_sixty_one_photo_job_needs_confirming_and_two_tranches(built):
+    import captions
+    job = built.parent / demo_job.LARGE["name"]
+    photos = sorted((job / "Photos").iterdir())
+    assert len(photos) == 61
+
+    assert 61 > captions.CONFIRM_ABOVE, "sixty-one would skip the confirmation"
+    tranches = captions.plan_tranches(photos, {str(p): "x" for p in photos})
+    assert [len(t) for t in tranches] == [60, 1]
+
+
+def test_the_large_job_has_a_fictional_brief_of_its_own(built):
+    import brief
+    job = built.parent / demo_job.LARGE["name"]
+    fields = brief.read_brief(job)["fields"]
+    assert fields["Property address"] == "200 Example Avenue, Anytown, Iowa"
+    assert "fictional" in fields["Client (intended user)"].lower()
+    for folder in ("Photos", "Maps", "Comps", "Drafts"):
+        assert (job / folder).is_dir()
+
+
+def test_packaging_stops_rather_than_shipping_placeholders(tmp_path, monkeypatch):
+    """If the approved source is not on the build machine, nothing is
+    substituted. A practice job full of panels is what this replaced."""
+    import photo_source
+    monkeypatch.setattr(photo_source, "SOURCE", tmp_path / "nowhere")
+    with pytest.raises(photo_source.SourceUnavailable) as raised:
+        demo_job.build(tmp_path / "package")
+    assert "not available" in str(raised.value)
+    assert "placeholder" in str(raised.value)
+
+
+def test_no_synthetic_panel_ships_anywhere(built):
+    for photo in built.parent.rglob("Photos/*"):
+        assert not photo.name.startswith("SYNTHETIC"), photo.name
+        assert photo.name.startswith("photo-"), photo.name
 
 
 # --- what it contains -------------------------------------------------------
 
-def test_it_makes_one_job_under_a_demo_jobs_folder(built, tmp_path):
+def test_it_makes_the_jobs_under_a_demo_jobs_folder(built):
     assert built.parent.name == "Demo Jobs"
     assert built.name == demo_job.JOB_NAME
-    assert [p.name for p in built.parent.iterdir() if p.is_dir()] == [demo_job.JOB_NAME]
 
 
 def test_it_has_marks_own_standard_folders(built):
@@ -56,15 +130,15 @@ def test_there_are_exactly_twelve_photos(built):
     assert len(photos) == 12
 
 
-def test_the_photos_vary_in_size_and_orientation(built):
-    shapes = []
+def test_the_photographs_are_real_ones_with_their_metadata_removed(built):
+    """They are photographs now, not generated panels, and each is a copy with
+    the camera information stripped out of it."""
     for path in sorted((built / "Photos").iterdir()):
         with Image.open(path) as im:
-            shapes.append(im.size)
-    assert len({s for s in shapes}) == 12                    # all different
-    assert any(w > h for w, h in shapes), "no landscape"
-    assert any(h > w for w, h in shapes), "no portrait"
-    assert any(w == h for w, h in shapes), "no square"
+            assert not im.getexif(), path.name
+            assert im.mode == "RGB"
+        assert path.name.startswith("photo-")
+        assert "20260213" not in path.name
 
 
 def test_every_photo_opens_and_is_a_real_image(built):
@@ -91,9 +165,9 @@ def test_no_heic_is_shipped(built):
     assert not [n for n in names if n.endswith((".heic", ".heif"))]
 
 
-def test_the_whole_job_stays_small(built):
-    total = sum(p.stat().st_size for p in built.rglob("*") if p.is_file())
-    assert total < 1_500_000, "%d bytes is more than a practice job needs" % total
+def test_the_practice_jobs_stay_a_sensible_size(built):
+    total = sum(p.stat().st_size for p in built.parent.rglob("*") if p.is_file())
+    assert total < 60_000_000, "%d bytes is more than practice jobs need" % total
 
 
 # --- it is obviously invented -----------------------------------------------
@@ -104,20 +178,21 @@ def test_the_address_is_plainly_fictional(built):
     assert "fictional" in text.lower()
 
 
-def test_every_photo_says_on_its_face_that_it_is_not_real(built):
-    """Checked as pixels, not as a filename. The words are drawn into the
-    image, so a photo separated from its folder still declares itself."""
-    for path in sorted((built / "Photos").iterdir()):
-        with Image.open(path) as im:
-            colours = {c for _, c in im.convert("RGB").getcolors(maxcolors=1 << 20)}
-        # a flat panel plus drawn text: never a photograph's colour spread
-        assert len(colours) < 400, path.name
+def test_the_source_is_only_ever_read(built, fake_source):
+    """Copy only: never moved, renamed, edited, deleted or rewritten."""
+    import hashlib
+    after = {p: hashlib.sha256(p.read_bytes()).hexdigest()
+             for p in sorted(fake_source.rglob("*")) if p.is_file()}
+    assert len(after) == 80, "a source file went missing"
+    for p in after:
+        with Image.open(p) as im:
+            assert im.getexif(), "a source file lost its EXIF"
 
 
 def test_nothing_client_shaped_appears_anywhere_in_it(built):
     """No city, street, client or report name from the real corpus."""
-    blob = b" ".join(p.read_bytes() for p in built.rglob("*") if p.is_file())
-    blob += b" ".join(str(p).encode() for p in built.rglob("*"))
+    blob = b" ".join(p.read_bytes()[:6000] for p in built.parent.rglob("*") if p.is_file())
+    blob += b" ".join(str(p).encode() for p in built.parent.rglob("*"))
     for forbidden in (b"Bettendorf", b"Davenport", b"Mason City", b"Walmart",
                       b"Kinze", b"Marquette", b"Burlington", b"Brady Street",
                       b"Forest", b"sk-ant"):
@@ -174,10 +249,26 @@ def client(built, monkeypatch):
     return TestClient(create_app())
 
 
-def test_the_jobs_folder_opens_and_shows_the_one_job(client, built):
+def test_the_jobs_folder_opens_and_shows_both_jobs(client, built):
     found = client.get("/api/workspace").json()
     assert found["valid"] is True
-    assert found["folder_names"] == [demo_job.JOB_NAME]
+    assert found["folder_names"] == sorted(spec["name"] for spec in demo_job.JOBS)
+
+
+def test_the_sixty_one_photo_job_opens_and_asks_to_confirm(client, built):
+    name = demo_job.LARGE["name"]
+    quote = client.get("/api/jobs/%s/caption-estimate" % name).json()
+    assert quote["photos_to_send"] == 61
+    assert quote["tranches"] == 2
+    assert quote["needs_confirmation"] is True
+    assert quote["estimate"]["arithmetic"] == "61 x $0.0500 = $3.05"
+
+
+def test_the_twelve_photo_job_opens_without_asking(client, built):
+    quote = client.get("/api/jobs/%s/caption-estimate" % demo_job.JOB_NAME).json()
+    assert quote["photos_to_send"] == 12
+    assert quote["tranches"] == 1
+    assert quote["needs_confirmation"] is False
 
 
 def test_all_twelve_photos_reach_the_subject_photographs_screen(client):

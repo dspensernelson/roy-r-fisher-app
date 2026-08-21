@@ -331,7 +331,13 @@ def test_the_real_archive_carries_the_practice_job():
         names = archive.namelist()
     photos = [n for n in names
               if "/Demo Jobs/" in n and "/Photos/" in n and not n.endswith("/")]
-    assert len(photos) == 12
+    assert len(photos) == 73, "twelve for the ordinary run and sixty-one for the tranching"
+
+    by_job = {}
+    for n in photos:
+        by_job.setdefault(n.split("/Demo Jobs/")[1].split("/")[0], []).append(n)
+    assert sorted(len(v) for v in by_job.values()) == [12, 61], by_job.keys()
+    assert any("61 Photo Test" in name for name in by_job)
     assert [n for n in names if n.endswith("/Demo Jobs/READ ME.txt")]
     assert [n for n in names if "/Demo Jobs/" in n and n.endswith("job-brief.md")]
 

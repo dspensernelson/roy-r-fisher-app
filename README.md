@@ -59,15 +59,22 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-335 tests; the ones that need Mark's private material skip on machines without it.
+The suite last measured 662 passed, 15 skipped, on 2026-08-21. That is the
+result of that run, not a permanent number: it moves every time tests are
+added. The skips are the tests that need Mark's private material, which is not
+on every machine.
 
 ## What we know is missing
 
-- **Nothing has run on Windows yet.** There is now a Windows launcher, a
-  packaging script, and a package that builds and self-verifies on the Mac
-  (`tools/package_windows.py`). Whether the embedded interpreter starts, the
-  compiled wheels import, and Explorer's unzip leaves it whole are all still
-  unproven, and are the next thing to be tested.
+- **Windows is part way proven, and not accepted.** One pilot run on a Windows
+  PC covered delivery and startup. The package was delivered to that PC through
+  a browser download. It was extracted with Windows Explorer. The packaged app
+  then started on Windows. The version was shown on screen, and the app's
+  behavior with no key set was observed. That is where the evidence stops. No
+  real API key was entered, because the computer is employer owned, so paid AI
+  caption generation on Windows is unproven and whether a real key is stored and
+  read back on Windows was not observed. None of this is full Windows
+  acceptance.
 - **The design system has not been adopted.** The screens still run on the old
   stylesheet, whose brand red is wrong.
 - **No section other than photos builds.** The next cheapest family is the

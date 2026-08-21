@@ -1,5 +1,24 @@
 # Roy R. Fisher
 
+**This is the active Roy R. Fisher application repository.**
+
+Application code, builds, packaging, tests, and current documentation live
+here. This is the only copy. If you are running the app or changing it, you
+are in the right folder.
+
+Source reports and evidence live next door in `RRF`. That folder holds
+Mark's finished reports and reference material, and no application code.
+
+Do not create a second copy of the app inside `RRF`. One existed until
+2026-08-21, went stale, and made it unclear which folder to open.
+
+| Want to | Go to |
+|---|---|
+| Run or change the app | `RRF-App` (this folder) |
+| Find reports or evidence | `RRF` |
+
+---
+
 A Windows desktop app that helps Mark produce commercial appraisal reports.
 Mark runs Roy R. Fisher in Davenport, Iowa. He has written these reports in
 Word for decades and is not a software user by inclination. Spenser owns the

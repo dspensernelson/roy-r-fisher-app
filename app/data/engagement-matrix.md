@@ -55,7 +55,7 @@ Scenario sources: LIHTC (LURA restricted vs market rents + as-complete), renovat
 | Special purpose (church) | often omitted | per-structure valuation, deferred-maintenance letter |
 
 ## Two-structure jobs
-When distinct structures are valued separately (St. John Vianney church + rectory): Improvements and Sales Comparison repeat per structure, comps split into per-structure sets (`Comps/`, `Comps - Houses/`), one Correlation.
+When distinct structures are valued separately (for example a church and its rectory): Improvements and Sales Comparison repeat per structure, comps split into per-structure sets (`Comps/`, `Comps - Houses/`), one Correlation.
 
 ## Effective date rules
 - Tax appeal: January 1 of assessment year (never the inspection date)

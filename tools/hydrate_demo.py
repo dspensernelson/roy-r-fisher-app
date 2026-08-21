@@ -254,9 +254,22 @@ def clear_ours(baseline: Path) -> int:
     removed = 0
     for photos_dir in sorted(baseline.glob("*/Photos")):
         for path in sorted(photos_dir.iterdir()):
-            if path.is_file() and path.name.startswith(OURS):
-                path.unlink()
-                removed += 1
+            if not path.is_file() or not path.name.startswith(OURS):
+                continue
+            if path.name == "photo-manifest.json":
+                # It starts with "photo-", which is not the same as being
+                # ours. This is the exact shape of the mistake that destroyed
+                # a real manifest: a name that looks like something we would
+                # have written is not evidence that we wrote it. Only the
+                # marker we put there ourselves counts.
+                try:
+                    mine = json.loads(path.read_text()).get("_fixture") is True
+                except (ValueError, OSError):
+                    mine = False
+                if not mine:
+                    continue
+            path.unlink()
+            removed += 1
     return removed
 
 

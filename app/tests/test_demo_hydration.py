@@ -250,6 +250,94 @@ def test_reset_demo_restores_the_photographs_rather_than_deleting_them(demo_repo
     assert photo_count(baseline / job) == expected
 
 
+# --- the regression that cost real captions --------------------------------
+
+def test_hydration_never_destroys_an_existing_manifest_or_its_captions(demo_repo):
+    """The one that matters. This is a regression test for a real loss.
+
+    While clearing its own placeholders, an earlier version of this tool ran a
+    blanket sweep for `photo-manifest.json` across the whole baseline. It also
+    removed the one in Mark's Davenport job, which held captions produced by a
+    real paid run. The photographs survived; the captions did not, and nothing
+    could bring them back.
+
+    Two rules came out of that, and both are checked here. The tool removes
+    only files it created, and it never writes over a manifest it did not
+    write itself.
+    """
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+
+    # A manifest that belongs to somebody else, with captions worth money in
+    # it, sitting in a job the tool is about to hydrate.
+    job = baseline / "MOLINE_3400 41st Avenue Drive - Rent Study"
+    (job / "Photos").mkdir(parents=True, exist_ok=True)
+    (job / "Photos" / "IMG_9001.jpg").write_bytes(b"one of his own")
+    his = job / "Photos" / "photo-manifest.json"
+    precious = {
+        "job": job.name, "context": "", "report_year": 2026,
+        "caption_style": "view",
+        "photos": [
+            {"file": "IMG_9001.jpg",
+             "caption": "View of the north elevation from the parking lot",
+             "reviewed": True},
+        ],
+    }
+    his.write_text(json.dumps(precious, indent=2), encoding="utf-8")
+    before = his.read_bytes()
+
+    # Hydrate twice, because the second run is the one that clears first.
+    hydrate_demo.hydrate(baseline)
+    hydrate_demo.hydrate(baseline)
+
+    assert his.is_file(), "his manifest was deleted"
+    assert his.read_bytes() == before, "his manifest was rewritten"
+
+    kept = json.loads(his.read_text())["photos"][0]
+    assert kept["caption"] == "View of the north elevation from the parking lot"
+    assert kept["reviewed"] is True
+    assert (job / "Photos" / "IMG_9001.jpg").read_bytes() == b"one of his own"
+
+
+def test_clearing_removes_only_what_this_tool_made(demo_repo):
+    """A file that merely looks like ours is not ours."""
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+    job = baseline / "CLINTON_622 S 4th Street - 2025 Tax"
+    (job / "Photos").mkdir(parents=True, exist_ok=True)
+
+    strangers = {
+        "IMG_0007.jpeg": b"a camera file of his",
+        "Photo (RRF App).docx": b"a document he built",
+        "notes.txt": b"something he typed",
+        "photo-manifest.json": b'{"photos": []}',
+    }
+    for name, body in strangers.items():
+        (job / "Photos" / name).write_bytes(body)
+
+    hydrate_demo.hydrate(baseline)
+    assert len(copies(baseline)) > 0
+
+    removed = hydrate_demo.clear_ours(baseline)
+    assert removed > 0
+    assert copies(baseline) == [], "its own copies should all be gone"
+
+    for name, body in strangers.items():
+        left = job / "Photos" / name
+        assert left.is_file(), "%s was removed" % name
+        assert left.read_bytes() == body, "%s was changed" % name
+
+
+def test_a_fixture_manifest_is_marked_so_it_can_be_told_apart(demo_repo):
+    """The tool's own manifests carry _fixture, which is how it knows which
+    ones it may overwrite on a later run."""
+    baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
+    hydrate_demo.hydrate(baseline)
+
+    ours = [p for p in baseline.rglob("Photos/photo-manifest.json")]
+    assert ours, "no fixture manifest was written at all"
+    for found in ours:
+        assert json.loads(found.read_text()).get("_fixture") is True, found
+
+
 def test_the_tool_writes_only_into_the_demo_baseline():
     """It reads Report Examples now, which Spenser authorised on 2026-08-20.
     What matters is that it only ever reads there: every write goes to the

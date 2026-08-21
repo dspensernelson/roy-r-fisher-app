@@ -573,6 +573,14 @@ def strip_local_traces(site_packages: Path) -> int:
     for found in sorted(Path(site_packages).glob("*.dist-info/direct_url.json")):
         found.unlink()
         removed += 1
+        # RECORD still lists it, with its hash. A metadata index naming a file
+        # that is not there is untidy and, more to the point, leaves the words
+        # "direct_url" in the archive for a scan to trip over.
+        record = found.with_name("RECORD")
+        if record.is_file():
+            kept = [line for line in record.read_text(encoding="utf-8").splitlines()
+                    if "direct_url.json" not in line]
+            record.write_text("\n".join(kept) + "\n", encoding="utf-8")
     return removed
 
 

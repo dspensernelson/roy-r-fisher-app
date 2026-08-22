@@ -64,6 +64,12 @@ def never_touch_the_real_home(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("RRF_VERSION_FILE", str(box / ".rrf-app-version.json"))
     monkeypatch.setenv("RRF_USAGE_FILE", str(box / ".rrf-ai-usage.json"))
     monkeypatch.setenv("RRF_AI_POLICY_FILE", str(box / ".rrf-demo-ai-policy.json"))
+    monkeypatch.setenv("RRF_JOBFACTS_FILE", str(box / ".rrf-job-facts.json"))
+    # The thumbnail cache, added 2026-08-22 when thumbnails moved out of
+    # Mark's Photos folder. Missing it did exactly what the comment above
+    # predicts: every suite run left a fresh folder of thumbnails in the
+    # real home directory, one per pytest tmp_path, accumulating for ever.
+    monkeypatch.setenv("RRF_CACHE_DIR", str(box / ".rrf-app-cache"))
 
 
 @pytest.fixture

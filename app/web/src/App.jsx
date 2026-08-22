@@ -7,9 +7,36 @@ import Settings from "./screens/Settings.jsx";
 import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
-import { getWorkspace, getDemo, resetDemo, appVersion } from "./api.js";
+import { getWorkspace, getDemo, resetDemo, appVersion, listJobs } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
+
+// Where he was, so a browser refresh does not throw away his place. The app
+// has no addresses of its own: every screen lives at "/" and the view is
+// state, so a refresh took him back to Jobs from wherever he was working.
+//
+// Deliberately not routing. Giving each screen a real address is a larger
+// change than this pass was asked for, and it is written up rather than
+// started. This is the small version: remember the last screen for this tab
+// only, and never restore one that is not still there.
+const WHERE = "rrf.where";
+
+function remember(view) {
+  try { sessionStorage.setItem(WHERE, JSON.stringify(view)); } catch { /* private mode */ }
+}
+
+function lastPlace() {
+  try {
+    const found = JSON.parse(sessionStorage.getItem(WHERE) || "null");
+    // Only the three screens that belong to a job. Setup screens and the
+    // folder chooser are steps, and dropping back into a step out of context
+    // would be worse than starting at Jobs.
+    if (found && ["job", "photos", "sections"].includes(found.screen) && found.job) {
+      return found;
+    }
+  } catch { /* damaged or unavailable: start at Jobs, which always works */ }
+  return null;
+}
 
 export default function App() {
   const [view, setView] = useState({ screen: "jobs", job: null });
@@ -31,8 +58,25 @@ export default function App() {
   // text on the startup screen.
   const CANNOT_REACH = "Could not reach the app's server. Close this tab and start the app again.";
 
+  // Remembered on every move, so nothing has to call a second function to
+  // keep the two in step.
+  useEffect(() => { remember(view); }, [view]);
+
   useEffect(() => {
-    getWorkspace().then(setWs)
+    getWorkspace().then((saved) => {
+      setWs(saved);
+      // Put him back only if the job is still one he is working on. A folder
+      // renamed or made inactive since he last looked would otherwise open a
+      // screen for something that is not there.
+      const back = saved && saved.valid ? lastPlace() : null;
+      if (back) {
+        listJobs()
+          .then((live) => {
+            if (live.some((one) => one.name === back.job)) setView(back);
+          })
+          .catch(() => { /* Jobs is the safe place to be */ });
+      }
+    })
       .catch((e) => setWsError(
         e && e.status === 409 && e.stateUnreadable && e.message ? e.message : CANNOT_REACH));
     getDemo().then(setDemo).catch(() => {});

@@ -119,7 +119,7 @@ def test_the_helper_still_gives_existing_callers_their_message(api_source):
 
 
 def test_the_screen_shows_the_server_sentence_only_for_the_flagged_409(app_source):
-    branch = app_source[app_source.index("getWorkspace().then(setWs)"):]
+    branch = app_source[app_source.index("getWorkspace().then("):]
     branch = branch[:branch.index("getDemo()")]
 
     assert "e.status === 409" in branch
@@ -130,7 +130,7 @@ def test_the_screen_shows_the_server_sentence_only_for_the_flagged_409(app_sourc
 
 def test_the_generic_message_is_unchanged_and_is_the_fallback(app_source):
     assert 'const CANNOT_REACH = "%s";' % CANNOT_REACH in app_source
-    branch = app_source[app_source.index("getWorkspace().then(setWs)"):]
+    branch = app_source[app_source.index("getWorkspace().then("):]
     branch = branch[:branch.index("getDemo()")]
     # the flagged case first, the generic message as the else
     assert branch.index("e.stateUnreadable") < branch.index("CANNOT_REACH")
@@ -139,7 +139,7 @@ def test_the_generic_message_is_unchanged_and_is_the_fallback(app_source):
 def test_the_screen_does_not_show_every_server_message(app_source):
     """The defect this must not become: a rule that prints whatever the
     backend said onto the startup screen."""
-    branch = app_source[app_source.index("getWorkspace().then(setWs)"):]
+    branch = app_source[app_source.index("getWorkspace().then("):]
     branch = branch[:branch.index("getDemo()")]
     assert ".catch((e) => setWsError(e.message))" not in branch
     assert "setWsError(e.message)" not in branch.replace(

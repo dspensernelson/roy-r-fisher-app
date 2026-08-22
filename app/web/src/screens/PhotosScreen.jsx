@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, markReviewed, markUnreviewed, jobFacts, putJobFacts } from "../api.js";
+         captionEstimate, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -137,8 +137,15 @@ export default function PhotosScreen({ job }) {
 
   async function onBuild() {
     setBusy("Building photo pages..."); setError(null); setDone(null);
-    try { setDone((await build(job)).created); } catch (e) { setError(e.message); }
+    try { setDone(await build(job)); } catch (e) { setError(e.message); }
     setBusy("");
+  }
+
+  // Pressed, never automatic. A failure here is not a failed build: the file
+  // is already written, so the message says where it is and says so.
+  async function onReveal(what) {
+    setError(null);
+    try { await reveal(job, done.created, what); } catch (e) { setError(e.message); }
   }
 
   function setCaption(i, caption) {
@@ -379,7 +386,10 @@ export default function PhotosScreen({ job }) {
           the action that uses them. Read out of the brief, which means split
           out of one line of text, so a wrong split has to be visible before it
           becomes a filename rather than after. */}
-      {facts && inPhotos.length > 0 && (
+      {/* Where it will be saved, until it is saved. Once the document exists
+          the completion message below says the same thing about a real file,
+          so keeping both on screen was one fact told twice. */}
+      {facts && inPhotos.length > 0 && !done && (
         <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
           {facts.ready ? (
             <>Will be saved as <strong>{facts.filename}</strong>.</>
@@ -413,11 +423,26 @@ export default function PhotosScreen({ job }) {
 
       {cutNote && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{cutNote}</div>}
 
-      {done && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
-        {typeof done === "string" && done.includes("cleared")
-          ? done
-          : <>Done. <strong>{done}</strong> was created in this job's Photos folder. Nothing was overwritten.</>}
-      </div>}
+      {/* Clearing captions reports itself here too, as a plain sentence. Only
+          a build carries a file, and only a file gets the two actions. */}
+      {done && typeof done === "string" && (
+        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{done}</div>
+      )}
+
+      {done && done.created && (
+        <div className="finished">
+          <div className="finished-said">
+            <strong>{done.created}</strong> is ready.
+            <span className="finished-where">Saved in this job's Photos folder. Nothing was overwritten.</span>
+          </div>
+          {/* Offered, never done for him. Opening a client's document without
+              being asked is not the app's decision to make. */}
+          <div className="finished-acts">
+            <button className="button" onClick={() => onReveal("document")}>Open document</button>
+            <button className="button secondary" onClick={() => onReveal("folder")}>Show in folder</button>
+          </div>
+        </div>
+      )}
       {error && <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>{error}</div>}
 
       {count === 0 ? (

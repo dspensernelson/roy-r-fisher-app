@@ -18,6 +18,7 @@ import inventory
 import jobfacts
 import naming
 import pricing
+import reveal
 import usage as usage_store
 import jobs
 import packaging
@@ -756,7 +757,40 @@ def create_app() -> FastAPI:
                                            out_base=out_base)
                 except Exception as exc:
                     raise HTTPException(500, f"Build failed: {exc}")
-        return {"created": out.name}
+        # The folder is named as well as the file, so the screen can offer to
+        # open either without deriving a path of its own.
+        return {"created": out.name, "folder": str(out.parent)}
+
+    class RevealWhat(BaseModel):
+        file: str
+        # "document" opens it, "folder" shows it in the folder it was saved in.
+        what: str = "document"
+
+    @app.post("/api/jobs/{name}/reveal")
+    def reveal_built_file(name: str, body: RevealWhat):
+        """Open a built document, or show it in its folder. Never on its own.
+
+        Confined the same way every other file route is: a bare name, resolved,
+        and required to land inside this job's own Photos folder. Without that,
+        this would open any file on the machine that could be named.
+        """
+        job = photos_routes._job_or_404(name)
+        photos_dir = jobs.photos_dir(job)
+        candidate = photos_dir / Path(body.file).name
+        target = photos_routes._resolve_confined(candidate, photos_dir)
+        if target is None or not target.is_file():
+            raise HTTPException(404, "That file is not in this job's Photos folder.")
+        try:
+            if body.what == "folder":
+                reveal.show_in_folder(target)
+            else:
+                reveal.open_document(target)
+        except reveal.RevealFailed as exc:
+            # 409, not 500. Nothing is broken: the document is written and
+            # verified, and only the handing-over failed. The body carries the
+            # saved path so the screen can show him where it is.
+            raise HTTPException(409, "%s Saved at: %s" % (exc.message, target))
+        return {"opened": target.name, "folder": str(target.parent)}
 
     # Any /api request using a write method (POST/PUT/PATCH/DELETE) that
     # reaches here matched none of the specific routes above -- e.g. a

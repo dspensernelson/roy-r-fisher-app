@@ -13,6 +13,7 @@ import brief
 import busy
 import captions
 import jobs
+import thumbcache
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
 from photo_pages import exif_order  # noqa: E402
@@ -24,7 +25,11 @@ except ImportError:  # pragma: no cover - HEIC support optional in tests
     pass
 
 router = APIRouter()
-THUMB_DIR = ".rrf-thumbs"
+# Nothing writes here any more: thumbnails moved out of Mark's job folder and
+# into app-owned storage. The name stays because a Photos folder from before
+# that change still has one sitting in it, and it must go on being skipped
+# rather than listed to him as a folder of his. Old caches are left alone.
+THUMB_DIR = thumbcache.LEGACY_THUMB_DIR
 THUMB_PX = 1024
 
 
@@ -513,10 +518,10 @@ def thumb(name: str, file: str):
     src = _resolve_confined(candidate, photos_dir)
     if src is None or not src.is_file():
         raise HTTPException(404, "Photo not found.")
-    cache = photos_dir / THUMB_DIR
-    cache.mkdir(exist_ok=True)
-    cached = cache / (Path(file).name + ".jpg")
-    if not cached.exists() or cached.stat().st_mtime < src.stat().st_mtime:
+    # App-owned storage, outside his job folder. See thumbcache.py.
+    cached = thumbcache.cached_file(photos_dir, file)
+    if thumbcache.is_stale(cached, src):
+        cached.parent.mkdir(parents=True, exist_ok=True)
         img = Image.open(src).convert("RGB")
         img.thumbnail((THUMB_PX, THUMB_PX))
         img.save(cached, format="JPEG", quality=85)

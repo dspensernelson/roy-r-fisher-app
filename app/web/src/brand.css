@@ -211,6 +211,19 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
 .done { margin-top: 18px; background: var(--ok-bg); color: var(--ok-ink); border-radius: 6px; padding: 14px 18px; font-size: 15px; }
+/* The finished document, and the two things he can do with it. One message
+   rather than the pair that used to sit here saying where it would go and
+   then where it went. */
+.finished {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  margin: 0 0 16px; padding: 16px 18px; border-radius: 6px;
+  background: var(--ok-bg); color: var(--ok-ink);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.finished-said { font-size: 15px; }
+.finished-where { display: block; margin-top: 3px; font-size: 13px; opacity: 0.8; }
+.finished-acts { display: flex; gap: 10px; flex-wrap: wrap; }
 .error { margin-top: 18px; background: #FBEAEA; color: #8E2830; border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
 
 /* The job screen: what has arrived on the left, the report on the right.

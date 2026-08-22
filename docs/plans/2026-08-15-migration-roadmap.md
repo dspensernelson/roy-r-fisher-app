@@ -43,7 +43,7 @@ to be.
   machinery. The other shapes are different compositions, not subsets: the
   short form combines and omits sections rather than trimming them. Each
   shape's composition comes from the engagement matrix and its recipe,
-  never from cutting down the full report. The appraiser's own use will steer the
+  never from cutting down the full report. the appraiser's own use will steer the
   order after handoff.
 - **Three classes of file, three rules.** Client source documents and the
   workbook are never touched: the app reads them and nothing more. App-owned
@@ -117,7 +117,7 @@ Four more decisions, recorded the same way as the ones above. Where one of
 them changes something written on 2026-08-15, the older bullet has been
 amended in place, so this file holds one answer and never two.
 
-- **The appraiser receives an early Windows Photo Pilot, before the handoff bundle.**
+- **the appraiser receives an early Windows Photo Pilot, before the handoff bundle.**
   This is the named exception to "one handoff, not a drip", and it is
   bounded. The pilot exists to prove five things on the appraiser's real Windows
   computer: that the app installs, that it starts, that he can select a job
@@ -274,5 +274,5 @@ only. Read-only. Take copies, adapt freely, never write back.
   nothing about Office.
 - **Template manufacturing touches client material every time.** The gate is
   mechanical scan, Claude read, Spenser glance. No shortcut.
-- **The appraiser is hard to manage and setup is remote.** Anything that needs two
+- **the appraiser is hard to manage and setup is remote.** Anything that needs two
   steps on his machine is a defect.

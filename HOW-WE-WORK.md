@@ -40,7 +40,7 @@ He directs the build. He does not work in the code. If he meets a term he does
 not recognise, that is a defect in the writing, not a gap in him.
 
 No em dashes, anywhere, ever. Hyphens instead. En dashes are fine; they are
-The appraiser's own caption style.
+the appraiser's own caption style.
 
 Before asking him to decide about any document, open it and say what is
 actually in it. He did not write most of the documents in this repo and should

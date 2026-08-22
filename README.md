@@ -5,12 +5,17 @@ for one commercial appraiser, who has written these reports in Word for
 decades. Spenser owns the product. The app runs on one machine, offline,
 for one person.
 
+## How this gets built
+
+`HOW-WE-WORK.md` is the standard this project is held to. It is the rules the
+build has to clear and the reasoning behind each one. If you want to know how
+the app got made rather than what it does, read that first.
+
 ## What is at the root
 
 | | |
 |---|---|
-| `app/` | The product. Python server, React screens, its own engine and templates. The code reads no project files outside app/. At run time it also uses the settings and key files in the home folder and the jobs folder the appraiser points it at. Two dev tools reach wider: demo reset finds the repo root, and one styling test reads brand/ |
-| `brand/` | The design system source: components, tokens, and the real logo and photography files |
+| `app/` | The product. Python server, React screens, its own engine and templates. The code reads no project files outside app/. At run time it also uses the settings and key files in the home folder and the jobs folder the appraiser points it at. One dev tool reaches wider: demo reset finds the repo root. One styling test reads the design system and skips without it |
 | `Start Roy R. Fisher.command` | Double-click to run it on a Mac |
 
 ## What is deliberately not here
@@ -22,6 +27,11 @@ which lives inside one of them. They stay on the development machine.
 Several tests read that material to check the built Word file against a real
 delivered report. On a clone without it they skip, and say which private file
 they wanted. Everything else runs.
+
+The design system and the firm's brand assets, its logo, letterhead and
+photography, are also not here. They are the firm's property rather than this
+project's, so they stay on the development machine. One styling test reads
+them and skips on a clone without them.
 
 The previous version of this project, a set of AI skills that drafted reports
 by following written instructions, is also not here. It is kept as a local

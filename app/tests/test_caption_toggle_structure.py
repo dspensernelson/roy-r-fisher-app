@@ -21,6 +21,10 @@ CSS = WEB / "brand.css"
 DESIGN_SYSTEM = (Path(__file__).resolve().parents[2] / "brand" /
                  "Roy R. Fisher Design System" / "components" / "actions" /
                  "SegmentedControl.jsx")
+has_design_system = pytest.mark.skipif(
+    not DESIGN_SYSTEM.is_file(),
+    reason=f"design system not on this machine: {DESIGN_SYSTEM.name}",
+)
 
 
 @pytest.fixture
@@ -76,6 +80,7 @@ def test_the_flag_is_ruled_the_way_the_design_system_specifies():
     assert ".toggle-flag::before, .toggle-flag::after" in css
 
 
+@has_design_system
 def test_it_follows_the_design_system_rather_than_inventing_a_treatment():
     """The design system says the flag renders above, not as a second word."""
     # collapsed, because the contract is a wrapped comment

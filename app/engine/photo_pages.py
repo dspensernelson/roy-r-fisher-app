@@ -1,7 +1,7 @@
 """Build the appraiser's Photo.docx from a photo manifest, clone-and-fill from his template.
 
 Ships (MANIFEST row). Pure Python: runs identically on Windows. Measured furniture
-2026-08-09 from the delivered Mark Folder Template Photo.docx: 14 tables, each
+2026-08-09 from the delivered folder template Photo.docx: 14 tables, each
 3 rows x 2 columns (image cell, caption cell), image ~4.0in wide in the left
 cell, centered caption in the right cell.
 

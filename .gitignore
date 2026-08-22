@@ -54,3 +54,7 @@ sandbox/
 .rrf-app.json
 *.env
 !app/web/.env.example
+
+# The design system and brand assets are the firm's property, not this
+# project's. They stay on the development machine.
+brand/

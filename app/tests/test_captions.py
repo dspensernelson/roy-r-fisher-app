@@ -113,42 +113,6 @@ def test_drafting_uses_the_style_recorded_on_the_job(client, monkeypatch):
     assert seen["style"] == "category"
 
 
-def test_preview_captions_the_job_s_own_photos_in_both_styles(client, monkeypatch):
-    """The chooser shows a page's worth of his real photos, captioned both
-    ways, because that is the thing he is actually deciding between."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    calls = []
-
-    def spy(context, paths, style=captions.DEFAULT_STYLE):
-        calls.append(style)
-        return {p.name: f"{style} caption for {p.name}" for p in paths}, {"input": 100, "output": 20}
-
-    with patch.object(captions, "draft_captions", spy):
-        body = client.post("/api/jobs/JOB1/caption-preview").json()
-
-    assert body["ai_available"] is True
-    assert sorted(calls) == ["category", "view"]      # both, so toggling is instant
-    assert body["photos"] == ["a.jpg"]
-    assert body["captions"]["view"]["a.jpg"] == "view caption for a.jpg"
-    assert body["captions"]["category"]["a.jpg"] == "category caption for a.jpg"
-
-
-def test_preview_without_a_key_says_so_instead_of_failing(client):
-    body = client.post("/api/jobs/JOB1/caption-preview").json()
-    assert body["ai_available"] is False
-    assert body["photos"] == ["a.jpg"]
-    assert body["captions"] == {}
-
-
-def test_preview_never_writes_anything_to_the_job(client, monkeypatch, tmp_path):
-    """It is a look, not a decision. Nothing is saved until he picks."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    before = (tmp_path / "jobs" / "JOB1" / "Photos" / "photo-manifest.json").read_text()
-    with patch.object(captions, "draft_captions", lambda c, p, style="view": ({"a.jpg": "x"}, {"input": 100, "output": 20})):
-        client.post("/api/jobs/JOB1/caption-preview")
-    assert (tmp_path / "jobs" / "JOB1" / "Photos" / "photo-manifest.json").read_text() == before
-
-
 def test_the_screen_can_ask_what_the_two_styles_look_like(client):
     """One source for the styles: the screen reads them rather than
     restating them, so the samples on screen cannot drift from the prompt."""

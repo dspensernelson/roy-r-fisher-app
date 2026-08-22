@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, captionPreview, clearCaptions, cutPhoto, uncutPhoto,
+import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, markReviewed, markUnreviewed, jobFacts, putJobFacts } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
   const [styles, setStyles] = useState([]);
   const [asking, setAsking] = useState(false);   // the caption style step
-  const [preview, setPreview] = useState(null);  // his own photos, captioned both ways
-  const [previewing, setPreviewing] = useState(false);
-  const [showing, setShowing] = useState(null);  // which style the preview is toggled to
+  const [showing, setShowing] = useState(null);  // which style the examples are toggled to
   const [busy, setBusy] = useState("");
   const [done, setDone] = useState(null);
   const [error, setError] = useState(null);
@@ -60,13 +58,13 @@ export default function PhotosScreen({ job }) {
     setBusy("");
   }
 
-  async function openChooser() {
+  // Opens a step and nothing else. It reads no photograph, sends no
+  // photograph, and calls nobody. Choosing how the captions should read used
+  // to caption three of his photos both ways, which meant two paid requests
+  // fired before he had seen a price or agreed to anything.
+  function openChooser() {
     setShowing(manifest.caption_style || "view");
     setAsking(true);
-    if (preview) return;                    // asked once per visit, not per open
-    setPreviewing(true);
-    try { setPreview(await captionPreview(job)); } catch (e) { setError(e.message); }
-    setPreviewing(false);
   }
 
   // Above thirty photographs he sees the number in a window of its own before
@@ -551,7 +549,8 @@ export default function PhotosScreen({ job }) {
           <div className="sheet" role="dialog" aria-modal="true" aria-label="How should the captions read?">
             <h2>How should the captions read?</h2>
             <p className="sub" style={{ margin: "0 0 16px" }}>
-              Your own photos, written both ways. This is how the printed page is laid out.
+              Two examples of each style, and how the printed page is laid out.
+              Nothing is sent and nothing is charged for until you confirm.
             </p>
 
             {/* The money, before the button that spends it, and shown as the
@@ -599,38 +598,25 @@ export default function PhotosScreen({ job }) {
                 </div>
               </div>
 
-              {previewing && (
-                <>
-                  <div className="cell-photo" />
-                  <div className="cell-caption waiting">
-                    <div className="loading-bar"><span /></div>
-                    <p>Writing sample captions for three of your photos.<br />
-                      This takes a few seconds.</p>
-                  </div>
-                </>
-              )}
-
-              {!previewing && preview && preview.photos.map((file) => (
-                <React.Fragment key={file}>
-                  <div className="cell-photo"><img src={thumbUrl(job, file)} alt="" /></div>
-                  <div className="cell-caption">
-                    {preview.ai_available
-                      ? (preview.captions[showing]?.[file] || <em>no caption</em>)
-                      : (styles.find((s) => s.key === showing)?.sample)}
-                  </div>
+              {/* Written examples beside an empty frame, never beside one of
+                  his photographs. A line of text sitting next to a real photo
+                  reads as a caption OF that photo, and the app has not looked
+                  at it and cannot say. The frame is deliberately blank. */}
+              {(styles.find((s) => s.key === showing)?.samples || []).map((line, n) => (
+                <React.Fragment key={`${showing}-${n}`}>
+                  <div className="cell-photo is-example" aria-hidden="true" />
+                  <div className="cell-caption">{line}</div>
                 </React.Fragment>
               ))}
             </div>
 
-            {!previewing && preview && !preview.ai_available && (
-              <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-                These are examples, not your photos. Writing real ones needs a key on this computer.
-              </p>
-            )}
+            <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+              Examples of the writing style, not captions of your photographs.
+            </p>
 
             <div className="sheet-foot">
               <p className="keep-note">Captions you have already typed are never changed.</p>
-              <button className="button" onClick={() => beginCaptions(showing)} disabled={previewing}>
+              <button className="button" onClick={() => beginCaptions(showing)}>
                 Use this style
               </button>
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>

@@ -37,6 +37,17 @@ STYLES = {
     "view": {
         "label": "View of",
         "sample": "View of northwest corner facing southeast",
+        # Shown on the style step, which now sends nothing and calls nobody.
+        # Invented for the screen on purpose: generic building parts, no
+        # client, no address, no tenant, and deliberately not captions of the
+        # photographs he has open. Pairing a written line with one of his
+        # photographs would be a claim about that photograph that the app
+        # cannot observe, which is the one thing this app must never do.
+        "samples": [
+            "View of the front entrance",
+            "View of the main office",
+            "View of the parking area",
+        ],
         "note": "Measured across four delivered reports, 79 captions.",
         "thin_evidence": False,
         "prompt": """Write each caption as a view statement, the firm's most common form.
@@ -61,6 +72,13 @@ Rules:
     "category": {
         "label": "Location first",
         "sample": "Building exterior – northwest corner facing southeast",
+        # The same three subjects as the other style, so the step shows one
+        # difference and not two: the form changes, the subjects do not.
+        "samples": [
+            "Building exterior – front entrance",
+            "Common area – main office",
+            "Site – parking area",
+        ],
         "note": "Rests on ONE delivered report, a multi-family building, 24 captions.",
         "thin_evidence": True,
         "prompt": """Write each caption as a category, an en dash, then the specific detail.

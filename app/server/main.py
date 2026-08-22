@@ -398,6 +398,7 @@ def create_app() -> FastAPI:
         return {"ai_available": captions.ai_available(),
                 "styles": [
                     {"key": key, "label": s["label"], "sample": s["sample"],
+                     "samples": list(s["samples"]),
                      "note": s["note"], "thin_evidence": s["thin_evidence"]}
                     for key, s in captions.STYLES.items()
                 ]}
@@ -640,46 +641,6 @@ def create_app() -> FastAPI:
         with busy.writing():
             jobfacts.save(job, body.city, body.address)
         return job_facts(name)
-
-    @app.post("/api/jobs/{name}/caption-preview")
-    def preview_captions(name: str):
-        """Caption one page's worth of this job's own photos, both ways.
-
-        A look, not a decision: nothing here is saved. The screen shows the
-        result so Mark is choosing between two real sentences about his own
-        building rather than two abstract examples.
-        """
-        job = photos_routes._job_or_404(name)
-        manifest = photos_routes.load_manifest(job)
-        # One page is three photos, so that is what the preview shows.
-        sample = photos_routes.included(manifest)[:photo_pages_per_table()]
-        names = [p["file"] for p in sample]
-        if not names or not captions.ai_available():
-            return {"ai_available": False, "photos": names, "captions": {}}
-
-        photos_dir = jobs.photos_dir(job)
-        paths = []
-        for entry in sample:
-            resolved = photos_routes._resolve_confined(
-                photos_dir / Path(entry["file"]).name, photos_dir)
-            if resolved is not None and resolved.is_file():
-                paths.append(resolved)
-
-        drafted = {}
-        for style in captions.STYLES:
-            try:
-                drafted[style] = captions.draft_captions(
-                    manifest.get("context", ""), paths, style=style)[0]
-            except captions.CaptionError as exc:
-                # Written for Mark already. Before Task 4 this path could only
-                # show the exception's class name, because whatever the SDK
-                # raised was not fit to read; now there is a sentence, so the
-                # sentence is what he gets.
-                raise HTTPException(502, exc.message)
-            except Exception:
-                raise HTTPException(502, "Could not write the sample captions. "
-                                         "Nothing was changed. Try again in a moment.")
-        return {"ai_available": True, "photos": names, "captions": drafted}
 
     @app.post("/api/jobs/{name}/build")
     def build_photos(name: str):

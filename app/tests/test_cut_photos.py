@@ -189,16 +189,6 @@ def test_captions_are_written_for_the_included_blanks_only(client, home, monkeyp
     assert manifest_on_disk(home)["photos"][1]["caption"] == ""
 
 
-def test_the_preview_only_shows_included_photos(client, home, monkeypatch):
-    client.post("/api/jobs/A job/photos/a.jpg/cut")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.setattr(captions, "draft_captions",
-                        lambda context, paths, style=None: ({p.name: "x" for p in paths}, {"input": 100, "output": 20}))
-    body = client.post("/api/jobs/A job/caption-preview").json()
-    assert "a.jpg" not in body["photos"]
-    assert body["photos"] == ["b.jpg", "c.jpg", "d.jpg"]
-
-
 def test_the_model_is_not_called_when_everything_is_cut(client, home, monkeypatch):
     for name in ["a.jpg", "b.jpg", "c.jpg", "d.jpg"]:
         client.post("/api/jobs/A job/photos/%s/cut" % name)
@@ -209,7 +199,6 @@ def test_the_model_is_not_called_when_everything_is_cut(client, home, monkeypatc
                         lambda *a, **k: called.append(1) or {})
 
     client.post("/api/jobs/A job/captions")
-    assert client.post("/api/jobs/A job/caption-preview").json()["photos"] == []
     assert called == [], "nothing to caption means nothing is asked of the model"
 
 

@@ -31,12 +31,20 @@ FOLDER_KEY = "jobs_folder"
 JOB_NAME = re.compile(r"^[A-Z][A-Z0-9 .'&-]*_.+")
 
 # How many of Mark's own eight folders a folder needs before the app will call
-# it a job. Two rather than one on purpose. One is met by any folder that
-# happens to contain something called `Photos`, and `Documents` on a Mac often
-# does, which would make the home folder look like it held a job. A real job
-# carries all eight, so two is forgiving of a half-built one and still refuses
-# a coincidence.
-JOB_FOLDER_SIGNALS = 2
+# it a job.
+#
+# Measured, not guessed, and raised from two after looking at the real screen:
+# `~/Library` on a Mac contains both `Maps` and `Photos`, which met a threshold
+# of two exactly. The home folder therefore reported `1 job found` and could be
+# confirmed as the jobs folder, which is the very mistake this check exists to
+# stop.
+#
+# Four is safe in both directions. A job made by the app, and a job from Mark's
+# own folder template, carry all eight. A job he made by hand may carry only
+# `Photos`, and that one is recognised by its name instead, because his jobs are
+# named in the house style. Nothing incidental on either operating system is
+# likely to hold four of these eight names at once.
+JOB_FOLDER_SIGNALS = 4
 
 # Bookkeeping files both operating systems scatter about. Never a job, and
 # never worth showing him.

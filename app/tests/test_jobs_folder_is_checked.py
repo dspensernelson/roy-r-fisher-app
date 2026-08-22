@@ -67,6 +67,27 @@ def test_one_lookalike_folder_is_not_a_job(tmp_path):
     assert not workspace.looks_like_job(documents)
 
 
+def test_the_mac_library_folder_is_not_a_job(tmp_path):
+    """Found by looking at the real screen, not by thinking about it.
+
+    `~/Library` on a Mac holds both `Maps` and `Photos`. With the threshold at
+    two it was reported as a job, so the home folder said `1 job found` and
+    offered to be confirmed as the jobs folder.
+    """
+    library = tmp_path / "Library"
+    (library / "Maps").mkdir(parents=True)
+    (library / "Photos").mkdir()
+    (library / "Caches").mkdir()
+    assert not workspace.looks_like_job(library)
+
+
+def test_a_half_built_job_is_still_recognised_by_its_name(tmp_path):
+    """Raising the threshold must not cost a real job made by hand."""
+    job = tmp_path / "DAVENPORT_100 Brady Street - 2026"
+    (job / "Photos").mkdir(parents=True)
+    assert workspace.looks_like_job(job)
+
+
 def test_an_ordinary_folder_is_not_a_job(tmp_path):
     plain = tmp_path / "Downloads"
     plain.mkdir()

@@ -84,9 +84,12 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
                     : "Open one of the folders below to keep looking."}
                 </span>
               </div>
+              {/* No title when it is off. A tooltip becomes the button's
+                  accessible name, so it announced the reason instead of
+                  "Use this folder". The reason is already in the note beside
+                  it, where it can be read rather than hovered for. */}
               <button className={`button${canUse ? "" : " is-off"}`} onClick={use}
-                      disabled={!canUse || !!busy}
-                      title={canUse ? "" : "No jobs were found in this folder"}>
+                      disabled={!canUse || !!busy}>
                 Use this folder
               </button>
             </div>

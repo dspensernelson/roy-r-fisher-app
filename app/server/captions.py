@@ -291,8 +291,15 @@ def draft_captions(context: str, photo_paths: list,
         raise CaptionError("That API key does not have access to write "
                            "captions. Contact Spenser.", "no_access")
     except anthropic.RateLimitError:
+        # Deliberately no longer claims that nothing was changed. A run is
+        # divided into requests and every finished one is saved before the
+        # next is sent, so this can be raised with sixty captions already on
+        # disk. The screen showed this sentence directly under a box reporting
+        # those sixty, and the two contradicted each other. What did or did not
+        # survive is a fact about the run, not about one request, and the run
+        # says it now.
         raise CaptionError("Anthropic is busy or the account has hit a limit. "
-                           "Nothing was changed. Try again in a minute.", "rate")
+                           "Try again in a minute.", "rate")
     except anthropic.APIStatusError as exc:
         status = getattr(exc, "status_code", None)
         if status in (400, 413):

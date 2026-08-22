@@ -204,8 +204,14 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .drop { border: 2px dashed var(--link); background: #FFFFFF; border-radius: 6px; padding: 26px; text-align: center; color: var(--ink-muted); margin-bottom: 22px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
 .grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; display: block; }
+/* `font: 14px/1.45 inherit` was invalid: `inherit` is not a family name inside
+   the shorthand, so the whole declaration was dropped and the box fell back to
+   the browser's default for a textarea, which is monospace. Mark's captions are
+   prose and were being typed in a code font. Set as long-hand so each part
+   stands on its own. */
 .grid textarea {
-  width: 100%; margin-top: 8px; font: 14px/1.45 inherit; color: var(--ink);
+  width: 100%; margin-top: 8px; color: var(--ink);
+  font-family: inherit; font-size: 14px; line-height: 1.45;
   border: none; border-bottom: 1px solid var(--line); background: none;
   padding: 4px 2px; resize: vertical; overflow: hidden; min-height: 44px;
 }
@@ -224,6 +230,28 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .finished-said { font-size: 15px; }
 .finished-where { display: block; margin-top: 3px; font-size: 13px; opacity: 0.8; }
 .finished-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* A caption run has three endings and they are not all good news. Success
+   keeps the green it always had; a run that saved some and not others is a
+   warning; a run that saved nothing, and a cost the provider never reported,
+   are not dressed as success. */
+.outcome { border-radius: 6px; padding: 14px 18px; font-size: 15px;
+  background: var(--ok-bg); color: var(--ok-ink); }
+.outcome-partial { background: #FDF6E3; color: #6B5514; border: 1px solid #E8D9A8; }
+/* The same pair `.error` uses, so a failed run and an error look alike. */
+.outcome-failed { background: #FBEAEA; color: #8E2830; border: 1px solid #EBD2D2; }
+.outcome-unknown { background: #F4F3F1; color: var(--ink); border: 1px solid var(--line); }
+.outcome-said { margin: 0 0 8px; font-weight: 700; }
+
+/* The run, beside the work it is doing. It used to be a thin indeterminate bar
+   in the top corner, on a page of sixty-one photographs. */
+.run {
+  margin: 0 0 16px; padding: 14px 18px; border-radius: 6px;
+  background: #FFFFFF; border: 1px solid var(--line);
+}
+.run-said strong { display: block; font-size: 15px; color: var(--ink); }
+.run-counts { display: block; margin: 3px 0 10px; font-size: 13px; color: var(--ink-muted);
+  font-variant-numeric: tabular-nums; }
 .error { margin-top: 18px; background: #FBEAEA; color: #8E2830; border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
 
 /* The job screen: what has arrived on the left, the report on the right.
@@ -251,6 +279,13 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .folder .has { color: #7FCF9B; }
 .folder .needs { color: #F0B95E; }
 .folder .quiet { color: var(--box-muted); font-style: italic; }
+/* Empty folders keep their name and their count and give up their weight.
+   Nothing is hidden: the row is still there, still readable, still says what
+   is in it. */
+.folder.is-empty { background: transparent; border: 1px solid var(--line);
+  padding-top: 8px; padding-bottom: 8px; }
+.folder.is-empty .name { font-weight: 600; color: var(--ink-muted); }
+.folder.is-empty .count { color: var(--ink-muted); }
 
 .section-row {
   background: var(--box); border-radius: 5px; padding: 8px 12px; margin-bottom: 4px;
@@ -269,6 +304,13 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .section-row.live { border-left-color: var(--brand); cursor: pointer; width: 100%; text-align: left; font: inherit; border-top: none; border-right: none; border-bottom: none; }
 .section-row.live:hover { background: var(--box-hover); }
 .section-row.live .chip { background: var(--brand); color: #fff; }
+/* The one thing he can actually do on this screen. It was a smaller, lighter
+   row on the right while eight dark folder rows, seven of them reading
+   `0 files`, filled the left. The weight now matches what matters. */
+.section-row.live { padding: 16px 16px; border-left-width: 5px; }
+.section-row.live .name { font-size: 16px; font-weight: 700; }
+.section-row.live .state { font-size: 12.5px; margin-top: 3px; }
+.section-row.live .num { font-size: 12px; }
 .section-row.soon { opacity: 0.5; }
 .empty-note { background: transparent; border: 1.5px dashed var(--line); border-radius: 5px; padding: 18px 16px; text-align: center; }
 .empty-note .name { font-size: 14px; font-weight: 600; color: var(--ink); }

@@ -74,8 +74,13 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
 
 function FolderRow({ f, open, onToggle, labels, onPick, onClear, busy }) {
   const openable = f.kind !== "shortcut" && !f.unreadable && f.files.length > 0;
+  // A folder with nothing in it is still worth listing, because the row is how
+  // he sees the shape of a job. It is not worth the same weight as one holding
+  // his photographs. Seven of these at full strength were drowning the one
+  // action on the screen.
+  const empty = f.kind !== "shortcut" && !f.unreadable && f.count === 0;
   return (
-    <div className="folder">
+    <div className={`folder${empty ? " is-empty" : ""}`}>
       <div className="top">
         {openable ? (
           <button className="folder-open" onClick={() => onToggle(f.folder)}>

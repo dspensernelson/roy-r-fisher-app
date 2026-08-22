@@ -18,6 +18,7 @@ import inventory
 import jobfacts
 import naming
 import pricing
+import progress
 import reveal
 import usage as usage_store
 import jobs
@@ -566,31 +567,39 @@ def create_app() -> FastAPI:
         tranches = captions.plan_tranches(waiting)
 
         done, usages, failure = 0, [], None
-        for tranche_number, batch in enumerate(tranches, start=1):
-            try:
-                drafted, used = captions.draft_captions(
-                    manifest.get("context", ""), batch,
-                    style=manifest.get("caption_style", captions.DEFAULT_STYLE))
-            except captions.CaptionError as exc:
-                # 3. Everything already paid for stays. Only the batch that
-                #    failed and the ones never sent are left without words.
-                failure = exc
-                break
+        progress.start(name, len(waiting), len(tranches))
+        try:
+            for tranche_number, batch in enumerate(tranches, start=1):
+                try:
+                    drafted, used = captions.draft_captions(
+                        manifest.get("context", ""), batch,
+                        style=manifest.get("caption_style", captions.DEFAULT_STYLE))
+                except captions.CaptionError as exc:
+                    # 3. Everything already paid for stays. Only the batch that
+                    #    failed and the ones never sent are left without words.
+                    failure = exc
+                    break
 
-            usages.append(used)
-            # 4. Saved immediately, as unreviewed drafts, before the next
-            #    request goes out. A refresh, a crash or a later failure
-            #    cannot lose work that has already been charged for.
-            with busy.writing():
-                for entry in photos_routes.included(manifest):
-                    if not str(entry.get("caption", "")).strip():
-                        fresh = drafted.get(entry["file"], "")
-                        if fresh:
-                            entry["caption"] = fresh
-                            entry.pop(photos_routes.REVIEWED, None)
-                            done += 1
-                photos_routes.save_manifest(job, manifest)
-
+                usages.append(used)
+                # 4. Saved immediately, as unreviewed drafts, before the next
+                #    request goes out. A refresh, a crash or a later failure
+                #    cannot lose work that has already been charged for.
+                with busy.writing():
+                    for entry in photos_routes.included(manifest):
+                        if not str(entry.get("caption", "")).strip():
+                            fresh = drafted.get(entry["file"], "")
+                            if fresh:
+                                entry["caption"] = fresh
+                                entry.pop(photos_routes.REVIEWED, None)
+                                done += 1
+                    photos_routes.save_manifest(job, manifest)
+                # Written after the save, never before it, so the number the
+                # screen shows is a number of captions already on disk.
+                progress.advance(name, tranche_number, done)
+        finally:
+            # However this ends, including a way nobody predicted. A progress
+            # light stuck on would leave the screen polling for ever.
+            progress.finish(name)
         measured = cost.measured(captions.MODEL, usages)
         remaining = [p.name for p in _uncaptioned(job, photos_routes.load_manifest(job))]
 
@@ -637,11 +646,44 @@ def create_app() -> FastAPI:
                   "tranches_planned": len(tranches),
                   "tranches_done": len(usages),
                   "review": photos_routes.review_progress(fresh_manifest)}
+        # What actually happened to the run, in one word and one sentence, said
+        # here because only the run knows. A single request cannot: it failed,
+        # and whether that leaves nothing saved or sixty captions saved depends
+        # on the requests before it. The screen used to put the request's own
+        # sentence, "Nothing was changed", directly under a box reporting sixty
+        # saved captions.
+        answer["state"] = ("done" if failure is None and not remaining else
+                           "partial" if done > 0 else "failed")
+        if answer["state"] == "partial":
+            answer["summary"] = (
+                "%d %s saved. %d %s still %s a caption. The captions already "
+                "saved will not be sent or charged for again."
+                % (done, "caption was" if done == 1 else "captions were",
+                   len(remaining), "photo" if len(remaining) == 1 else "photos",
+                   "needs" if len(remaining) == 1 else "need"))
+        elif answer["state"] == "done":
+            answer["summary"] = ("%d %s written."
+                                 % (done, "caption was" if done == 1 else "captions were"))
+        else:
+            answer["summary"] = "No captions were written. Nothing was changed."
+
         if failure is not None:
             answer["error"] = failure.message
             answer["error_kind"] = failure.kind
             answer["partial"] = done > 0
         return answer
+
+    @app.get("/api/jobs/{name}/caption-progress")
+    def caption_progress(name: str):
+        """How far a running caption run has got. Asked on a timer.
+
+        Deliberately not authoritative about captions: the manifest is. This
+        says which request the run is on and how many captions are already
+        saved, so the screen can show a position instead of a bar that only
+        proves something is happening.
+        """
+        photos_routes._job_or_404(name)
+        return progress.read(name)
 
     @app.get("/api/jobs/{name}/facts")
     def job_facts(name: str):

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal } from "../api.js";
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -20,6 +20,7 @@ export default function PhotosScreen({ job }) {
   const [facts, setFacts] = useState(null);   // city and address for the filename
   const [fixing, setFixing] = useState(false);
   const [confirming, setConfirming] = useState(null);  // the spend confirmation
+  const [running, setRunning] = useState(null);   // which request the run is on
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
@@ -80,19 +81,40 @@ export default function PhotosScreen({ job }) {
     setConfirming(null);
     setAsking(false);
     setBusy("Writing captions..."); setError(null); setSpent(null);
+    setRunning({ request: 0, requests: tranches, captioned: 0, total: toSend });
+
+    // While the run is in flight, ask where it has got to and pull down the
+    // captions already saved. Each request is written to disk before the next
+    // one is sent, so finished work can be on screen rather than waiting for
+    // the whole run to come back.
+    const watching = setInterval(async () => {
+      try {
+        const at = await captionProgress(job);
+        if (!at.running) return;
+        setRunning(at);
+        if (at.captioned > 0) setManifest(await getManifest(job));
+      } catch { /* a missed tick is not worth a message */ }
+    }, 1200);
+
     try {
       if (style && style !== manifest.caption_style) {
         await save({ ...manifest, caption_style: style });
       }
       const m = await draftCaptions(job, confirmed || needsConfirm);
       setManifest(m);
-      // What it actually cost, kept on screen next to what was estimated.
-      if (m.measured) setSpent({ ...m.measured, captioned: m.captioned, remaining: m.remaining || [] });
-      if (m.error) setError(m.error);
+      // What it actually cost, kept on screen next to what was estimated,
+      // and what became of the run, which only the run can say.
+      if (m.measured) setSpent({ ...m.measured, captioned: m.captioned,
+                                 remaining: m.remaining || [],
+                                 state: m.state, summary: m.summary });
+      // A run that saved something is not an error, whatever one request did.
+      if (m.error && m.state === "failed") setError(m.error);
       if (!m.ai_available) {
         setError("Writing captions needs a key on this computer. You can still type them in yourself.");
       }
     } catch (e) { setError(e.message); }
+    clearInterval(watching);
+    setRunning(null);
     setBusy("");
     refreshQuote();
   }
@@ -243,10 +265,15 @@ export default function PhotosScreen({ job }) {
               control that leaves him guessing is the defect this replaced:
               the old copy here announced a 60-photo wall that no longer
               exists, and he read it as the app being broken. */}
+          {/* One sentence about the missing key, not two. This and the
+              `!aiOn` note below said the same thing in different words and
+              both rendered, stacking two near-identical grey paragraphs above
+              the buttons and pushing the actions down the screen. */}
           {blockedBecause === "no_key" && (
             <p className="sub off-note" style={{ margin: "6px 0 0" }}>
-              Writing captions needs a key on this computer. Open Settings to
-              add one. You can still type every caption in yourself.
+              Writing captions for you needs a key on this computer.
+              Open Settings to add one. You can still type every caption in yourself,
+              and everything else works.
             </p>
           )}
           {blockedBecause === "local_only" && (
@@ -266,10 +293,13 @@ export default function PhotosScreen({ job }) {
               {ceiling}. Captions are saved as each one finishes.
             </p>
           )}
-          {!aiOn && (
+          {/* Only when the screen has no blocked reason to show, so the two
+              can never both appear. */}
+          {!aiOn && !blockedBecause && (
             <p className="sub off-note" style={{ margin: "6px 0 0" }}>
-              Writing captions for you is off: no key is set up on this computer.
-              You can still type every caption in yourself, and everything else works.
+              Writing captions for you needs a key on this computer.
+              Open Settings to add one. You can still type every caption in yourself,
+              and everything else works.
             </p>
           )}
         </div>
@@ -332,7 +362,7 @@ export default function PhotosScreen({ job }) {
           <p className="setting-fine" style={{ margin: "0 0 12px" }}>
             The photos, their order, the caption style and everything else about this
             job stay as they are, and no built Word file is removed. Cleared captions
-            cannot be recovered. Suggest captions can write new ones afterwards.
+            cannot be recovered. Generate captions can write new ones afterwards.
           </p>
           <div className="setting-actions">
             <button className="button" onClick={onClearCaptions} disabled={!!busy}>
@@ -346,8 +376,17 @@ export default function PhotosScreen({ job }) {
       {/* What the last run cost, from what the provider reported. Kept next to
           what was estimated so the two can be compared, and never called an
           actual cost, because it is this app's arithmetic and not a bill. */}
+      {/* Three outcomes, three treatments. A run that saved some captions and
+          not others is neither a success nor a failure and no longer wears the
+          colour of either. A cost the provider did not report is not good news
+          and no longer sits in a green box. */}
       {spent && (
-        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+        <div className={`outcome outcome-${spent.state === "partial" ? "partial"
+                          : spent.state === "failed" ? "failed"
+                          : spent.calculated_cost === null || spent.calculated_cost === undefined
+                            ? "unknown" : "done"}`}
+             style={{ marginTop: 0, marginBottom: 16 }}>
+          {spent.summary && <p className="outcome-said">{spent.summary}</p>}
           <strong>{spent.label}</strong>
           {spent.calculated_cost !== null && spent.calculated_cost !== undefined ? (
             <> : <code>${spent.calculated_cost.toFixed(2)}</code> for {spent.captioned}{" "}
@@ -368,8 +407,7 @@ export default function PhotosScreen({ job }) {
             <div className="cost-after">
               <strong>{spent.remaining.length}</strong>{" "}
               {spent.remaining.length === 1 ? "photo is" : "photos are"} still without a caption:{" "}
-              {spent.remaining.join(", ")}. The captions already written are saved and
-              will not be paid for again.
+              {spent.remaining.join(", ")}.
               <div style={{ marginTop: 8 }}>
                 <button className="button secondary" disabled={!!busy}
                         onClick={() => runCaptions(manifest.caption_style)}>
@@ -418,6 +456,29 @@ export default function PhotosScreen({ job }) {
               <button className="linky" onClick={() => setFixing(false)}>Cancel</button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* The run, in words, across the width of the work rather than as a
+          thin bar in a corner. It says which request it is on because the app
+          knows, and how many captions are already saved because they are
+          already on disk and already on screen below. */}
+      {running && (
+        <div className="run" role="status" aria-live="polite">
+          <div className="run-said">
+            <strong>
+              {running.requests > 1
+                ? `Writing captions, request ${Math.min(running.request + 1, running.requests)} of ${running.requests}`
+                : "Writing captions"}
+            </strong>
+            <span className="run-counts">
+              {running.captioned} of {running.total} written
+              {running.total - running.captioned > 0 &&
+                <> · {running.total - running.captioned} to go</>}
+              . Each one is saved as it arrives.
+            </span>
+          </div>
+          <div className="loading-bar"><span /></div>
         </div>
       )}
 

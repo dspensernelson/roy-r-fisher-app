@@ -223,6 +223,14 @@ def test_the_unavailable_control_does_not_look_like_a_live_button():
 
 
 def test_the_screen_says_captions_can_still_be_typed():
+    """The wording changed on 2026-08-22 and the promise did not.
+
+    There used to be two sentences about the missing key, rendering together
+    and saying the same thing in different words. One of them opened with
+    `no key is set up on this computer`. They are now one sentence, so that
+    exact phrase is gone; what it has to keep saying is that a key is what is
+    missing and that he can still type the captions himself.
+    """
     source = SCREEN.read_text()
     assert "type every caption in yourself" in source
-    assert "no key is set up on this computer" in source
+    assert "needs a key on this computer" in source

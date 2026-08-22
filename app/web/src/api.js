@@ -36,6 +36,8 @@ export const captionStyles = () => fetch("/api/caption-styles").then(j);
 export const appVersion = () => fetch("/api/version").then(j);
 export const captionEstimate = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/caption-estimate`).then(j);
+export const captionProgress = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/caption-progress`).then(j);
 export const markReviewed = (name, file) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/reviewed`, { method: "POST" }).then(j);
 export const markUnreviewed = (name, file) =>

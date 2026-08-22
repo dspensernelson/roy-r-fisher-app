@@ -1,9 +1,9 @@
 # Roy R. Fisher
 
-A Windows desktop app that helps the appraiser produce commercial appraisal reports.
-The appraiser runs Roy R. Fisher in Davenport, Iowa. He has written these reports in
-Word for decades and is not a software user by inclination. Spenser owns the
-product. The app runs on one machine, offline, for one person.
+A Windows desktop app for producing commercial appraisal reports. It is built
+for one commercial appraiser, who has written these reports in Word for
+decades. Spenser owns the product. The app runs on one machine, offline,
+for one person.
 
 ## What is at the root
 
@@ -15,7 +15,7 @@ product. The app runs on one machine, offline, for one person.
 
 ## What is deliberately not here
 
-The appraiser's delivered appraisals are his clients' confidential work, so they are
+The delivered appraisals are his clients' confidential work, so they are
 not in this repository and will not be. Neither is his own folder template,
 which lives inside one of them. They stay on the development machine.
 
@@ -40,7 +40,7 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-335 tests; the ones that need the appraiser's private material skip on machines without it.
+335 tests; the ones that need that private material skip on machines without it.
 
 ## What we know is missing
 
@@ -67,6 +67,6 @@ so a fresh clone needs one step before the app will serve anything:
 Then start it with `Start Roy R. Fisher.command` on a Mac, or
 `python3 app/run_app.py`.
 
-The appraiser will not have Node on his PC. Whatever we eventually hand him has to
+The target PC will not have Node. Whatever we eventually hand him has to
 arrive with the interface already built, so that build is a packaging job for
 us and never a step for him.

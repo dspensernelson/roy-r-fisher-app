@@ -38,6 +38,12 @@ RUNTIME_NAME = "runtime.json"
 
 HOST = "127.0.0.1"
 
+# One sentence about stopping the app, in one place, so the terminal and the
+# packaged README cannot drift apart. They used to disagree: the window said to
+# press Control and C and the README said to close the window, which is two
+# instructions for one action in the two places a first-time user reads.
+STOP_INSTRUCTION = "Close this window to stop the Roy R. Fisher app."
+
 # Loopback only, never 0.0.0.0. Windows Defender Firewall generally does not
 # prompt for a loopback-only bind, and an unsigned launcher opening a listening
 # socket is already a recognisable shape to endpoint protection. Recorded here
@@ -65,6 +71,24 @@ def runtime_file(root: Path) -> Path:
     the manifest either, because it changes every run.
     """
     return Path(root) / RUNTIME_NAME
+
+
+def clear_runtime(root: Path) -> None:
+    """Forget the port this copy bound, on the way out of a normal shutdown.
+
+    The file describes a running app. Left behind it describes one that is not
+    running, and that is exactly the stale file the audit found: every ordinary
+    close produced one, naming a dead process.
+
+    Never raises. Failing to tidy up must not turn a clean exit into an error,
+    and a leftover file is already safe: `already_running_here` probes the port
+    and only trusts it when this same version answers, so a crash that skips
+    this is handled by the next launch rather than by this line.
+    """
+    try:
+        runtime_file(root).unlink()
+    except (OSError, FileNotFoundError):
+        pass
 
 
 def read_runtime(root: Path) -> dict:

@@ -35,6 +35,8 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "app" / "server"))
 
 import packaging  # noqa: E402
+# Read rather than restated, so the window and this README cannot drift apart.
+from startup import STOP_INSTRUCTION  # noqa: E402
 
 # Decided by the Task 1 evidence, recorded in Section 7b of the pilot plan.
 # python.org stops publishing Windows embeddable builds when a series leaves
@@ -612,7 +614,10 @@ def readme_text() -> str:
         "2. Double-click \"Start Roy R. Fisher.bat\".\n"
         "\n"
         "3. Your browser opens by itself. Leave the black window open while you\n"
-        "   work. To stop the app, close that window.\n"
+        "   work. " + STOP_INSTRUCTION + "\n"
+        "\n"
+        "   The app picks a fresh address each time it starts, so open it from\n"
+        "   the black window rather than from a bookmark.\n"
         "\n"
         "Windows may say it protected your PC the first time. Click More info,\n"
         "then Run anyway. Spenser will be on the call the first time.\n"

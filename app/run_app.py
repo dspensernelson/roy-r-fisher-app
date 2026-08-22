@@ -91,7 +91,8 @@ def main() -> int:
     startup.write_runtime(ROOT, port, version)
 
     print("Starting Roy R. Fisher %s." % version)
-    print("Leave this window open while you work. To stop the app, press Control and C.")
+    print("Leave this window open while you work.")
+    print(startup.STOP_INSTRUCTION)
     print()
 
     # 5. Open the browser only once the app has really answered, and answered
@@ -103,13 +104,25 @@ def main() -> int:
         else:
             # 7. Plain words, not a traceback. The server thread is still up,
             #    so this cannot exit the process itself; it says what it knows
-            #    and Control-C ends it.
+            #    and closing the window ends it.
             print(startup.failure_report(ROOT, port, version))
 
     threading.Thread(target=when_up, daemon=True).start()
 
     import uvicorn          # the first third-party import in the whole file
-    uvicorn.run("main:app", host=startup.BIND_HOST, port=port)
+    try:
+        # Quiet. uvicorn's own INFO lines announced a process id, a bind
+        # address and every request, which is real server output in a window
+        # a person has been told is not a piece of software. Warnings and
+        # errors still print, because those are the ones worth photographing
+        # and sending to Spenser.
+        uvicorn.run("main:app", host=startup.BIND_HOST, port=port,
+                    log_level="warning", access_log=False)
+    finally:
+        # 8. The record of a running app goes when the app stops. A crash that
+        #    never reaches here leaves one behind, and the next launch handles
+        #    that by probing the port rather than by trusting the file.
+        startup.clear_runtime(ROOT)
     return 0
 
 

@@ -67,6 +67,23 @@ body {
 .picker-row.pick .tick { width: 16px; color: var(--brand); font-weight: 700; }
 .picker-row.pick.on { background: #F4EFEF; }
 .picker-row.pick.on .picker-name { font-weight: 700; }
+/* Which rows are jobs, so the list he is reading and the count above it are
+   telling him the same thing. */
+.picker-tag {
+  margin-left: auto; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 700; color: var(--brand); background: #F4EFEF;
+  border-radius: 3px; padding: 2px 7px;
+}
+/* The result of looking in this folder, and the action that acts on it. One
+   block, because the count is the whole decision. */
+.folder-result {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  max-width: 720px; margin: 0 0 14px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: 6px; background: #FFFFFF;
+}
+.folder-result.is-ready { border-color: var(--brand); background: #FCF9F9; }
+.folder-result-count { display: block; font-size: 15px; color: var(--ink); }
+.folder-result-note { display: block; margin-top: 3px; font-size: 13px; color: var(--ink-muted); }
 /* Search and the running count stay put while the list scrolls under them. */
 .picker-head { display: flex; align-items: center; gap: 14px; max-width: 720px;
   position: sticky; top: 0; background: var(--ground); padding: 10px 0; z-index: 2; }
@@ -74,7 +91,12 @@ body {
   border: 1.5px solid var(--line); border-radius: 4px; background: #FFFFFF; color: var(--ink); }
 .find:focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
 .picker-head .count { font-size: 12.5px; color: var(--ink-muted); white-space: nowrap;
-  margin-left: auto; }
+  margin-left: auto; font-variant-numeric: tabular-nums; }
+/* The running count is what says whether he can carry on, so it reads as a
+   figure rather than as one more grey note beside the search box. */
+.picker-head .count.is-some { font-size: 14px; font-weight: 700; color: var(--ink); }
+.picker-head .count.is-none { font-size: 14px; font-weight: 700; color: var(--brand); }
+.pick-required { max-width: 720px; margin: 12px 0 0; font-size: 13.5px; color: var(--brand); }
 .picker-head .linky { white-space: nowrap; }
 .linky.inline { margin-left: 0; font-size: inherit; }
 .linky:disabled { color: var(--ink-muted); opacity: 0.55; cursor: default;

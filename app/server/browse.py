@@ -13,6 +13,8 @@ import string
 import sys
 from pathlib import Path
 
+import workspace
+
 # Where "up" leads when there is nowhere above a drive. The browser asks for
 # this by name and gets the list of drives back.
 DRIVES = "\x00drives"
@@ -69,7 +71,7 @@ def listing(where: str = "") -> dict:
     """
     answer = {"path": "", "label": "", "parent": None, "breadcrumbs": [],
               "folders": [], "readable": True, "is_drive_list": False,
-              "loose_files": 0, "message": ""}
+              "loose_files": 0, "message": "", "job_count": 0}
 
     if where == DRIVES:
         answer.update(path=DRIVES, label="This PC", is_drive_list=True,
@@ -110,16 +112,24 @@ def listing(where: str = "") -> dict:
                       message="This computer will not let the app open that folder.")
         return answer
 
-    folders, loose = [], 0
+    folders, loose, job_count = [], 0, 0
     for entry in entries:
         try:
             if entry.is_dir():
-                folders.append({"name": entry.name, "path": str(Path(entry.path))})
+                # Marked here rather than guessed at on the screen. The row
+                # says which of these is one of his jobs, and the count below
+                # is what decides whether this folder can be confirmed at all.
+                is_job = workspace.looks_like_job(Path(entry.path))
+                if is_job:
+                    job_count += 1
+                folders.append({"name": entry.name, "path": str(Path(entry.path)),
+                                "is_job": is_job})
             else:
                 loose += 1
         except OSError:
             continue          # one unreadable entry never breaks the list
     answer["folders"] = folders
+    answer["job_count"] = job_count
     # Counted and named as not-jobs, so the screen can say so out loud rather
     # than leaving him to wonder where his documents went.
     answer["loose_files"] = loose

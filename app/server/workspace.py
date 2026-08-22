@@ -16,6 +16,7 @@ Two things this module refuses to do:
   every name in `describe` comes from reading the disk on the spot.
 """
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -23,6 +24,19 @@ import state
 
 SETTINGS_NAME = ".rrf-app.json"
 FOLDER_KEY = "jobs_folder"
+
+# The firm's house folder name, measured from the corpus: an upper-case city,
+# an underscore, then the street address. Matching this is the cheap signal
+# and it costs no disk access, so it is tried first.
+JOB_NAME = re.compile(r"^[A-Z][A-Z0-9 .'&-]*_.+")
+
+# How many of Mark's own eight folders a folder needs before the app will call
+# it a job. Two rather than one on purpose. One is met by any folder that
+# happens to contain something called `Photos`, and `Documents` on a Mac often
+# does, which would make the home folder look like it held a job. A real job
+# carries all eight, so two is forgiving of a half-built one and still refuses
+# a coincidence.
+JOB_FOLDER_SIGNALS = 2
 
 # Bookkeeping files both operating systems scatter about. Never a job, and
 # never worth showing him.
@@ -169,6 +183,35 @@ def child_folder_names(path: Path) -> list:
     return names
 
 
+def looks_like_job(path: Path) -> bool:
+    """Whether this folder is one of his jobs, decided by looking at it.
+
+    Two observable signals, and never the folder's position. Position was the
+    old answer by omission: anything the user happened to be standing in could
+    be confirmed as the jobs folder, so the drive root, the home folder and a
+    single job folder were all accepted in one click and produced an app with
+    nothing in it.
+
+    Deliberately not a guess about intent. A folder that carries neither signal
+    is reported as not-a-job and the screen says how many were found, so he
+    can see the app disagreeing with him before he commits to anything.
+    """
+    import jobs                    # deferred: jobs.py imports this module
+
+    if JOB_NAME.match(path.name):
+        return True
+    try:
+        found = 0
+        for folder in jobs.MARK_FOLDERS:
+            if (path / folder).is_dir():
+                found += 1
+                if found >= JOB_FOLDER_SIGNALS:
+                    return True
+    except OSError:
+        return False
+    return False
+
+
 def describe(path: Path) -> dict:
     """What is actually in this folder, read now.
 
@@ -180,7 +223,8 @@ def describe(path: Path) -> dict:
     """
     facts = {"path": str(path), "exists": False, "is_folder": False,
              "readable": False, "folder_count": 0, "folder_names": [],
-             "folder_names_truncated": False, "loose_file_count": 0}
+             "folder_names_truncated": False, "loose_file_count": 0,
+             "job_count": 0, "job_names": []}
 
     if not path.exists():
         return facts
@@ -189,13 +233,15 @@ def describe(path: Path) -> dict:
         return facts
     facts["is_folder"] = True
 
-    names, loose = [], 0
+    names, jobs_found, loose = [], [], 0
     try:
         for entry in path.iterdir():
             if entry.name.startswith("."):
                 continue
             if entry.is_dir():
                 names.append(entry.name)
+                if looks_like_job(entry):
+                    jobs_found.append(entry.name)
             elif entry.name not in NOISE:
                 loose += 1
     except OSError:
@@ -204,10 +250,13 @@ def describe(path: Path) -> dict:
 
     facts["readable"] = True
     names.sort()
+    jobs_found.sort()
     facts["folder_count"] = len(names)
     facts["folder_names"] = names[:NAME_LIMIT]
     facts["folder_names_truncated"] = len(names) > NAME_LIMIT
     facts["loose_file_count"] = loose
+    facts["job_count"] = len(jobs_found)
+    facts["job_names"] = jobs_found[:NAME_LIMIT]
     return facts
 
 

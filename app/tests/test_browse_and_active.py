@@ -33,6 +33,20 @@ def client(home):
     return TestClient(create_app())
 
 
+def make_job(home: Path, name: str) -> Path:
+    """A folder the app will recognise as one of his jobs.
+
+    Mark's own eight folders, the way `jobs.create` makes them and the way his
+    folder template arrives. A bare empty folder is no longer accepted as a
+    job, so a fixture that wants one has to look like one.
+    """
+    import jobs as jobs_module
+    job = home / name
+    for folder in jobs_module.MARK_FOLDERS:
+        (job / folder).mkdir(parents=True)
+    return job
+
+
 # ------------------------------------------------------------- browsing ----
 def test_it_lists_folders_and_never_files(tmp_path):
     (tmp_path / "A folder").mkdir()
@@ -136,7 +150,7 @@ def test_going_up_from_a_drive_root_reaches_the_drive_list(monkeypatch, tmp_path
 # --------------------------------------------------------- active jobs -----
 def test_nothing_is_active_on_first_setup(client, home):
     for name in ["A job", "B job"]:
-        (home / name).mkdir()
+        make_job(home, name)
     client.put("/api/workspace", json={"path": str(home)})
     listed = client.get("/api/workspace/folders").json()
     assert listed["folders"] == ["A job", "B job"]
@@ -146,14 +160,14 @@ def test_nothing_is_active_on_first_setup(client, home):
 
 def test_only_the_chosen_ones_show_on_the_jobs_screen(client, home):
     for name in ["A job", "B job", "C job"]:
-        (home / name).mkdir()
+        make_job(home, name)
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job", "C job"]})
     assert [j["name"] for j in client.get("/api/jobs").json()] == ["A job", "C job"]
 
 
 def test_a_selection_survives_a_restart(client, home):
-    (home / "A job").mkdir()
+    make_job(home, "A job")
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job"]})
 
@@ -164,7 +178,7 @@ def test_a_selection_survives_a_restart(client, home):
 
 def test_unselecting_works(client, home):
     for name in ["A job", "B job"]:
-        (home / name).mkdir()
+        make_job(home, name)
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job", "B job"]})
     client.put("/api/workspace/folders", json={"active": ["B job"]})
@@ -172,11 +186,11 @@ def test_unselecting_works(client, home):
 
 
 def test_a_newly_discovered_folder_starts_not_active(client, home):
-    (home / "A job").mkdir()
+    make_job(home, "A job")
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job"]})
 
-    (home / "Arrived later").mkdir()
+    make_job(home, "Arrived later")
     listed = client.get("/api/workspace/folders").json()
     assert "Arrived later" in listed["folders"]
     assert listed["active"] == ["A job"]
@@ -184,7 +198,7 @@ def test_a_newly_discovered_folder_starts_not_active(client, home):
 
 
 def test_a_folder_renamed_outside_the_app_is_reported_by_name(client, home):
-    (home / "A job").mkdir()
+    make_job(home, "A job")
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job"]})
 
@@ -196,7 +210,7 @@ def test_a_folder_renamed_outside_the_app_is_reported_by_name(client, home):
 
 
 def test_zero_active_is_allowed(client, home):
-    (home / "A job").mkdir()
+    make_job(home, "A job")
     client.put("/api/workspace", json={"path": str(home)})
     r = client.put("/api/workspace/folders", json={"active": []})
     assert r.status_code == 200
@@ -204,14 +218,16 @@ def test_zero_active_is_allowed(client, home):
 
 
 def test_a_job_made_in_the_app_starts_active(client, home):
+    # One job already here, because the folder has to hold a job before it can
+    # be chosen. It stays inactive, so the app-made one is the only one listed.
+    make_job(home, "DAVENPORT_9 Existing - 2026")
     client.put("/api/workspace", json={"path": str(home)})
     client.post("/api/jobs", json={"name": "DAVENPORT_1 Main - 2026"})
     assert [j["name"] for j in client.get("/api/jobs").json()] == ["DAVENPORT_1 Main - 2026"]
 
 
 def test_making_a_job_not_active_never_touches_the_folder(client, home):
-    job = home / "A job"
-    (job / "Photos").mkdir(parents=True)
+    job = make_job(home, "A job")
     (job / "Photos" / "a.jpg").write_bytes(b"a photo")
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job"]})
@@ -223,9 +239,10 @@ def test_making_a_job_not_active_never_touches_the_folder(client, home):
 
 
 def test_two_parent_folders_keep_separate_selections(client, home, tmp_path):
-    (home / "A job").mkdir()
+    make_job(home, "A job")
     other = tmp_path / "other jobs"
-    (other / "Z job").mkdir(parents=True)
+    other.mkdir()
+    make_job(other, "Z job")
 
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": ["A job"]})
@@ -238,7 +255,7 @@ def test_two_parent_folders_keep_separate_selections(client, home, tmp_path):
 
 def test_no_folder_name_is_ever_parsed_or_rewritten(client, home):
     odd = "DAVENPORT_2840 Brady Street - 2026 Tax"
-    (home / odd).mkdir()
+    make_job(home, odd)
     client.put("/api/workspace", json={"path": str(home)})
     client.put("/api/workspace/folders", json={"active": [odd]})
     assert client.get("/api/workspace/folders").json()["folders"] == [odd]

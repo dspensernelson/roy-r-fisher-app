@@ -27,8 +27,12 @@ DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("RRF_SETTINGS_FILE", str(tmp_path / "settings.json"))
     monkeypatch.delenv("RRF_JOBS_HOME", raising=False)
+    import jobs as jobs_module
     jobs = tmp_path / "jobs"
-    (jobs / "A job" / "Photos").mkdir(parents=True)
+    # Mark's own eight folders, so the jobs folder can be chosen at all: a
+    # folder holding nothing the app recognises as a job is now refused.
+    for folder in jobs_module.MARK_FOLDERS:
+        (jobs / "A job" / folder).mkdir(parents=True, exist_ok=True)
     (jobs / "A job" / "Photos" / "a.jpg").write_bytes(b"not really a photo")
     (jobs / "A job" / "Photos" / "photo-manifest.json").write_text(json.dumps(
         {"job": "A job", "context": "", "report_year": 2026, "caption_style": "view",

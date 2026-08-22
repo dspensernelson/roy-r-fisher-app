@@ -231,6 +231,10 @@ def create_app() -> FastAPI:
 
     @app.put("/api/workspace")
     def save_workspace(body: NewFolder):
+        # First, before any judgement about the folder. A reset replacing the
+        # folders under him is a better answer than "no jobs were found in
+        # here", which would be true and useless. Same order as Build.
+        busy.check_not_resetting()
         path = body.path
         if not path.strip():
             raise HTTPException(400, "No folder was chosen.")
@@ -243,6 +247,25 @@ def create_app() -> FastAPI:
             raise HTTPException(400, "That is a file, not a folder.")
         if not facts["readable"]:
             raise HTTPException(400, "That folder cannot be opened on this computer.")
+        # The folder has to hold jobs, and the refusal names which of the
+        # three ways it does not. Before this, any folder he happened to be
+        # standing in could be confirmed, so the drive root, his home folder
+        # and a single job folder were all one click from an app with nothing
+        # in it and no explanation.
+        if facts["job_count"] == 0:
+            if facts["folder_count"] == 0:
+                raise HTTPException(
+                    400, "There are no folders in here at all, so there are no "
+                         "jobs to open. Go up a level and pick the folder your "
+                         "job folders sit in.")
+            if workspace.looks_like_job(Path(path)):
+                raise HTTPException(
+                    400, "This looks like one job rather than the folder your "
+                         "jobs sit in. Go up one level and choose the folder "
+                         "that holds this job.")
+            raise HTTPException(
+                400, "No jobs were found in here. Open the folder your job "
+                     "folders sit in, then choose it.")
         with busy.writing():
             workspace.save_folder(path)
         # Nothing to restart: every route reads the saved answer when asked.

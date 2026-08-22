@@ -53,7 +53,13 @@ export default function ActiveJobs({ first, onDone, onCancel }) {
       <div className="title-row">
         <h1>{first ? "Which jobs are you working on?" : "Manage active jobs"}</h1>
         <div className="title-actions">
-          <button className="button" onClick={save} disabled={!!busy}>
+          {/* Off at zero. It used to be live with nothing ticked, and pressing
+              it produced a Jobs screen with nothing on it and no explanation
+              of why. Nothing starts selected, which is unchanged: he says
+              what he is working on and the app never assumes. */}
+          <button className={`button${chosen.size === 0 ? " is-off" : ""}`}
+                  onClick={save} disabled={!!busy || chosen.size === 0}
+                  title={chosen.size === 0 ? "Pick at least one job to work on" : ""}>
             Use these active jobs
           </button>
           {!first && <button className="linky" onClick={onCancel} disabled={!!busy}>Cancel</button>}
@@ -85,7 +91,7 @@ export default function ActiveJobs({ first, onDone, onCancel }) {
         <button className="linky inline" onClick={clearAll} disabled={chosen.size === 0}>
           Clear all
         </button>
-        <span className="count">
+        <span className={`count${chosen.size === 0 ? " is-none" : " is-some"}`}>
           {chosen.size} of {data.folders.length} active
           {find.trim() && shown.length !== data.folders.length &&
             <> · showing {shown.length}</>}
@@ -110,8 +116,9 @@ export default function ActiveJobs({ first, onDone, onCancel }) {
       </div>
 
       {chosen.size === 0 && (
-        <p className="setting-fine">
-          Nothing is active, so the Jobs screen will be empty until you make a job active.
+        <p className="pick-required">
+          Pick at least one job to carry on. The others stay exactly where they are,
+          and you can change this later.
         </p>
       )}
       {busy && (

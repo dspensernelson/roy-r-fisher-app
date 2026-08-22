@@ -25,17 +25,21 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
   }
 
   const folders = loc ? loc.folders : [];
+  // What the server found here, and therefore whether this folder can be
+  // confirmed at all. The button used to be live everywhere, including the
+  // drive root and inside a single job.
+  const jobsHere = loc && loc.readable && !loc.is_drive_list ? loc.job_count : 0;
+  const canUse = jobsHere > 0;
 
   return (
     <>
       <div className="title-row">
         <h1>{first ? "Choose your jobs folder" : "Change jobs folder"}</h1>
-        <div className="title-actions">
-          {loc && loc.readable && !loc.is_drive_list && (
-            <button className="button" onClick={use} disabled={!!busy}>Use this folder</button>
-          )}
-          {!first && <button className="linky" onClick={onCancel} disabled={!!busy}>Cancel</button>}
-        </div>
+        {!first && (
+          <div className="title-actions">
+            <button className="linky" onClick={onCancel} disabled={!!busy}>Cancel</button>
+          </div>
+        )}
       </div>
 
       {first
@@ -62,30 +66,60 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
             ))}
           </nav>
 
-          {/* What is actually in here, read now. This is the preview: he is
-              looking at the real contents before he commits to anything. */}
-          <p className="sub">
-            {loc.readable
-              ? <>
-                  {folders.length} {folders.length === 1 ? "folder is" : "folders are"} directly
-                  inside this one
-                  {loc.loose_files > 0 && <>, beside {loc.loose_files} loose{" "}
-                    {loc.loose_files === 1 ? "file that is not a job" : "files that are not jobs"}</>}.
-                </>
-              : loc.message}
-          </p>
+          {/* The result of looking in here, and the action that acts on it,
+              in one place. The count is the whole decision, so the button
+              that depends on it sits beside the count rather than at the far
+              edge of the screen. */}
+          {loc.readable ? (
+            <div className={`folder-result${canUse ? " is-ready" : ""}`}>
+              <div>
+                <strong className="folder-result-count">
+                  {jobsHere === 0
+                    ? "No jobs found here"
+                    : `${jobsHere} ${jobsHere === 1 ? "job" : "jobs"} found`}
+                </strong>
+                <span className="folder-result-note">
+                  {canUse
+                    ? "This is the folder your jobs sit in. Stop here and choose it."
+                    : "Open one of the folders below to keep looking."}
+                </span>
+              </div>
+              <button className={`button${canUse ? "" : " is-off"}`} onClick={use}
+                      disabled={!canUse || !!busy}
+                      title={canUse ? "" : "No jobs were found in this folder"}>
+                Use this folder
+              </button>
+            </div>
+          ) : (
+            <p className="sub">{loc.message}</p>
+          )}
+
+          {loc.readable && (
+            <p className="sub">
+              {folders.length} {folders.length === 1 ? "folder is" : "folders are"} directly
+              inside this one
+              {loc.loose_files > 0 && <>, beside {loc.loose_files} loose{" "}
+                {loc.loose_files === 1 ? "file that is not a job" : "files that are not jobs"}</>}.
+            </p>
+          )}
 
           <div className="picker">
             {loc.parent !== null && (
-              <button className="picker-row up" onClick={() => go(loc.parent)}>
-                <span className="picker-icon">↑</span>
+              <button className="picker-row up" onClick={() => go(loc.parent)}
+                      aria-label="Up one folder">
+                <span className="picker-icon" aria-hidden="true">↑</span>
                 <span className="picker-name">Up one folder</span>
               </button>
             )}
+            {/* Named for a screen reader and for the keyboard. The row used to
+                announce itself as an unlabelled button, because the only text
+                in it sat inside a span the icon shared. */}
             {folders.map((f) => (
-              <button className="picker-row" key={f.path} onClick={() => go(f.path)}>
-                <span className="picker-icon">▸</span>
+              <button className="picker-row" key={f.path} onClick={() => go(f.path)}
+                      aria-label={f.is_job ? `Open job folder ${f.name}` : `Open folder ${f.name}`}>
+                <span className="picker-icon" aria-hidden="true">▸</span>
                 <span className="picker-name">{f.name}</span>
+                {f.is_job && <span className="picker-tag">job</span>}
               </button>
             ))}
             {loc.readable && folders.length === 0 && (

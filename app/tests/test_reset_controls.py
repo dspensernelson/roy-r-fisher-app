@@ -49,10 +49,16 @@ def client(home):
 
 
 def make_job(home: Path, name: str, manifest=None) -> Path:
-    """A real job folder on disk: real photo files, a real manifest file."""
+    """A real job folder on disk: real photo files, a real manifest file.
+
+    Mark's own eight folders too, because the jobs folder can no longer be
+    chosen unless it actually holds something the app recognises as a job.
+    """
+    import jobs as jobs_module
     manifest = FULL_MANIFEST if manifest is None else manifest
     job = home / name
-    (job / "Photos").mkdir(parents=True)
+    for folder in jobs_module.MARK_FOLDERS:
+        (job / folder).mkdir(parents=True, exist_ok=True)
     for entry in manifest["photos"]:
         (job / "Photos" / entry["file"]).write_bytes(b"not really a photo")
     (job / "Photos" / "photo-manifest.json").write_text(json.dumps(manifest, indent=2))
@@ -225,5 +231,6 @@ def test_captions_can_be_written_again_afterwards(client, home, monkeypatch):
 
 
 def test_a_job_that_does_not_exist_is_refused(client, home):
+    make_job(home, "A job")          # so the folder can be chosen at all
     client.put("/api/workspace", json={"path": str(home)})
     assert client.post("/api/jobs/nope/captions/clear").status_code == 404

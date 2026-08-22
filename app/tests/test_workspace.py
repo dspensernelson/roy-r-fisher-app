@@ -36,10 +36,18 @@ def client(clean):
 
 
 def make_jobs_folder(root: Path, names, loose=()) -> Path:
+    """A jobs folder holding real-looking jobs.
+
+    Each child carries Mark's own eight folders, because a bare empty folder
+    is no longer accepted as a job and a folder holding none of them is no
+    longer accepted as the jobs folder.
+    """
+    import jobs as jobs_module
     folder = root / "jobs"
     folder.mkdir()
     for name in names:
-        (folder / name).mkdir()
+        for inner in jobs_module.MARK_FOLDERS:
+            (folder / name / inner).mkdir(parents=True)
     for name in loose:
         (folder / name).write_text("not a job")
     return folder
@@ -125,7 +133,7 @@ def test_an_unreadable_settings_file_is_refused_and_left_alone(clean):
 # ------------------------------------------------------- looking at it ------
 def test_it_counts_only_immediate_child_folders(clean):
     folder = make_jobs_folder(clean, ["A job", "B job"], loose=["notes.txt", "sheet.xlsx"])
-    (folder / "A job" / "Photos").mkdir()          # nested, must not count
+    (folder / "A job" / "Photos").mkdir(exist_ok=True)   # nested, must not count
     facts = workspace.describe(folder)
     assert facts["folder_count"] == 2
     assert facts["folder_names"] == ["A job", "B job"]
@@ -170,11 +178,10 @@ def test_a_file_is_not_a_folder(clean):
 
 
 def test_a_saved_folder_that_was_deleted_is_chosen_but_not_valid(clean):
+    import shutil
     folder = make_jobs_folder(clean, ["One"])
     workspace.save_folder(str(folder))
-    for child in folder.iterdir():
-        child.rmdir()
-    folder.rmdir()
+    shutil.rmtree(folder)
     status = workspace.status()
     assert status["chosen"] is True
     assert status["valid"] is False
@@ -237,14 +244,24 @@ def test_confirming_nothing_is_refused(client, clean):
     assert client.put("/api/workspace", json={"path": "   "}).status_code == 400
 
 
-def test_an_empty_folder_can_still_be_chosen(client, clean):
-    """He may be setting up before any job exists. The screen says the folder
-    holds no folders; it does not refuse him."""
+def test_an_empty_folder_is_refused_and_says_why(client, clean):
+    """Approved 2026-08-22, and a reversal of what this file used to hold.
+
+    It used to accept an empty folder on the grounds that he might be setting
+    up before any job exists. The audit found the cost of that: `Use this
+    folder` was live everywhere, so the drive root and his home folder were
+    accepted in exactly the same silent way, and the first thing he met was an
+    app with nothing in it and no explanation. Refusing names the mistake.
+
+    The case this gives up is real and is recorded as a conflict for Spenser:
+    a genuinely empty new jobs folder can no longer be chosen, so the app can
+    no longer be pointed at one before the first job exists.
+    """
     folder = make_jobs_folder(clean, [])
     r = client.put("/api/workspace", json={"path": str(folder)})
-    assert r.status_code == 200
-    assert r.json()["folder_count"] == 0
-    assert client.get("/api/jobs").json() == []
+    assert r.status_code == 400
+    assert "no folders in here" in r.json()["detail"].lower()
+    assert client.get("/api/workspace").json()["chosen"] is False
 
 
 # ------------------------------------------- before anything is chosen ------

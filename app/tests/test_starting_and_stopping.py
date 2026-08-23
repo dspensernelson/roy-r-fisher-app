@@ -43,10 +43,23 @@ def test_the_packaged_readme_reads_the_same_sentence():
     assert "STOP_INSTRUCTION +" in PACKAGER
 
 
+def printed_lines(source: str) -> str:
+    """Only the lines that put something in the window.
+
+    A comment explaining why Control-C behaves differently from closing the
+    window is not something Mark reads, and scanning the whole file made the
+    two indistinguishable.
+    """
+    return "\n".join(line for line in source.splitlines()
+                     if "print(" in line and not line.strip().startswith("#"))
+
+
 def test_control_c_is_gone_from_what_he_reads():
-    assert "Control and C" not in RUN_APP
-    assert "Control-C" not in RUN_APP
-    assert "Ctrl" not in RUN_APP
+    shown = printed_lines(RUN_APP)
+    assert "Control and C" not in shown
+    assert "Control-C" not in shown
+    assert "Ctrl" not in shown
+    assert "Leave this window open" in shown, "the guard is reading the right lines"
 
 
 def test_he_is_not_pointed_at_a_bookmark():
@@ -74,7 +87,15 @@ def test_a_normal_shutdown_forgets_the_port(tmp_path):
 
 
 def test_clearing_is_wired_into_the_way_out():
-    """In a finally, so it runs whichever way the server stops."""
+    """In a finally, so it runs on every path that returns from uvicorn.
+
+    Measured 2026-08-22: Control-C reaches it, a kill does not, and closing the
+    console window on Windows is a CTRL_CLOSE_EVENT rather than an interrupt,
+    so it probably does not either. That is recorded in run_app.py and left for
+    the Windows acceptance test rather than guessed at, because nothing depends
+    on it: a leftover file names a port, and every reader of it asks that port
+    whether our version is answering before believing a word of it.
+    """
     tail = RUN_APP[RUN_APP.index("import uvicorn"):]
     assert "finally:" in tail
     assert "startup.clear_runtime(ROOT)" in tail

@@ -711,11 +711,14 @@ def readme_text() -> str:
         "If something goes wrong\n"
         "-----------------------\n"
         "\n"
-        "Keep the previous version's folder until this one has worked once.\n"
-        "Only one version can run at a time.\n"
+        "The version you had before is still installed. Close the app, then run\n"
+        "\"Start previous version.bat\" in the folder the installer named when it\n"
+        "finished. Nothing of yours is affected either way.\n"
         "\n"
-        "The black window says what happened. Send Spenser a photo of it and do\n"
-        "not delete the folder.\n")
+        "Only one version can run at a time. If you see a message saying another\n"
+        "version is already running, close its black window first.\n"
+        "\n"
+        "The black window says what happened. Send Spenser a photo of it.\n")
 
 
 def main() -> int:

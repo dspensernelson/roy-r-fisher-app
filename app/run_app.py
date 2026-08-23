@@ -132,9 +132,21 @@ def main() -> int:
         uvicorn.run("main:app", host=startup.BIND_HOST, port=port,
                     log_level="warning", access_log=False)
     finally:
-        # 8. The record of a running app goes when the app stops. A crash that
-        #    never reaches here leaves one behind, and the next launch handles
-        #    that by probing the port rather than by trusting the file.
+        # 8. The record of a running app goes when the app stops.
+        #
+        #    Measured 2026-08-22, and narrower than it first looked. Control-C
+        #    reaches here and the file goes. A kill does not, and neither,
+        #    almost certainly, does closing the console window on Windows,
+        #    which is a CTRL_CLOSE_EVENT rather than an interrupt and is the
+        #    way Mark is told to stop the app. Handling that needs a Windows
+        #    console handler and a Windows machine to prove it on, so it is
+        #    written up rather than guessed at.
+        #
+        #    Nothing depends on this having run. A file left behind names a
+        #    port, the next launch asks that port whether our version is
+        #    answering, and a dead port answers nothing. The installer asks the
+        #    same question before it copies. So the worst case is a stale file
+        #    that everything already treats as meaningless.
         startup.clear_runtime(ROOT)
     return 0
 

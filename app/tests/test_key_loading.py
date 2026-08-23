@@ -196,7 +196,10 @@ def test_generating_captions_is_genuinely_disabled_when_there_is_no_key():
         "the control must be disabled, not merely styled"
     assert 'blockedBecause === "no_key"' in source, \
         "a missing key must be one of the named reasons"
-    assert "const canGenerate = inPhotos.length > 0 && !blockedBecause" in source
+    # `!!quote &&` was added on 2026-08-22: the button must also wait for the
+    # estimate, or it can be pressed before the app knows a confirmation is
+    # needed. The no-key half of the condition is unchanged.
+    assert "const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause" in source
 
     build = _element(source, "Build photo pages")
     assert "aiOn" not in build, "building a report does not need a key"

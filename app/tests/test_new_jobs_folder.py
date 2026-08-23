@@ -145,14 +145,6 @@ def test_the_screen_is_told_which_folder_it_is_looking_at(client, tmp_path):
     inside = client.get("/api/browse", params={"path": str(job)}).json()
     assert inside["is_job"] is True
 
-
-def test_the_second_button_is_its_own_press_with_its_own_words():
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    assert "Use as new jobs folder" in screen
-    assert "use(true)" in screen and "use(false)" in screen
-
-
-def test_the_second_button_is_not_offered_where_it_could_never_work():
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    assert "loc.is_root || loc.is_home || loc.is_job" in screen
-    assert "!neverAllowed" in screen
+# The two screen checks that were here moved to
+# `app/web/src/screens/ChooseFolder.test.jsx` on 2026-08-22, where the second
+# button is actually pressed and what it sends is actually observed.

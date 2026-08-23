@@ -59,10 +59,14 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-The suite last measured 662 passed, 15 skipped, on 2026-08-21. That is the
-result of that run, not a permanent number: it moves every time tests are
-added. The skips are the tests that need Mark's private material, which is not
-on every machine.
+The suite last measured 788 passed, nothing skipped, on 2026-08-22. That is
+the result of that run, not a permanent number: it moves every time tests are
+added. Tests that need Mark's private material skip on a machine without it;
+they run here because the reports sit next door in `RRF`.
+
+`python3 -m pytest` runs everything, including the React screens: one test
+shells out to the Vitest suite in `app/web`, which renders the screens and
+presses their buttons. To run only that: `cd app/web && npm test`.
 
 ## What we know is missing
 

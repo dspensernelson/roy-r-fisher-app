@@ -164,47 +164,8 @@ def test_the_count_is_zero_inside_a_single_job(client, tmp_path):
     body = client.get("/api/browse", params={"path": str(job)}).json()
     assert body["job_count"] == 0, "Mark's own folders are not themselves jobs"
 
-
-# --- the screens ----------------------------------------------------------
-def test_the_confirm_button_is_off_until_jobs_are_found():
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    assert "const canUse = jobsHere > 0" in screen
-    assert "disabled={!canUse || !!busy}" in screen
-    assert "jobs found" in screen
-
-
-def test_the_confirm_button_sits_with_the_result_not_at_the_far_edge():
-    """It used to live in title-actions, at the opposite corner from the list."""
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    block = screen[screen.index('className={`folder-result'):]
-    block = block[:block.index("</div>", block.index("Use this folder"))]
-    assert "folder-result-count" in block and "Use this folder" in block
-    actions = screen[screen.index('<div className="title-row">'):screen.index("</div>")]
-    assert "Use this folder" not in actions
-
-
-def test_the_screen_says_whether_to_open_a_folder_or_stop_here():
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    assert "Stop here and choose it." in screen
-    assert "Open one of the folders below to keep looking." in screen
-
-
-def test_folder_rows_are_named_for_a_screen_reader():
-    screen = (WEB / "screens" / "ChooseFolder.jsx").read_text()
-    assert "aria-label={f.is_job ?" in screen
-    assert 'aria-label="Up one folder"' in screen
-    # the icon is decoration and must not be read out as content
-    assert 'className="picker-icon" aria-hidden="true"' in screen
-
-
-def test_active_jobs_cannot_be_confirmed_with_nothing_picked():
-    screen = (WEB / "screens" / "ActiveJobs.jsx").read_text()
-    assert "disabled={!!busy || chosen.size === 0}" in screen
-    assert "Pick at least one job" in screen
-
-
-def test_active_jobs_still_starts_with_nothing_chosen_and_keeps_its_tools():
-    screen = (WEB / "screens" / "ActiveJobs.jsx").read_text()
-    assert "setChosen(new Set(r.active))" in screen, "the saved answer, not everything"
-    assert "Select all" in screen and "Clear all" in screen
-    assert 'type="search"' in screen, "search is preserved"
+# The rest of this file's screen checks moved to
+# `app/web/src/screens/ChooseFolder.test.jsx` on 2026-08-22. They read the
+# screen's source and asserted that a string was present, which proves the
+# string is there and nothing about what happens when the button is pressed.
+# The Vitest suite renders the screen and presses it.

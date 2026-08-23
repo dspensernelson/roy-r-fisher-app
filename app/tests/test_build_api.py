@@ -12,6 +12,26 @@ from main import create_app  # noqa: E402
 from conftest import TEMPLATE_DOCX, has_template  # noqa: E402
 
 
+def ready_to_build(c, job_name: str) -> None:
+    """Everything Build has required since these tests were last able to run.
+
+    They predate two gates and never noticed either, because the corpus they
+    need moved next door when the repository was split, and they skipped from
+    then until 2026-08-22. Build now insists on a caption for every included
+    photograph, a tick against each one, and a city and street address to name
+    the file from. This does what Mark does, in that order.
+    """
+    manifest = c.get("/api/jobs/%s/manifest" % job_name).json()
+    for n, photo in enumerate(manifest["photos"], start=1):
+        if not str(photo.get("caption", "")).strip():
+            photo["caption"] = "View of the test subject %d" % n
+    c.put("/api/jobs/%s/manifest" % job_name, json=manifest)
+    c.put("/api/jobs/%s/facts" % job_name,
+          json={"city": "Davenport", "address": "1 Test Street"})
+    for photo in manifest["photos"]:
+        c.post("/api/jobs/%s/photos/%s/reviewed" % (job_name, photo["file"]))
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     home = tmp_path / "jobs"
@@ -24,6 +44,7 @@ def client(tmp_path, monkeypatch):
     m["photos"] = [{"file": "a.jpg", "caption": "View of test"}]
     m["report_year"] = 2026
     c.put("/api/jobs/JOB1/manifest", json=m)
+    ready_to_build(c, "JOB1")
     return c, home / "JOB1"
 
 
@@ -39,14 +60,35 @@ def test_build_creates_docx(client):
 
 
 @has_template
-def test_build_error_surfaces_real_message(client):
+def test_build_error_surfaces_real_message(client, tmp_path):
+    """A dangling entry reaches the engine, and the engine's own words come back.
+
+    Rewritten 2026-08-22. This used to name the missing photograph through
+    PUT /manifest, and that route can no longer produce this state: the manifest
+    is reconciled against the folder on the way in, so a file that is not there
+    is dropped rather than stored, and the review gate then refuses the build
+    long before the engine sees anything.
+
+    The state is still reachable, by the route the build endpoint's own comments
+    are about: the manifest file sits on disk where a human or another process
+    can edit it, and the engine reads that raw file rather than the
+    reconciliation. That is what makes a genuinely dangling entry surface as a
+    specific, honest error instead of being silently dropped, and it is what
+    this test now exercises.
+    """
     c, job = client
-    m = c.get("/api/jobs/JOB1/manifest").json()
-    m["photos"] = [{"file": "missing.jpg", "caption": "x"}]
-    c.put("/api/jobs/JOB1/manifest", json=m)
+    photos = job / "Photos"
+    (photos / "photo-manifest.json").write_text(json.dumps({
+        "job": "JOB1", "context": "", "report_year": 2026, "caption_style": "view",
+        "photos": [
+            {"file": "a.jpg", "caption": "View of the front", "reviewed": True},
+            {"file": "missing.jpg", "caption": "View of nothing", "reviewed": True},
+        ]}), encoding="utf-8")
+
     r = c.post("/api/jobs/JOB1/build")
     assert r.status_code == 500
     assert "missing.jpg" in r.json()["detail"]
+    assert not list(photos.glob("*.docx")), "a failed build leaves no document"
 
 
 def test_build_no_manifest_gives_plain_english_error(client, tmp_path, monkeypatch):
@@ -85,6 +127,7 @@ def test_build_with_photos_but_no_manifest_file_succeeds(tmp_path, monkeypatch):
     assert not (photos_dir / "photo-manifest.json").is_file()
 
     c = TestClient(create_app())
+    ready_to_build(c, "JOB3")
     r = c.post("/api/jobs/JOB3/build")
     assert r.status_code == 200, r.text
     created = r.json()["created"]

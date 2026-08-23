@@ -7,7 +7,20 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Mark's delivered reports and his own folder template. Private material: it
 # is not in this repository and never will be, so every test that needs a
 # piece of it says which piece and skips when it is not there.
-CORPUS = REPO_ROOT / "Report Examples"
+#
+# It moved next door on 2026-08-21, when the application repository was split
+# out of the evidence vault, and this path did not follow it. The corpus was
+# still on the machine and fifteen tests had been quietly skipping ever since,
+# including the one that compares a built document against a delivered report.
+# Both places are checked so the same suite works either side of that split and
+# on a clone that has neither.
+def _find_corpus() -> Path:
+    beside = REPO_ROOT.parent / "RRF" / "Report Examples"
+    inside = REPO_ROOT / "Report Examples"
+    return inside if inside.is_dir() else beside
+
+
+CORPUS = _find_corpus()
 TEMPLATE_DOCX = CORPUS / "Templates and Other" / "Mark Folder Template" / "Photos" / "Photo.docx"
 GOLDEN_PHOTOS = (CORPUS / "MASON CITY_Walmart_4151 4th St SW" / "Photos"
                  / "Raw pics_Walmart Mason City 4151 4th St SW" / "All report photos used")

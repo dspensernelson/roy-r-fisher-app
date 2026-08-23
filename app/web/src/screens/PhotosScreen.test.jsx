@@ -215,3 +215,29 @@ describe("build is gated on review", () => {
     expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled();
   });
 });
+
+describe("the cost confirmation cannot be skipped", () => {
+  it("will not start a run before the estimate has arrived", async () => {
+    // The estimate never resolves, which is what a slow one looks like for the
+    // moment it is slow. The button counted the photographs itself and went
+    // live, so a 61-photo run could start with no confirmation shown.
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(61) }));
+    api.captionEstimate.mockReturnValue(new Promise(() => {}));
+    vi.spyOn(api, "draftCaptions").mockResolvedValue({});
+
+    await show();
+    const button = await screen.findByRole("button", { name: /Generate captions/ });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(api.draftCaptions).not.toHaveBeenCalled();
+  });
+
+  it("comes alive with the count once the estimate is in", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(61) }));
+    api.captionEstimate.mockResolvedValue(estimate({
+      photos_to_send: 61, tranches: 2, needs_confirmation: true }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Generate captions (61)" })).toBeEnabled());
+  });
+});

@@ -226,7 +226,15 @@ export default function PhotosScreen({ job }) {
   const blockedBecause = quote ? quote.blocked_because : "";
 
   const buildReady = inPhotos.length > 0 && allReviewed && !(facts && !facts.ready);
-  const canGenerate = inPhotos.length > 0 && !blockedBecause && toSend > 0;
+  // The quote has to be in hand before this can be pressed, and that is a
+  // safety rule rather than a nicety. `toSend` falls back to counting
+  // uncaptioned photographs when the estimate has not arrived, so the button
+  // could read "Generate captions (61)" and be live while `needsConfirm` was
+  // still false, which sent a sixty-one photograph run with no confirmation
+  // shown. The server refused it, so nothing was ever spent, but what Mark saw
+  // was a raw refusal instead of the window asking him to agree to the money.
+  // Found while photographing this screen, not by a test.
+  const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause && toSend > 0;
   const chosen = manifest.caption_style || "view";
   // The one this job starts on is shown first, whichever it is.
   const ordered = [...styles].sort((a, b) => (b.key === chosen) - (a.key === chosen));
@@ -322,7 +330,8 @@ export default function PhotosScreen({ job }) {
                     disabled={!!busy || !canGenerate}
                     title={blockedBecause === "no_key" ? "Needs a key on this computer"
                            : blockedBecause === "local_only" ? "Demo photos are not sent anywhere"
-                           : blockedBecause === "nothing_to_do" ? "Every photo already has a caption" : ""}>
+                           : blockedBecause === "nothing_to_do" ? "Every photo already has a caption"
+                           : !quote ? "Working out the cost" : ""}>
               {canGenerate ? `Generate captions (${toSend})` : "Generate captions"}
             </button>
             <button className="linky" style={{ marginLeft: 0 }} onClick={() => filePicker.current?.click()}>

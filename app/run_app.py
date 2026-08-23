@@ -107,6 +107,19 @@ def main() -> int:
             #    and closing the window ends it.
             print(startup.failure_report(ROOT, port, version))
 
+    # Tidy the app's own thumbnail cache, off the startup path. Bounded, and
+    # it only ever deletes inside the cache the app writes: a legacy
+    # `.rrf-thumbs` folder inside one of Mark's jobs is never reached by it.
+    def tidy_cache():
+        try:
+            import thumbcache
+            thumbcache.prune()
+        except Exception:
+            # Housekeeping must never take the app down or say anything about
+            # itself. Nothing depends on it having run.
+            pass
+
+    threading.Thread(target=tidy_cache, daemon=True).start()
     threading.Thread(target=when_up, daemon=True).start()
 
     import uvicorn          # the first third-party import in the whole file

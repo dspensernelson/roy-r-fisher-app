@@ -24,13 +24,35 @@ this module's to make.
 """
 import hashlib
 import os
+import re
+import time
 from pathlib import Path
 
 CACHE_NAME = ".rrf-app-cache"
 
 # The old location, kept only so the rest of the app can carry on ignoring it
-# when it lists a Photos folder. Nothing writes here any more.
+# when it lists a Photos folder. Nothing writes here any more, and nothing here
+# ever deletes one: it sits inside one of Mark's own job folders, and removing
+# anything from those is a separate decision that has not been made.
 LEGACY_THUMB_DIR = ".rrf-thumbs"
+
+# What this module is allowed to delete, and nothing else. A folder directly
+# inside the cache whose name is one of our own fingerprints, holding files
+# whose names are one of our own thumbnails. Anything that does not match both
+# shapes is left alone, so a cache path pointed somewhere unexpected can only
+# ever be a no-op rather than a disaster.
+OWNED_FOLDER = re.compile(r"^[0-9a-f]{16}$")
+OWNED_FILE = re.compile(r"^.+-[0-9a-f]{8}\.jpg$")
+
+# A thumbnail is a convenience: it costs one image resize to rebuild and the
+# app is unusable to nobody while that happens. Anything untouched for this
+# long is cheaper to make again than to keep.
+KEEP_DAYS = 30
+
+# How much work one prune may do. Startup must never wait on a folder that has
+# grown for years, so the sweep stops at this many folders and picks up the
+# rest next time rather than trying to finish in one go.
+MAX_FOLDERS_PER_SWEEP = 200
 
 
 def cache_root() -> Path:
@@ -85,3 +107,72 @@ def is_stale(cached: Path, source: Path) -> bool:
         return cached.stat().st_mtime < source.stat().st_mtime
     except OSError:
         return True
+
+
+def prune(keep_days: int = KEEP_DAYS, budget: int = MAX_FOLDERS_PER_SWEEP,
+          now: float = None) -> dict:
+    """Delete cache folders nothing has used lately. Bounded, and app-owned only.
+
+    Three limits, and each one is deliberate.
+
+    It only ever looks inside the cache root, and only at folders and files
+    whose names match the shapes this module writes. A folder someone else put
+    there, or a cache root pointed at the wrong place, is skipped rather than
+    emptied.
+
+    It stops after `budget` folders. This runs at startup, and a sweep that
+    tried to finish on a cache grown over years would make the app feel broken
+    on exactly the machines where it had most to do. What it does not reach, it
+    reaches next time.
+
+    It never raises. Tidying is worth doing and never worth failing over, so a
+    permission error on one folder skips that folder and the app carries on.
+
+    Legacy `.rrf-thumbs` folders are not touched, and cannot be: they live
+    inside Mark's job folders, and nothing here looks outside the cache root.
+    """
+    now = time.time() if now is None else now
+    cutoff = now - (max(0, keep_days) * 86400)
+    report = {"looked_at": 0, "removed": 0, "kept": 0, "freed_bytes": 0,
+              "stopped_early": False}
+
+    root = cache_root()
+    try:
+        if not root.is_dir():
+            return report
+        entries = sorted(os.scandir(root), key=lambda e: e.name)
+    except OSError:
+        return report
+
+    for entry in entries:
+        if report["looked_at"] >= budget:
+            report["stopped_early"] = True
+            break
+        try:
+            # follow_symlinks=False: a link planted here must never be walked
+            # into, and must never be followed on the way to unlink().
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+            if not OWNED_FOLDER.match(entry.name):
+                continue
+            report["looked_at"] += 1
+            folder = Path(entry.path)
+            files = [f for f in os.scandir(folder)
+                     if f.is_file(follow_symlinks=False) and OWNED_FILE.match(f.name)]
+            strays = [f for f in os.scandir(folder) if not OWNED_FILE.match(f.name)]
+            newest = max((f.stat().st_mtime for f in files), default=0.0)
+            if strays or newest >= cutoff:
+                # Something in here is not ours, or something in here is still
+                # in use. Either way it stays.
+                report["kept"] += 1
+                continue
+            freed = sum(f.stat().st_size for f in files)
+            for f in files:
+                os.unlink(f.path)
+            folder.rmdir()          # refuses if anything unexpected is left
+            report["removed"] += 1
+            report["freed_bytes"] += freed
+        except OSError:
+            continue
+
+    return report

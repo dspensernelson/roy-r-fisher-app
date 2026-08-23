@@ -259,6 +259,9 @@ def copy_app(out: Path) -> None:
     app_out = out / "app"
     app_out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(REPO / "app" / "run_app.py", app_out / "run_app.py")
+    # The installer travels with the package it installs, so the .bat beside it
+    # is a shim and the logic has one home.
+    shutil.copy2(REPO / "app" / "install_windows.py", app_out / "install_windows.py")
 
     for part in APP_PARTS:
         source = REPO / "app" / part
@@ -303,6 +306,8 @@ def build(out: Path, work: Path, offline: bool) -> None:
     copy_app(out)
     shutil.copy2(REPO / "VERSION", out / "VERSION")
     shutil.copy2(REPO / "Start Roy R. Fisher.bat", out / "Start Roy R. Fisher.bat")
+    shutil.copy2(REPO / "Install or update Roy R. Fisher.bat",
+                 out / "Install or update Roy R. Fisher.bat")
     (out / "README FIRST.txt").write_text(readme_text(), encoding="utf-8")
 
     python_dir = out / "python"
@@ -600,24 +605,51 @@ def readme_text() -> str:
     correctly declined to put a personal key on it. Instructions that push
     somebody toward doing that anyway are a defect, so the key is now plainly
     optional and the machine it belongs on is named.
+
+    Rewritten again 2026-08-22, when installing arrived. Running the app out of
+    the unzipped folder was the whole story before; now the unzipped folder is
+    something he installs from and then deletes, and updating is the same
+    action as installing.
     """
     return (
         "Roy R. Fisher\n"
         "=============\n"
         "\n"
-        "Getting started\n"
-        "---------------\n"
+        "Installing, and updating later\n"
+        "------------------------------\n"
         "\n"
-        "1. Unzip this folder somewhere in your own account, for example your\n"
-        "   Desktop or your Documents folder. Do not put it in Program Files.\n"
+        "1. Unzip this folder anywhere you like, for example your Downloads or\n"
+        "   your Desktop.\n"
         "\n"
-        "2. Double-click \"Start Roy R. Fisher.bat\".\n"
+        "2. Double-click \"Install or update Roy R. Fisher.bat\".\n"
         "\n"
-        "3. Your browser opens by itself. Leave the black window open while you\n"
-        "   work. " + STOP_INSTRUCTION + "\n"
+        "3. It puts one icon on your Desktop called Roy R. Fisher. That icon\n"
+        "   starts the app from now on.\n"
         "\n"
-        "   The app picks a fresh address each time it starts, so open it from\n"
-        "   the black window rather than from a bookmark.\n"
+        "When a newer version arrives, do exactly the same three steps with the\n"
+        "new zip. The icon then starts the new version. Nothing of yours moves:\n"
+        "your key, the folder your jobs live in, your settings and every\n"
+        "document you have built stay where they are and carry straight over.\n"
+        "\n"
+        "The version you had before is kept. If a new version gives you\n"
+        "trouble, close it and run \"Start previous version.bat\", which the\n"
+        "installer tells you the location of when it finishes.\n"
+        "\n"
+        "You can delete the unzipped folder once it has installed.\n"
+        "\n"
+        "\n"
+        "Using it\n"
+        "--------\n"
+        "\n"
+        "Double-click the Roy R. Fisher icon on your Desktop.\n"
+        "\n"
+        "Your browser opens by itself. Leave the black window open while you\n"
+        "work. " + STOP_INSTRUCTION + "\n"
+        "\n"
+        "The app picks a fresh address each time it starts, so open it from the\n"
+        "black window rather than from a bookmark.\n"
+        "\n"
+        "The version you are running is shown at the top right of every screen.\n"
         "\n"
         "Windows may say it protected your PC the first time. Click More info,\n"
         "then Run anyway. Spenser will be on the call the first time.\n"
@@ -629,9 +661,10 @@ def readme_text() -> str:
         "Two practice jobs come with this package so you can try everything\n"
         "straight away.\n"
         "\n"
-        "1. Start the app.\n"
+        "1. Start the app from the Desktop icon.\n"
         "2. When it asks where your jobs live, choose the \"Demo Jobs\" folder\n"
-        "   inside this one.\n"
+        "   inside the installed app. The installer prints where that is when\n"
+        "   it finishes.\n"
         "3. Open either job and go to its Photos folder.\n"
         "\n"
         "  " + ORDINARY_NAME + "\n"

@@ -18,9 +18,9 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
 
   useEffect(() => { go(current || ""); }, []);
 
-  async function use() {
+  async function use(acceptEmpty) {
     setBusy("Saving..."); setError("");
-    try { onSaved(await saveWorkspace(loc.path)); }
+    try { onSaved(await saveWorkspace(loc.path, acceptEmpty)); }
     catch (e) { setError(e.message); setBusy(""); }
   }
 
@@ -30,6 +30,14 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
   // drive root and inside a single job.
   const jobsHere = loc && loc.readable && !loc.is_drive_list ? loc.job_count : 0;
   const canUse = jobsHere > 0;
+  // Three folders are never the jobs folder, whatever he presses, so the
+  // second button is not offered in any of them either.
+  const neverAllowed = !!loc && (loc.is_root || loc.is_home || loc.is_job);
+  // Nothing in here at all. Starting a new jobs folder before the first job
+  // exists is a real thing to want, so it is offered as its own deliberate
+  // press rather than reached by clicking the same button twice.
+  const isEmpty = !!loc && loc.readable && !loc.is_drive_list
+                  && loc.folders.length === 0 && !neverAllowed;
 
   return (
     <>
@@ -81,17 +89,31 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
                 <span className="folder-result-note">
                   {canUse
                     ? "This is the folder your jobs sit in. Stop here and choose it."
-                    : "Open one of the folders below to keep looking."}
+                    : loc.is_root
+                      ? "This is the top of the disk. Open the folder your job folders sit in."
+                      : loc.is_home
+                        ? "This is your home folder. Open the folder your job folders sit in."
+                        : loc.is_job
+                          ? "This looks like one job. Go up one level and choose the folder that holds it."
+                          : isEmpty
+                            ? "There is nothing in here yet. You can start a new jobs folder here."
+                            : "Open one of the folders below to keep looking."}
                 </span>
               </div>
               {/* No title when it is off. A tooltip becomes the button's
                   accessible name, so it announced the reason instead of
                   "Use this folder". The reason is already in the note beside
                   it, where it can be read rather than hovered for. */}
-              <button className={`button${canUse ? "" : " is-off"}`} onClick={use}
-                      disabled={!canUse || !!busy}>
-                Use this folder
-              </button>
+              {isEmpty ? (
+                <button className="button" onClick={() => use(true)} disabled={!!busy}>
+                  Use as new jobs folder
+                </button>
+              ) : (
+                <button className={`button${canUse ? "" : " is-off"}`}
+                        onClick={() => use(false)} disabled={!canUse || !!busy}>
+                  Use this folder
+                </button>
+              )}
             </div>
           ) : (
             <p className="sub">{loc.message}</p>

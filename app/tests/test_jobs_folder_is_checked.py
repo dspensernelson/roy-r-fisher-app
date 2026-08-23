@@ -7,9 +7,9 @@ first ninety seconds with Spenser on the call.
 
 The rule: the app decides by looking, never by where the user is standing. A
 folder is one of his jobs when its name is in the firm's house style, or when
-it carries at least two of Mark's own eight folders. Two rather than one
-because `Documents` on a Mac often contains something called `Photos`, and one
-signal would make the home folder look like it held a job.
+it carries at least four of Mark's own eight folders. Four rather than two
+because `~/Library` on a Mac holds both `Maps` and `Photos`, which met a
+threshold of two and made the home folder look like it held a job.
 
 The two-step setup itself is unchanged and deliberate: choose the folder, then
 say which jobs are live. Nothing is auto-activated.
@@ -95,12 +95,14 @@ def test_an_ordinary_folder_is_not_a_job(tmp_path):
 
 
 # --- the four ways of choosing the wrong folder ---------------------------
-def test_an_empty_folder_is_refused(client, tmp_path):
+def test_an_empty_folder_is_refused_by_the_ordinary_press(client, tmp_path):
+    """It can still be chosen, but only by the deliberate second button.
+    See test_new_jobs_folder.py."""
     empty = tmp_path / "nothing"
     empty.mkdir()
     code, detail = choose(client, empty)
     assert code == 400
-    assert "no folders in here" in detail.lower()
+    assert "nothing in this folder yet" in detail.lower()
     assert "go up a level" in detail.lower()
 
 

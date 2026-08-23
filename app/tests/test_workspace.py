@@ -253,14 +253,14 @@ def test_an_empty_folder_is_refused_and_says_why(client, clean):
     accepted in exactly the same silent way, and the first thing he met was an
     app with nothing in it and no explanation. Refusing names the mistake.
 
-    The case this gives up is real and is recorded as a conflict for Spenser:
-    a genuinely empty new jobs folder can no longer be chosen, so the app can
-    no longer be pointed at one before the first job exists.
+    The case this gave up is now answered by a second, deliberate button,
+    "Use as new jobs folder". See test_new_jobs_folder.py. This test holds the
+    ordinary press, which still refuses and now names the way forward.
     """
     folder = make_jobs_folder(clean, [])
     r = client.put("/api/workspace", json={"path": str(folder)})
     assert r.status_code == 400
-    assert "no folders in here" in r.json()["detail"].lower()
+    assert "nothing in this folder yet" in r.json()["detail"].lower()
     assert client.get("/api/workspace").json()["chosen"] is False
 
 

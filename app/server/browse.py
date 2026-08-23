@@ -71,7 +71,8 @@ def listing(where: str = "") -> dict:
     """
     answer = {"path": "", "label": "", "parent": None, "breadcrumbs": [],
               "folders": [], "readable": True, "is_drive_list": False,
-              "loose_files": 0, "message": "", "job_count": 0}
+              "loose_files": 0, "message": "", "job_count": 0,
+              "is_root": False, "is_home": False, "is_job": False}
 
     if where == DRIVES:
         answer.update(path=DRIVES, label="This PC", is_drive_list=True,
@@ -130,6 +131,14 @@ def listing(where: str = "") -> dict:
             continue          # one unreadable entry never breaks the list
     answer["folders"] = folders
     answer["job_count"] = job_count
+    # Two folders the screen must never offer, even as a new jobs folder, so
+    # it can say why here rather than only after he presses.
+    answer["is_root"] = workspace.is_filesystem_root(target)
+    answer["is_home"] = workspace.is_home_folder(target)
+    # Whether THIS folder is itself one of his jobs. An empty folder named in
+    # the house style is a job with nothing in it yet, not a place to start a
+    # new jobs folder, and the screen must not offer to make it one.
+    answer["is_job"] = workspace.looks_like_job(target)
     # Counted and named as not-jobs, so the screen can say so out loud rather
     # than leaving him to wonder where his documents went.
     answer["loose_files"] = loose

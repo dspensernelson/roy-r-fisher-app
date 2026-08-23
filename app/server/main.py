@@ -68,6 +68,10 @@ class NewKey(BaseModel):
 
 class NewFolder(BaseModel):
     path: str
+    # Set only by the second button on the folder screen, "Use as new jobs
+    # folder". It is a deliberate answer to a question the app asked, never a
+    # default and never a retry of the same press.
+    accept_empty: bool = False
 
 
 class ActiveJobs(BaseModel):
@@ -249,25 +253,43 @@ def create_app() -> FastAPI:
             raise HTTPException(400, "That is a file, not a folder.")
         if not facts["readable"]:
             raise HTTPException(400, "That folder cannot be opened on this computer.")
-        # The folder has to hold jobs, and the refusal names which of the
-        # three ways it does not. Before this, any folder he happened to be
-        # standing in could be confirmed, so the drive root, his home folder
-        # and a single job folder were all one click from an app with nothing
-        # in it and no explanation.
+        # Three places are never the jobs folder, whatever he presses. None of
+        # them is a mistake the app can let him make deliberately: the top of a
+        # disk and his home folder both hold hundreds of unrelated folders, and
+        # a single job folder would make the app list Mark's own eight folders
+        # as though each were a job.
+        if workspace.is_filesystem_root(Path(path)):
+            raise HTTPException(
+                400, "That is the top of the disk, not a folder of jobs. Open "
+                     "the folder your job folders sit in, then choose it.")
+        if workspace.is_home_folder(Path(path)):
+            raise HTTPException(
+                400, "That is your home folder, which holds everything on this "
+                     "computer. Open the folder your job folders sit in, then "
+                     "choose it.")
+        if workspace.looks_like_job(Path(path)):
+            raise HTTPException(
+                400, "This looks like one job rather than the folder your "
+                     "jobs sit in. Go up one level and choose the folder "
+                     "that holds this job.")
+
+        # An empty folder is the one refusal he can answer. Starting a new jobs
+        # folder before the first job exists is a real thing to want, and the
+        # first version of this check made it impossible. It stays a separate,
+        # deliberate press rather than a retry of the same one, so it can never
+        # be reached by clicking the same button twice.
         if facts["job_count"] == 0:
             if facts["folder_count"] == 0:
+                if not body.accept_empty:
+                    raise HTTPException(
+                        400, "There is nothing in this folder yet. Choose it as "
+                             "a new jobs folder if that is what you want, or go "
+                             "up a level and pick the folder your job folders "
+                             "sit in.")
+            else:
                 raise HTTPException(
-                    400, "There are no folders in here at all, so there are no "
-                         "jobs to open. Go up a level and pick the folder your "
-                         "job folders sit in.")
-            if workspace.looks_like_job(Path(path)):
-                raise HTTPException(
-                    400, "This looks like one job rather than the folder your "
-                         "jobs sit in. Go up one level and choose the folder "
-                         "that holds this job.")
-            raise HTTPException(
-                400, "No jobs were found in here. Open the folder your job "
-                     "folders sit in, then choose it.")
+                    400, "No jobs were found in here. Open the folder your job "
+                         "folders sit in, then choose it.")
         with busy.writing():
             workspace.save_folder(path)
         # Nothing to restart: every route reads the saved answer when asked.

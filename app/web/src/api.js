@@ -57,8 +57,8 @@ export const putWorkspaceFolders = (active) =>
   fetch("/api/workspace/folders", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active }) }).then(j);
 export const getDemo = () => fetch("/api/demo").then(j);
 export const resetDemo = () => fetch("/api/demo/reset", { method: "POST" }).then(j);
-export const saveWorkspace = (path) =>
-  fetch("/api/workspace", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) }).then(j);
+export const saveWorkspace = (path, acceptEmpty) =>
+  fetch("/api/workspace", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, accept_empty: !!acceptEmpty }) }).then(j);
 export const forgetWorkspace = () => fetch("/api/workspace", { method: "DELETE" }).then(j);
 export const cutPhoto = (name, file) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/cut`, { method: "POST" }).then(j);

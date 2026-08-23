@@ -191,6 +191,23 @@ def child_folder_names(path: Path) -> list:
     return names
 
 
+def is_filesystem_root(path: Path) -> bool:
+    """The top of a disk. `/` on a Mac, `C:\\` on Windows."""
+    try:
+        resolved = Path(path).resolve()
+    except OSError:
+        return False
+    return resolved.parent == resolved
+
+
+def is_home_folder(path: Path) -> bool:
+    """His own user folder. Never the jobs folder, however empty it looks."""
+    try:
+        return Path(path).resolve() == Path.home().resolve()
+    except OSError:
+        return False
+
+
 def looks_like_job(path: Path) -> bool:
     """Whether this folder is one of his jobs, decided by looking at it.
 

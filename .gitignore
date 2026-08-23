@@ -60,3 +60,11 @@ sandbox/
 # never project content.
 build/
 runtime.json
+
+# Roy R. Fisher's own letterhead, logos and design system source. Kept on the
+# development machine and out of this repository, because the remote is public
+# and letterhead master artwork with the firm's address block is the thing
+# somebody would need to make a document look like it came from Mark.
+# Decided 2026-08-23. The files are still on Spenser's Mac; they are simply
+# not published.
+brand/

@@ -18,9 +18,17 @@ WEB = Path(__file__).resolve().parents[1] / "web" / "src"
 SCREEN = WEB / "screens" / "PhotosScreen.jsx"
 CSS = WEB / "brand.css"
 # The design system's own copy of this control, which the app is following.
+# It is not in this repository: the remote is public and brand/ holds Roy R.
+# Fisher's letterhead and logos, so the whole folder stays on the development
+# machine. The one test that reads it skips when it is not there, the same way
+# the tests that need Mark's delivered reports already do.
 DESIGN_SYSTEM = (Path(__file__).resolve().parents[2] / "brand" /
                  "Roy R. Fisher Design System" / "components" / "actions" /
                  "SegmentedControl.jsx")
+
+needs_design_system = pytest.mark.skipif(
+    not DESIGN_SYSTEM.is_file(),
+    reason="the design system is private and not in this repository")
 
 
 @pytest.fixture
@@ -76,6 +84,7 @@ def test_the_flag_is_ruled_the_way_the_design_system_specifies():
     assert ".toggle-flag::before, .toggle-flag::after" in css
 
 
+@needs_design_system
 def test_it_follows_the_design_system_rather_than_inventing_a_treatment():
     """The design system says the flag renders above, not as a second word."""
     # collapsed, because the contract is a wrapped comment

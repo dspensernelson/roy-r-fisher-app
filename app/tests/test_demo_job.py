@@ -36,7 +36,11 @@ def fake_source(tmp_path, monkeypatch):
     source = tmp_path / "Fake Report Examples" / "CLIENTTOWN_A Property" / "Photos"
     source.mkdir(parents=True)
     for i in range(80):
-        image = Image.new("RGB", (900 + i, 700), (40 + i % 60, 90, 120))
+        # Stored tall with orientation 6, which is how a camera records a
+        # landscape shot taken on its side: it displays 900x700. Stored
+        # wide with the same flag would display portrait, and the demo
+        # generator now refuses those, correctly.
+        image = Image.new("RGB", (700, 900 + i), (40 + i % 60, 90, 120))
         exif = image.getexif()
         exif[0x0112] = 6
         exif[0x010F] = "AcmeCamera"

@@ -115,3 +115,33 @@ def test_the_page_breaks_between_pages_are_untouched(tmp_path):
                    if k.tag.endswith("}p") and "sectPr" in k.xml)
     assert breaks + sections == len(doc.tables) - 1, (
         "four tables need three separators between them")
+
+@has_template
+@pytest.mark.parametrize("count", [1, 2, 4, 5, 11, 61])
+def test_the_last_table_has_no_empty_rows(count, tmp_path):
+    """A table is only as big as the photographs in it.
+
+    Spenser found this on the 61-photo job: 61 is twenty full pages and one
+    photograph, so the last table held one picture and two empty rows below it.
+    He had said so once already, on the 11-photo file, and I read the row count
+    on the counts that divide by three and told him it was exact. It is exact
+    on those and only on those.
+    """
+    out = build_photo_docx(a_job(tmp_path, count), TEMPLATE_DOCX)
+    doc = Document(str(out))
+    last = doc.tables[-1]
+    on_last_page = count - (len(doc.tables) - 1) * PHOTOS_PER_TABLE
+    assert len(last.rows) == on_last_page, (
+        "last table has %d rows for %d photographs" % (len(last.rows), on_last_page))
+
+
+@has_template
+@pytest.mark.parametrize("count", [1, 2, 3, 4, 5, 6, 9, 11, 12, 61])
+def test_every_row_in_the_document_holds_a_photograph(count, tmp_path):
+    out = build_photo_docx(a_job(tmp_path, count), TEMPLATE_DOCX)
+    doc = Document(str(out))
+    rows = sum(len(t.rows) for t in doc.tables)
+    assert rows == count, "%d rows for %d photographs" % (rows, count)
+    for t in doc.tables:
+        for r in t.rows:
+            assert r._tr.xml.count("<a:blip") == 1, "a row with no photograph in it"

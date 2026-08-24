@@ -59,9 +59,39 @@ def photographs(source: Path = None) -> list:
                 size = path.stat().st_size
             except OSError:
                 continue
-            if MIN_BYTES <= size <= MAX_BYTES:
-                found.append(path)
+            if not (MIN_BYTES <= size <= MAX_BYTES):
+                continue
+            if not _is_landscape(path):
+                continue
+            found.append(path)
     return found
+
+
+def _is_landscape(path: Path) -> bool:
+    """Wider than it is tall, once the camera's orientation is applied.
+
+    Size alone was the only filter here, over the whole of `Report Examples`,
+    so this swept up sketches, market-overview images and anything else that
+    happened to be a JPEG of about the right weight. Twelve of the seventy-three
+    practice photographs came out portrait.
+
+    Not one photograph in any photo document Mark delivers is portrait: Mason
+    City fifty, 217 East 37th Street twenty-four, Burlington six, all landscape.
+    A practice job is meant to look like his work, and a portrait photograph in
+    it is a lie about what his work contains. It cost a day: it was read as
+    evidence about his reports and a fix was built on top of it.
+
+    Orientation is applied before the comparison, because a photograph taken
+    sideways is stored landscape with a flag saying otherwise, and it is the
+    displayed shape that matters.
+    """
+    try:
+        with Image.open(path) as opened:
+            upright = ImageOps.exif_transpose(opened)
+            width, height = upright.size
+    except Exception:
+        return False
+    return width > height
 
 
 def require(how_many: int, source: Path = None) -> list:

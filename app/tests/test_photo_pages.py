@@ -39,9 +39,13 @@ def test_build_fills_three_per_page_and_trims_tables(tmp_path):
     d = Document(str(out))
     assert len(d.tables) == 2                      # ceil(5/3) pages
     assert len(d.inline_shapes) == 5               # one image per photo
-    caps = [t.rows[r].cells[1].text.strip() for t in d.tables for r in range(3)]
+    # Five photographs, five rows. The sixth slot used to be an empty row on
+    # the last page; Spenser found it on the 61-photo job, where it was two.
+    assert [len(t.rows) for t in d.tables] == [3, 2]
+    caps = [r.cells[1].text.strip() for t in d.tables for r in t.rows]
+    assert len(caps) == 5
     assert "View of test subject 0" in caps[0]
-    assert caps[-1] == ""                          # 6th slot empty
+    assert all(c for c in caps), "every row holds a caption"
 
 
 @has_template

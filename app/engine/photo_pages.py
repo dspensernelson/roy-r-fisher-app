@@ -358,6 +358,28 @@ def _shrink_tables(doc: Document, needed: int):
     _merge_orphaned_section(doc)
 
 
+def _trim_unused_rows(doc, photo_count: int) -> int:
+    """Cut the rows on the last page that hold no photograph.
+
+    The template's tables are three rows each, and the last page rarely wants
+    three. Sixty-one photographs is twenty full pages and one, so the last
+    table held one picture and two empty rows under it. Eleven left one.
+
+    Found by Spenser on the 61-photo job, and named by him once before that on
+    the 11-photo one, which I checked against the counts that divide by three
+    and wrongly reported as exact. They are exact on those and only on those.
+    """
+    if not doc.tables:
+        return 0
+    last = doc.tables[-1]
+    used = photo_count - (len(doc.tables) - 1) * PHOTOS_PER_TABLE
+    removed = 0
+    for row in list(last.rows)[max(0, used):]:
+        row._tr.getparent().remove(row._tr)
+        removed += 1
+    return removed
+
+
 def _drop_trailing_blank_paragraphs(doc) -> int:
     """Remove the empty paragraphs sitting after the last table.
 
@@ -427,6 +449,9 @@ def build_photo_docx(manifest_path: Path, template_path: Path,
 
     if manifest.get("report_year"):
         _set_copyright_year(doc, int(manifest["report_year"]))
+
+    # The last page is only as tall as the photographs on it.
+    _trim_unused_rows(doc, len(photos))
 
     # Last, after every table is filled and trimmed, so what is trailing is
     # actually trailing.

@@ -731,7 +731,7 @@ def readme_text() -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", default="build/Windows app/Roy R. Fisher v%s"
+    parser.add_argument("--out", default="build/packages/Roy R. Fisher v%s"
                         % packaging.version_of(REPO))
     parser.add_argument("--work", default="build/cache",
                         help="downloaded runtime and wheels, reused between builds")

@@ -30,7 +30,7 @@ import packaging  # noqa: E402
 import package_windows as pw  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
-REAL = REPO / "build" / "Windows app"
+REAL = REPO / "build" / "packages"
 # Read from VERSION rather than written here, so a version bump does not
 # silently turn every real-archive test into a skip. It did once.
 REAL_VERSION = packaging.version_of(REPO) or "0.0.0"

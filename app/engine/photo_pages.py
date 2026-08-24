@@ -34,24 +34,23 @@ from PIL import Image, ExifTags
 PHOTOS_PER_TABLE = 3
 
 # The box a photograph is fitted inside, in inches. Both numbers, not just the
-# width, and that is the whole point.
+# width.
 #
-# It used to be the width alone, with the height left to follow the aspect
-# ratio. A landscape photograph came out 4.00 x 3.00 and sat in the row. A
-# portrait one came out 4.00 x 5.33, in a row 2.93 inches tall, and pushed its
-# page past the printable area. Five of the twelve photographs in the shipped
-# practice job are portrait, and the spare page Spenser found at the back of
-# the document was that overflow arriving.
+# This is insurance, and it is not what caused the extra page. Corrected
+# 2026-08-23 after Spenser checked: there is no portrait photograph anywhere in
+# the photo documents he delivers. Mason City fifty images, 217 East 37th
+# Street twenty-four, Burlington six, every one of them landscape. The extra
+# page was the empty paragraph after a full last table, and it is dealt with in
+# `_drop_trailing_blank_paragraphs`.
 #
-# Measured from the delivered Mason City report: fifty photographs, widths 3.81
-# to 4.43 and heights 2.74 to 3.31, every one of them landscape. His corpus
-# says nothing about how he would want a portrait photograph handled, because
-# there is not one in it; what it gives is the size a photograph on his page
-# has always been. Three at 3.00 inches stack to 9.00 in a 10.00 inch page,
-# which leaves room rather than just fitting.
+# What this still earns its place for: the shipped practice job does contain
+# portrait photographs, and on the width alone one came out 4.00 x 5.33 in a
+# row 2.93 inches tall. If a portrait photograph ever does reach a real job the
+# document should be merely smaller, not broken.
 #
-# A landscape photograph is still limited by the width and still comes out
-# 4.00 x 3.00, so the documents that were right are byte for byte unchanged.
+# A landscape photograph is limited by the width and comes out 4.00 x 3.00,
+# which is the size his delivered reports already use, so nothing that was
+# right has moved.
 IMAGE_WIDTH_IN = 4.0
 IMAGE_MAX_HEIGHT_IN = 3.0
 
@@ -359,6 +358,40 @@ def _shrink_tables(doc: Document, needed: int):
     _merge_orphaned_section(doc)
 
 
+def _drop_trailing_blank_paragraphs(doc) -> int:
+    """Remove the empty paragraphs sitting after the last table.
+
+    This is the extra page. The template declares each row 2.926 inches tall
+    and the app puts a 3.00 inch photograph in it, so every row grows past its
+    own declared height and a full table of three ends up about a fifth of an
+    inch too tall for the page. The empty paragraph that follows the last table
+    is then one line too many, and it lands on a page of its own.
+
+    Measured on 2026-08-23: twelve, nine and three photographs all end with a
+    full table and all produced the extra page. Eleven did not, because its last
+    row is empty and stays at the declared height. Mark's own delivered Mason
+    City report ends on a partial table for the same reason and has no extra
+    page, which is why this was never visible in the corpus.
+
+    Removing the paragraph rather than shrinking the photographs is the smaller
+    change: nothing about the page he prints moves, and 4.00 x 3.00 is the size
+    his delivered reports already use. The `sectPr` stays where it is, so the
+    document still ends the way Word expects.
+    """
+    body = doc.element.body
+    removed = 0
+    for node in list(body)[::-1]:
+        tag = node.tag.split("}")[1]
+        if tag == "sectPr":
+            continue                     # the section always stays
+        if tag == "p" and not "".join(node.itertext()).strip():
+            body.remove(node)
+            removed += 1
+            continue
+        break                            # stop at the first thing that prints
+    return removed
+
+
 def build_photo_docx(manifest_path: Path, template_path: Path,
                      prepare=None, out_base: str = DEFAULT_OUTPUT_BASE) -> Path:
     """Build the document. `prepare` decides what bytes actually go in.
@@ -394,6 +427,10 @@ def build_photo_docx(manifest_path: Path, template_path: Path,
 
     if manifest.get("report_year"):
         _set_copyright_year(doc, int(manifest["report_year"]))
+
+    # Last, after every table is filled and trimmed, so what is trailing is
+    # actually trailing.
+    _drop_trailing_blank_paragraphs(doc)
 
     out = photos_dir / next_output_name(photos_dir, out_base)
     doc.save(str(out))

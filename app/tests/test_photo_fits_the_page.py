@@ -1,24 +1,20 @@
 """A photograph has to fit the cell it is put in, whichever way up it is.
 
-Found by Spenser on 2026-08-23, in the built document: a blank page at the back.
+This is insurance, and it is worth being clear that it is not the fix for the
+extra page. Written on 2026-08-23 believing it was, corrected the same day when
+Spenser checked the corpus: there is no portrait photograph in any of the photo
+documents he delivers. Mason City fifty images, 217 East 37th Street
+twenty-four, Burlington six, all landscape. The extra page was the empty
+paragraph after a full last table, and `test_no_extra_page.py` covers that.
 
-The cause was not the blank page. Every photograph was placed at a fixed four
-inch width with its height left to follow the aspect ratio, so a landscape
-photograph came out 4.00 x 3.00 and fitted the row, and a portrait one came out
-4.00 x 5.33 and did not. The row is 2.93 inches. Five of the twelve photographs
-in the shipped practice job are portrait, and each one pushed its page past the
-printable area. The spare page at the end was the overflow arriving.
-
-The measurement that settled it, from Mark's own delivered Mason City report:
-fifty photographs, every one of them landscape, heights 2.74 to 3.31 inches,
-widths 3.81 to 4.43. His corpus therefore says nothing about how he would like
-a portrait photograph handled, because there is not one in it. What it does say
-is the size a photograph on his page has always been, and that is the box a
-portrait one now has to fit inside too.
+What this still earns its place for: the shipped practice job does contain
+portrait photographs, five of twelve, and on the width alone one came out
+4.00 x 5.33 in a row 2.93 inches tall. If a portrait photograph ever reaches a
+real job the document should come out smaller, not broken.
 
 Fitting inside a box rather than matching a width leaves every landscape
-photograph exactly where it was, which is what makes this safe: the only
-documents that change are the ones that were broken.
+photograph exactly where it was, at the 4.00 x 3.00 his delivered reports
+already use, so nothing that was right moves.
 """
 import json
 import sys

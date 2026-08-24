@@ -9,7 +9,7 @@ REM stays open long enough to read it.
 
 cd /d "%~dp0"
 
-python\python.exe app\run_app.py
+program\python\python.exe program\app\run_app.py
 if errorlevel 1 (
   echo.
   echo The app did not start. The reason is above this line.

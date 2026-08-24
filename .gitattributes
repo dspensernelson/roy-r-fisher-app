@@ -1,0 +1,10 @@
+# Batch files are read by cmd.exe on Windows and want CRLF. An LF-only .bat
+# can be mis-parsed inside a parenthesised block, which is exactly what
+# "Start Roy R. Fisher.bat" contains, so this is correctness rather than
+# tidiness. Marked here so git stores one form and checks out the other, and
+# so `git diff --check` stops reporting the carriage returns as trailing
+# whitespace.
+*.bat text eol=crlf
+
+# The packaged readme and the acceptance sheet are opened in Notepad.
+*.txt text eol=crlf

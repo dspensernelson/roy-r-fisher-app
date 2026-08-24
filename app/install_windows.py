@@ -141,11 +141,14 @@ def _refuse_if_anything_is_running(home: Path) -> None:
 
 def _check_package(source: Path) -> str:
     """The package must be whole before any of it is copied."""
+    # The manifest describes `program/`, so that is what is checked, while the
+    # folder being copied is the one above it.
+    inner = packaging.program_dir(source)
     try:
-        packaging.verify(source)
+        packaging.verify(inner)
     except packaging.PackageDamaged as exc:
         raise InstallRefused(exc.message)
-    version = packaging.version_of(source)
+    version = packaging.version_of(inner)
     if not version:
         raise InstallRefused(
             "This folder does not say which version it is, so it cannot be "
@@ -276,7 +279,9 @@ def _make_shortcut(target_launcher: Path, desktop: Path) -> str:
 # ------------------------------------------------------------- doing it ---
 def install(source: Path = None) -> dict:
     """Install or update, from the package this file is sitting in."""
-    source = Path(source) if source else HERE.parent
+    # The whole unzipped folder, which is one level above `program/`, because
+    # the launcher, the readme and the practice jobs all have to travel too.
+    source = Path(source) if source else HERE.parents[1]
     version = _check_package(source)
 
     home = install_home()

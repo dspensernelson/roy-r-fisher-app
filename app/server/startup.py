@@ -64,13 +64,18 @@ class StartupRefused(Exception):
 
 # ------------------------------------------------------------ this folder ---
 def runtime_file(root: Path) -> Path:
-    """Beside the launcher, inside this version's folder.
+    """Inside this version's own `program` folder.
 
     Deliberately not in the home folder: it describes one installed copy, and
     two installed copies must be able to disagree about it. Deliberately not in
-    the manifest either, because it changes every run.
+    the manifest either, because it changes every run. And deliberately not at
+    the top of the unzipped folder, which is the part Mark looks at.
+
+    Takes either the version folder or the `program` folder inside it, so the
+    sibling scan can hand it a folder it has only just discovered.
     """
-    return Path(root) / RUNTIME_NAME
+    import packaging          # standard library only, same as this module
+    return packaging.program_dir(root) / RUNTIME_NAME
 
 
 def clear_runtime(root: Path) -> None:

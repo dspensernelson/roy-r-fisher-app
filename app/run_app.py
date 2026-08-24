@@ -22,7 +22,18 @@ sys.path.insert(0, str(SERVER))
 import packaging  # noqa: E402  standard library only
 import startup  # noqa: E402  standard library only
 
-ROOT = Path(__file__).resolve().parents[1]
+# Two folders, and they are the same one in a development checkout.
+#
+# PROGRAM holds VERSION, MANIFEST, app/ and python/, and is what the package
+# check verifies. HOME is the version folder Mark sees: in a package it holds
+# PROGRAM beside the launcher, the readme and the practice jobs, and it is what
+# the sibling scan compares against other installed versions.
+PROGRAM = Path(__file__).resolve().parents[1]
+HOME = PROGRAM.parent if PROGRAM.name == packaging.PROGRAM_DIR else PROGRAM
+
+# Kept so nothing that already reads ROOT has to change its meaning: it is the
+# folder the manifest describes.
+ROOT = PROGRAM
 
 # How long after a successful start a version has to survive before it is
 # recorded as the last one that worked. Long enough that a lazily failing
@@ -74,13 +85,13 @@ def main() -> int:
 
     # 2. Is a different version already running beside this one?
     try:
-        startup.refuse_if_another_version_runs(ROOT)
+        startup.refuse_if_another_version_runs(HOME)
     except startup.StartupRefused as exc:
         print(exc.message)
         return 3
 
     # 3. Is this same version already running? Then just show it.
-    existing = startup.already_running_here(ROOT, version)
+    existing = startup.already_running_here(HOME, version)
     if existing:
         print("Roy R. Fisher %s is already running. Opening it." % version)
         webbrowser.open("http://%s:%d" % (startup.HOST, existing))
@@ -88,7 +99,7 @@ def main() -> int:
 
     # 4. Ask the operating system for a port, and remember which one.
     port = startup.free_port()
-    startup.write_runtime(ROOT, port, version)
+    startup.write_runtime(HOME, port, version)
 
     print("Starting Roy R. Fisher %s." % version)
     print("Leave this window open while you work.")
@@ -105,7 +116,7 @@ def main() -> int:
             # 7. Plain words, not a traceback. The server thread is still up,
             #    so this cannot exit the process itself; it says what it knows
             #    and closing the window ends it.
-            print(startup.failure_report(ROOT, port, version))
+            print(startup.failure_report(HOME, port, version))
 
     # Tidy the app's own thumbnail cache, off the startup path. Bounded, and
     # it only ever deletes inside the cache the app writes: a legacy
@@ -147,7 +158,7 @@ def main() -> int:
         #    answering, and a dead port answers nothing. The installer asks the
         #    same question before it copies. So the worst case is a stale file
         #    that everything already treats as meaningless.
-        startup.clear_runtime(ROOT)
+        startup.clear_runtime(HOME)
     return 0
 
 

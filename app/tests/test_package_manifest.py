@@ -54,6 +54,17 @@ def built(tmp_path_factory):
 
 
 @pytest.fixture
+def program(built):
+    """Where VERSION, MANIFEST, app/ and python/ live inside the package.
+
+    Added 2026-08-23 with the `program/` layout. The manifest has always
+    described "the folder holding VERSION and MANIFEST"; that folder simply
+    moved one level down so the four things Mark clicks are alone at the top.
+    """
+    return packaging.program_dir(built)
+
+
+@pytest.fixture
 def copy(built, tmp_path):
     """A throwaway copy, so a test may damage it."""
     place = tmp_path / built.name
@@ -61,23 +72,51 @@ def copy(built, tmp_path):
     return place
 
 
+@pytest.fixture
+def damaged(copy):
+    """The machinery folder of a throwaway copy."""
+    return packaging.program_dir(copy)
+
+
 # --- what is in it ----------------------------------------------------------
 
 @needs_dist
-def test_the_script_produces_a_package_that_verifies(built):
-    packaging.verify(built)
+def test_the_script_produces_a_package_that_verifies(program):
+    packaging.verify(program)
 
 
 @needs_dist
 @pytest.mark.parametrize("required", [
-    "VERSION", "MANIFEST", "Start Roy R. Fisher.bat", "README FIRST.txt",
+    "Install or update Roy R. Fisher.bat", "Start Roy R. Fisher.bat",
+    "README FIRST.txt", "Demo Jobs",
+])
+def test_the_things_a_person_clicks_are_at_the_top(built, required):
+    """What Mark meets when he unzips, and nothing else.
+
+    He opened the old layout and found eight entries, six of them ours and
+    none of them his to act on. These four are the whole of it now.
+    """
+    assert (built / required).exists(), required
+
+
+@needs_dist
+def test_nothing_else_is_at_the_top(built):
+    top = sorted(p.name for p in built.iterdir() if not p.name.startswith("."))
+    assert top == ["Demo Jobs", "Install or update Roy R. Fisher.bat",
+                   "README FIRST.txt", "Start Roy R. Fisher.bat",
+                   packaging.PROGRAM_DIR], top
+
+
+@needs_dist
+@pytest.mark.parametrize("required", [
+    "VERSION", "MANIFEST",
     "app/run_app.py", "app/server/main.py", "app/server/packaging.py",
     "app/server/startup.py", "app/engine/photo_pages.py",
     "app/templates/Photo.docx", "app/data/engagement-matrix.md",
     "app/web/dist/index.html",
 ])
-def test_every_required_path_is_present(built, required):
-    assert (built / required).exists(), required
+def test_every_required_path_is_present(program, required):
+    assert (program / required).exists(), required
 
 
 @needs_dist
@@ -108,16 +147,16 @@ def test_the_demo_route_source_is_not_in_the_package(built):
 # --- the manifest itself ----------------------------------------------------
 
 @needs_dist
-def test_the_manifest_does_not_list_itself_or_runtime_json(built):
-    listed = packaging.read_manifest(built)
+def test_the_manifest_does_not_list_itself_or_runtime_json(program):
+    listed = packaging.read_manifest(program)
     assert "MANIFEST" not in listed["files"]
     assert "runtime.json" not in listed["files"]
 
 
 @needs_dist
-def test_the_manifest_records_the_version_and_an_aggregate(built):
-    listed = packaging.read_manifest(built)
-    assert listed["version"] == packaging.version_of(built)
+def test_the_manifest_records_the_version_and_an_aggregate(program):
+    listed = packaging.read_manifest(program)
+    assert listed["version"] == packaging.version_of(program)
     assert listed["aggregate"].startswith("sha256:")
     assert len(listed["aggregate"].split(":")[1]) == 64
     assert len(listed["files"]) > 10
@@ -130,8 +169,8 @@ def test_building_twice_from_the_same_inputs_gives_the_same_manifest(built, tmp_
         [sys.executable, str(SCRIPT), "--out", str(again),
          "--work", str(tmp_path / "cache"), "--offline"],
         check=True, capture_output=True, text=True, cwd=str(REPO))
-    first = packaging.read_manifest(built)
-    second = packaging.read_manifest(again)
+    first = packaging.read_manifest(packaging.program_dir(built))
+    second = packaging.read_manifest(packaging.program_dir(again))
     assert first["aggregate"] == second["aggregate"]
     assert first["files"] == second["files"]
 
@@ -139,68 +178,68 @@ def test_building_twice_from_the_same_inputs_gives_the_same_manifest(built, tmp_
 # --- catching a damaged copy ------------------------------------------------
 
 @needs_dist
-def test_a_missing_file_is_caught_and_named(copy):
-    (copy / "app" / "server" / "main.py").unlink()
+def test_a_missing_file_is_caught_and_named(damaged):
+    (damaged / "app" / "server" / "main.py").unlink()
     with pytest.raises(packaging.PackageDamaged) as raised:
-        packaging.verify(copy)
+        packaging.verify(damaged)
     assert "app/server/main.py" in raised.value.message
     assert "unzip" in raised.value.message.lower()
     assert "Traceback" not in raised.value.message
 
 
 @needs_dist
-def test_a_truncated_file_is_caught_and_named(copy):
-    target = copy / "app" / "server" / "main.py"
+def test_a_truncated_file_is_caught_and_named(damaged):
+    target = damaged / "app" / "server" / "main.py"
     target.write_bytes(target.read_bytes()[:20])
     with pytest.raises(packaging.PackageDamaged) as raised:
-        packaging.verify(copy)
+        packaging.verify(damaged)
     assert "wrong size" in raised.value.message
     assert "app/server/main.py" in raised.value.message
 
 
 @needs_dist
-def test_corruption_that_keeps_the_size_is_still_caught(copy):
+def test_corruption_that_keeps_the_size_is_still_caught(damaged):
     """Size alone would miss this. The aggregate is what catches it."""
-    target = copy / "app" / "server" / "main.py"
+    target = damaged / "app" / "server" / "main.py"
     body = bytearray(target.read_bytes())
     body[10] = body[10] ^ 0xFF
     target.write_bytes(bytes(body))
     with pytest.raises(packaging.PackageDamaged) as raised:
-        packaging.verify(copy)
+        packaging.verify(damaged)
     assert "do not match" in raised.value.message
 
 
 @needs_dist
-def test_a_file_moved_within_the_package_is_caught(copy):
-    shutil.move(str(copy / "app" / "server" / "startup.py"),
-                str(copy / "app" / "startup.py"))
+def test_a_file_moved_within_the_package_is_caught(damaged):
+    shutil.move(str(damaged / "app" / "server" / "startup.py"),
+                str(damaged / "app" / "startup.py"))
     with pytest.raises(packaging.PackageDamaged):
-        packaging.verify(copy)
+        packaging.verify(damaged)
 
 
 @needs_dist
-def test_a_missing_manifest_is_caught(copy):
-    (copy / "MANIFEST").unlink()
+def test_a_missing_manifest_is_caught(damaged):
+    (damaged / "MANIFEST").unlink()
     with pytest.raises(packaging.PackageDamaged) as raised:
-        packaging.verify(copy)
+        packaging.verify(damaged)
     assert "MANIFEST" in raised.value.message
 
 
 # --- runtime.json cannot invalidate the package -----------------------------
 
 @needs_dist
-def test_the_package_still_verifies_after_a_normal_start(copy):
+def test_the_package_still_verifies_after_a_normal_start(copy, damaged):
     """The contradiction this design had to fix: runtime.json used to be
     inside the package, so the app invalidated its own copy the first time it
     ran."""
     sys.path.insert(0, str(REPO / "app" / "server"))
     import startup
 
-    packaging.verify(copy)
+    packaging.verify(damaged)
     startup.write_runtime(copy, 51234, "0.1.0")
-    packaging.verify(copy)                       # after the first start
+    packaging.verify(damaged)                    # after the first start
     startup.write_runtime(copy, 51999, "0.1.0")
-    packaging.verify(copy)                       # and after the second
+    packaging.verify(damaged)                    # and after the second
 
 
 # --- the practice job ------------------------------------------------------
@@ -224,20 +263,20 @@ def test_both_practice_jobs_ship_beside_the_launcher(built):
 
 
 @needs_dist
-def test_the_practice_job_is_not_in_the_immutable_manifest(built):
+def test_the_practice_job_is_not_in_the_immutable_manifest(program):
     """Shipped content, but Mark's to work in. Opening it writes a photo
     manifest and building writes a document, and a listed folder would mean
     the app refused to start the moment he used the demo it came with."""
-    listed = packaging.read_manifest(built)
+    listed = packaging.read_manifest(program)
     assert not [p for p in listed["files"] if p.startswith("Demo Jobs/")]
 
 
 @needs_dist
-def test_the_package_still_verifies_after_the_demo_is_used(copy):
+def test_the_package_still_verifies_after_the_demo_is_used(copy, damaged):
     """The defect this closes was found by shipping the folder and then
     using it: a photo manifest and a built document appear inside Demo Jobs,
     and verify() counts anything unlisted as a damaged package."""
-    packaging.verify(copy)
+    packaging.verify(damaged)
 
     job = next(p for p in (copy / "Demo Jobs").iterdir() if p.is_dir())
     (job / "Photos" / "photo-manifest.json").write_text("{}", encoding="utf-8")
@@ -245,7 +284,7 @@ def test_the_package_still_verifies_after_the_demo_is_used(copy):
     (job / "Photos" / ".rrf-thumbs").mkdir()
     (job / "Photos" / ".rrf-thumbs" / "01.jpg").write_bytes(b"a thumbnail")
 
-    packaging.verify(copy)
+    packaging.verify(damaged)
 
 
 @needs_dist
@@ -288,7 +327,7 @@ def test_the_readme_names_both_practice_jobs(built):
 # --- the package actually runs ----------------------------------------------
 
 @needs_dist
-def test_the_packaged_app_imports_without_demo_py(built):
+def test_the_packaged_app_imports_without_demo_py(built, program):
     """The defect this catches was real and only a real package showed it.
 
     `main.py` imported `demo` at module scope and referenced `demo.DemoError`
@@ -302,14 +341,14 @@ def test_the_packaged_app_imports_without_demo_py(built):
          "import sys; sys.path.insert(0, %r); import main; "
          "app = main.create_app(); "
          "print(sorted(r.path for r in app.routes if 'demo' in r.path))"
-         % str(built / "app" / "server")],
+         % str(program / "app" / "server")],
         capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "[]"          # neither demo route exists
 
 
 @needs_dist
-def test_the_packaged_app_serves_its_own_version(built):
+def test_the_packaged_app_serves_its_own_version(built, program):
     """/api/version has to answer inside the package, because it is what the
     launcher probes to decide whether the thing on a port is us."""
     result = subprocess.run(
@@ -317,10 +356,10 @@ def test_the_packaged_app_serves_its_own_version(built):
          "import sys; sys.path.insert(0, %r); "
          "from fastapi.testclient import TestClient; import main; "
          "print(TestClient(main.create_app()).get('/api/version').json()['version'])"
-         % str(built / "app" / "server")],
+         % str(program / "app" / "server")],
         capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == packaging.version_of(built)
+    assert result.stdout.strip() == packaging.version_of(program)
 
 
 # --- the script is the only builder -----------------------------------------

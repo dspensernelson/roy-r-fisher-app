@@ -35,6 +35,33 @@ MANIFEST_NAME = "MANIFEST"
 VERSION_NAME = "VERSION"
 RUNTIME_NAME = "runtime.json"
 
+# Where the machinery lives inside a built package: VERSION, MANIFEST, app/
+# and python/ all sit in here, and the four things a person actually clicks sit
+# beside it at the top of the unzipped folder.
+#
+# Added 2026-08-23. Mark unzipped the package and met eight entries, six of
+# which were ours and none of which he could act on. Everything in this module
+# still takes "the folder that holds VERSION and MANIFEST" as its root, so this
+# is a fact about the layout rather than a change to the checking. The
+# development checkout has no such folder and never will, which is what
+# `program_dir` is for.
+PROGRAM_DIR = "program"
+
+
+def program_dir(root: Path) -> Path:
+    """The folder holding VERSION, MANIFEST, app/ and python/.
+
+    A built package keeps them one level down in `program/`; the development
+    checkout has them at the top. Given either the outer folder or the inner
+    one, this answers with the inner one.
+    """
+    root = Path(root)
+    if root.name == PROGRAM_DIR:
+        return root
+    inner = root / PROGRAM_DIR
+    return inner if inner.is_dir() else root
+
+
 # The practice job that ships in the package. It is Mark's to work in: opening
 # it writes a photo manifest, captions land in it, and built documents are
 # saved into its Photos folder. So it is shipped content but it is not

@@ -98,7 +98,8 @@ def test_clearing_is_wired_into_the_way_out():
     """
     tail = RUN_APP[RUN_APP.index("import uvicorn"):]
     assert "finally:" in tail
-    assert "startup.clear_runtime(ROOT)" in tail
+    assert "startup.clear_runtime(HOME)" in tail, (
+        "HOME is the version folder; runtime.json lives in its program folder")
 
 
 def test_clearing_a_file_that_is_not_there_is_not_an_error(tmp_path):

@@ -256,6 +256,7 @@ def check_web_build() -> Path:
 
 
 def copy_app(out: Path) -> None:
+    """`out` is the program folder, not the top of the package."""
     app_out = out / "app"
     app_out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(REPO / "app" / "run_app.py", app_out / "run_app.py")
@@ -302,15 +303,21 @@ def build(out: Path, work: Path, offline: bool) -> None:
     print("Roy R. Fisher package")
     print("  version %s, CPython %s" % (packaging.version_of(REPO), PYTHON_VERSION))
 
+    # The four things a person clicks sit at the top; everything else lives one
+    # level down. Mark unzipped the old layout and met eight entries, six of
+    # them ours and none of them his to act on.
+    program = out / packaging.PROGRAM_DIR
+    program.mkdir(parents=True)
+
     say("copying the app")
-    copy_app(out)
-    shutil.copy2(REPO / "VERSION", out / "VERSION")
+    copy_app(program)
+    shutil.copy2(REPO / "VERSION", program / "VERSION")
     shutil.copy2(REPO / "Start Roy R. Fisher.bat", out / "Start Roy R. Fisher.bat")
     shutil.copy2(REPO / "Install or update Roy R. Fisher.bat",
                  out / "Install or update Roy R. Fisher.bat")
     (out / "README FIRST.txt").write_text(readme_text(), encoding="utf-8")
 
-    python_dir = out / "python"
+    python_dir = program / "python"
     python_dir.mkdir()
     if not offline:
         shutil.unpack_archive(str(fetch_runtime(work)), str(python_dir))
@@ -360,13 +367,13 @@ def build(out: Path, work: Path, offline: bool) -> None:
     strip_local_traces(python_dir / "site-packages")
 
     say("writing the manifest")
-    (out / packaging.MANIFEST_NAME).write_text(packaging.build_manifest(out),
-                                               encoding="utf-8")
+    (program / packaging.MANIFEST_NAME).write_text(packaging.build_manifest(program),
+                                                   encoding="utf-8")
 
     say("verifying the package against its own manifest")
-    packaging.verify(out)
+    packaging.verify(program)
 
-    listed = packaging.read_manifest(out)
+    listed = packaging.read_manifest(program)
 
     say("making the archive")
     zip_path = out.with_name(out.name + ".zip")
@@ -557,7 +564,8 @@ def verify_zip(folder: Path, zip_path: Path) -> dict:
             archive.extractall(holder)
             extracted = Path(holder) / top
 
-            packaging.verify(extracted)
+            # The manifest describes `program/` inside the package.
+            packaging.verify(packaging.program_dir(extracted))
             facts["manifest"] = "the extracted package validates against its own MANIFEST"
 
             if packaging.aggregate(extracted) != packaging.aggregate(folder):

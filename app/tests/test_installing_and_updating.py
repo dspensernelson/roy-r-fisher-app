@@ -312,7 +312,7 @@ def test_the_ordinary_desktop_is_used_when_there_is_no_onedrive(monkeypatch, tmp
 # --- the shim, and what ships ---------------------------------------------
 def test_the_batch_file_only_calls_python():
     shim = (APP.parent / "Install or update Roy R. Fisher.bat").read_text()
-    assert "python\\python.exe app\\install_windows.py" in shim
+    assert "program\\python\\python.exe program\\app\\install_windows.py" in shim
     assert "pause" in shim, "the window has to stay open long enough to read"
 
 

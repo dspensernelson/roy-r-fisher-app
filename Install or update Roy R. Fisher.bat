@@ -12,6 +12,6 @@ REM so there is one place for it to be right and one place to test.
 
 cd /d "%~dp0"
 
-python\python.exe app\install_windows.py
+program\python\python.exe program\app\install_windows.py
 echo.
 pause

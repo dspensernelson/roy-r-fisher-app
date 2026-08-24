@@ -32,7 +32,28 @@ from docx.shared import Inches
 from PIL import Image, ExifTags
 
 PHOTOS_PER_TABLE = 3
+
+# The box a photograph is fitted inside, in inches. Both numbers, not just the
+# width, and that is the whole point.
+#
+# It used to be the width alone, with the height left to follow the aspect
+# ratio. A landscape photograph came out 4.00 x 3.00 and sat in the row. A
+# portrait one came out 4.00 x 5.33, in a row 2.93 inches tall, and pushed its
+# page past the printable area. Five of the twelve photographs in the shipped
+# practice job are portrait, and the spare page Spenser found at the back of
+# the document was that overflow arriving.
+#
+# Measured from the delivered Mason City report: fifty photographs, widths 3.81
+# to 4.43 and heights 2.74 to 3.31, every one of them landscape. His corpus
+# says nothing about how he would want a portrait photograph handled, because
+# there is not one in it; what it gives is the size a photograph on his page
+# has always been. Three at 3.00 inches stack to 9.00 in a 10.00 inch page,
+# which leaves room rather than just fitting.
+#
+# A landscape photograph is still limited by the width and still comes out
+# 4.00 x 3.00, so the documents that were right are byte for byte unchanged.
 IMAGE_WIDTH_IN = 4.0
+IMAGE_MAX_HEIGHT_IN = 3.0
 
 _DATETIME_TAG = next(k for k, v in ExifTags.TAGS.items() if v == "DateTimeOriginal")
 
@@ -73,10 +94,45 @@ def next_output_name(photos_dir: Path, base: str = DEFAULT_OUTPUT_BASE) -> str:
     return candidate
 
 
+def _fitted_size(image_path: Path):
+    """The size to place this photograph at, fitted inside the box.
+
+    Both edges are honoured and the shape is kept. A photograph wider than it
+    is tall is limited by the width, exactly as before; a tall one is limited
+    by the height instead and comes out narrower.
+
+    The file measured here is the one being embedded. When the app supplies a
+    preparer it has already applied the EXIF orientation, so a photograph taken
+    on its side is measured the way Word will draw it rather than the way the
+    camera happened to store it.
+
+    A file PIL cannot open falls back to the width alone, which is what this
+    did for everything until now. A photograph that cannot be measured is not a
+    reason to fail a build: python-docx opens it a moment later and raises
+    something the screen can show.
+    """
+    try:
+        with Image.open(image_path) as opened:
+            pixel_w, pixel_h = opened.size
+    except Exception:
+        return Inches(IMAGE_WIDTH_IN), None
+    if pixel_w <= 0 or pixel_h <= 0:
+        return Inches(IMAGE_WIDTH_IN), None
+
+    shape = pixel_w / pixel_h
+    width = IMAGE_WIDTH_IN
+    height = width / shape
+    if height > IMAGE_MAX_HEIGHT_IN:
+        height = IMAGE_MAX_HEIGHT_IN
+        width = height * shape
+    return Inches(width), Inches(height)
+
+
 def _fill_cell_image(cell, image_path: Path):
     p = cell.paragraphs[0]
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run().add_picture(str(image_path), width=Inches(IMAGE_WIDTH_IN))
+    width, height = _fitted_size(image_path)
+    p.add_run().add_picture(str(image_path), width=width, height=height)
 
 
 def _fill_cell_caption(cell, caption: str):

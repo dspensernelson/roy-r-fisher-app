@@ -107,6 +107,11 @@ delivered without Spenser seeing the change and saying yes.
 While a slice is still being understood there is no plan document, because we
 are finding the edges. Once its shape is known, write one.
 
+Every plan destroys itself. A plan is a work list, and a finished work list is
+clutter that the next session reads as current. The last task in any plan is to
+fold what was learned into these files and then delete the plan. What is worth
+keeping is a decision or a measurement, and neither of those lives in a plan.
+
 ## Approval
 
 After every Builder report, Codex gives Spenser the four-part Product Control

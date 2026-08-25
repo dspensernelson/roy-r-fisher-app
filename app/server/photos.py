@@ -143,6 +143,35 @@ def _dir_entry_names(job: Path) -> set:
     return jobs.photo_names(job)
 
 
+def photo_groups(job: Path) -> list:
+    """Where this job keeps its photographs, so Mark can be asked which set is
+    the report.
+
+    His office keeps every shoot twice, full size and shrunk by hand, and the
+    folder holding each varies job to job: `Original`, `Raw pics_`,
+    `Minimized`, `full size`, `Building`, `Used`, `Reduced`, `Report Photos_`,
+    or bare numbers. Nine conventions across eleven jobs, measured 2026-08-25,
+    and a new helper in the office has just added a tenth. So nothing here
+    reads a folder name for meaning. It counts what is where and lets him say.
+
+    A group is the FULL folder path relative to `Photos`, empty for the top of
+    `Photos` itself. Not the immediate child folder: Mason City's fifty chosen
+    photographs and its seven rejected ones are two folders side by side inside
+    one `Raw pics_` folder, and grouping by the child would hand him the seven
+    he threw out.
+
+    Biggest first, ties broken by name, so the set most likely to be the report
+    is offered first and the same job asks the same question twice running.
+    """
+    counted: dict = {}
+    for photo in jobs.photo_files(job):
+        where = jobs.photo_folder(job, photo)
+        if where not in counted:
+            counted[where] = {"folder": where, "count": 0, "sample": photo.name}
+        counted[where]["count"] += 1
+    return sorted(counted.values(), key=lambda g: (-g["count"], g["folder"]))
+
+
 def load_manifest(job: Path) -> dict:
     """Load the manifest and reconcile it against what's actually in the
     Photos folder before returning it.

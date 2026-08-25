@@ -536,6 +536,20 @@ export default function PhotosScreen({ job }) {
                   dragged; leaving the image draggable makes the browser hand
                   the thumbnail over as a file on every reorder. */}
               <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+              {/* Which folder inside Photos this one came from. Only shown
+                  when it came from a subfolder, so a job whose photos sit at
+                  the top of Photos gains no new furniture. It is here because
+                  the app now reads subfolders, and a photograph out of a
+                  folder called "Do Not Use" must be recognisable as one at a
+                  glance rather than being taken on trust. The leaf name is
+                  shown and the whole path is the tooltip: the real ones run
+                  to "Raw pics_Walmart Mason City 4151 4th St SW/All report
+                  photos used", which is too long to sit under a thumbnail. */}
+              {p.folder && (
+                <div className="photo-source" title={p.folder}>
+                  from {p.folder.split("/").filter(Boolean).pop()}
+                </div>
+              )}
               {/* A box, not a line: captions run four to twelve words and he
                   has to be able to read the whole thing without clicking in. */}
               <textarea value={p.caption} placeholder="Caption..." rows={2}
@@ -581,6 +595,11 @@ export default function PhotosScreen({ job }) {
                 {cutPhotos.map(({ p }) => (
                   <figure key={p.file} className="is-cut" style={{ margin: 0 }}>
                     <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+                    {p.folder && (
+                      <div className="photo-source" title={p.folder}>
+                        from {p.folder.split("/").filter(Boolean).pop()}
+                      </div>
+                    )}
                     {p.caption ? (
                       <p className="cut-caption">{p.caption}</p>
                     ) : (

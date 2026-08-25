@@ -43,7 +43,13 @@ def child_folders(root: Path) -> list:
 
 # Not jobs, and the app must not mistake them for jobs. Named here because
 # what they are is a fact about his filing, not something code can infer.
-NOT_JOBS = {"Templates and Other", "Description of Improvement Examples 8.17.26"}
+# `Aug 2026` is a folder Spenser added to the vault to keep a new example
+# apart from the delivered ones. It holds a job rather than being one, and it
+# is correct for the app not to recognise it: it carries no underscore and none
+# of Mark's folders. It is listed here so the guard keeps testing the rule
+# rather than failing on the shape of the vault.
+NOT_JOBS = {"Templates and Other", "Description of Improvement Examples 8.17.26",
+            "Aug 2026"}
 
 
 @needs_corpus

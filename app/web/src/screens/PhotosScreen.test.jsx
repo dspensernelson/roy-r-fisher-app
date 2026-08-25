@@ -241,3 +241,36 @@ describe("the cost confirmation cannot be skipped", () => {
       expect(screen.getByRole("button", { name: "Generate captions (61)" })).toBeEnabled());
   });
 });
+
+describe("where a photograph came from", () => {
+  // The app reads subfolders of Photos now, because four of the nine real
+  // jobs keep every photograph in one. That means a tile can be a photograph
+  // out of a folder called "Do Not Use", and Mark has to be able to see that
+  // without opening anything. The app deliberately does not act on the name
+  // itself: what "Used" and "Do Not Use" mean is his to say, not ours to
+  // guess, so it shows him the folder and leaves the cutting to him.
+  it("says which folder a photograph came from", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: [{ file: "a.jpeg", caption: "", folder: "Raw pics_Somewhere/Do Not Use" }],
+    }));
+    render(<PhotosScreen job={JOB} />);
+    expect(await screen.findByText(/from Do Not Use/)).toBeInTheDocument();
+  });
+
+  it("shows the leaf folder, not the whole path", async () => {
+    const folder = "Raw pics_Walmart Mason City 4151 4th St SW/All report photos used";
+    api.getManifest.mockResolvedValue(manifest({
+      photos: [{ file: "a.jpeg", caption: "", folder }],
+    }));
+    render(<PhotosScreen job={JOB} />);
+    const label = await screen.findByText(/from All report photos used/);
+    // The whole path is the tooltip, so nothing is lost by shortening it.
+    expect(label).toHaveAttribute("title", folder);
+  });
+
+  it("says nothing at all for a photograph at the top of Photos", async () => {
+    render(<PhotosScreen job={JOB} />);      // the default manifest has no folder
+    await screen.findAllByPlaceholderText("Caption...");
+    expect(screen.queryByText(/^from /)).not.toBeInTheDocument();
+  });
+});

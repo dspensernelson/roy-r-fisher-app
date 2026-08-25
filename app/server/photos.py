@@ -123,21 +123,7 @@ def _photo_files_on_disk(job: Path) -> list[Path]:
     card's count and this reconciliation never disagree on what counts as a
     photo.
     """
-    photos_dir = jobs.photos_dir(job)
-    if not photos_dir.is_dir():
-        return []
-    skip_names = {THUMB_DIR, manifest_path(job).name}
-    found = []
-    for entry in photos_dir.iterdir():
-        if entry.name in skip_names:
-            continue
-        if entry.suffix.lower() not in jobs.PHOTO_EXTS:
-            continue
-        resolved = _resolve_confined(entry, photos_dir)
-        if resolved is None or not resolved.is_file():
-            continue
-        found.append(resolved)
-    return found
+    return jobs.photo_files(job)
 
 
 def _dir_entry_names(job: Path) -> set:
@@ -154,10 +140,7 @@ def _dir_entry_names(job: Path) -> set:
     past the security check instead of letting that check reject it with a
     clear error. This only answers "is a photo still there by this name."
     """
-    photos_dir = jobs.photos_dir(job)
-    if not photos_dir.is_dir():
-        return set()
-    return {entry.name for entry in photos_dir.iterdir()}
+    return jobs.photo_names(job)
 
 
 def load_manifest(job: Path) -> dict:
@@ -212,10 +195,29 @@ def load_manifest(job: Path) -> dict:
     kept = [entry for entry in manifest.get("photos", [])
             if isinstance(entry, dict) and entry.get("file") in still_present]
 
+    # Where each photograph actually sits now, by name. A manifest written
+    # before subfolders were read carries no folder at all, and one Mark has
+    # since moved into `Original` would otherwise resolve to a path that is no
+    # longer there. The folder is corrected from the tree; his caption, his
+    # order and his tick are never touched.
+    where = {f.name: jobs.photo_folder(job, f) for f in on_disk}
+    for entry in kept:
+        found = where.get(entry.get("file"))
+        if found is None:
+            continue
+        if found:
+            entry["folder"] = found
+        else:
+            entry.pop("folder", None)
+
     known = {entry["file"] for entry in kept}
     new_files = [f for f in on_disk if f.name not in known]
     for f in exif_order(new_files):
-        kept.append({"file": f.name, "caption": ""})
+        entry = {"file": f.name, "caption": ""}
+        folder = jobs.photo_folder(job, f)
+        if folder:
+            entry["folder"] = folder
+        kept.append(entry)
 
     manifest["photos"] = kept
     return manifest
@@ -258,10 +260,17 @@ def _is_occupied(p: Path) -> bool:
     return p.is_symlink() or p.exists()
 
 
-def free_name(d: Path, name: str) -> str:
+def free_name(d: Path, name: str, taken=frozenset()) -> str:
+    """A name nothing else in the Photos tree is using.
+
+    `taken` carries the names already in use in subfolders. Without it an
+    upload could take a name a photograph in `Original` already has, and the
+    walk -- which keeps the first of any repeated name -- would then list the
+    upload and quietly hide the other one.
+    """
     stem, suffix = Path(name).stem, Path(name).suffix
     candidate, n = name, 2
-    while _is_occupied(d / candidate):
+    while _is_occupied(d / candidate) or candidate.lower() in taken:
         candidate, n = f"{stem} ({n}){suffix}", n + 1
     return candidate
 
@@ -281,6 +290,7 @@ def _confine_write_target(target: Path, photos: Path) -> None:
 def store_upload(job: Path, upload: UploadFile) -> str:
     photos = jobs.photos_dir(job)
     photos.mkdir(parents=True, exist_ok=True)
+    taken = {p.name.lower() for p in jobs.photo_files(job)}
     raw = upload.file.read()
     # .name confines an untrusted filename (which may carry ../, an absolute
     # path, or backslash traversal forms) to its final path component only,
@@ -289,11 +299,11 @@ def store_upload(job: Path, upload: UploadFile) -> str:
     if name.lower().endswith(".heic"):
         img = Image.open(io.BytesIO(raw)).convert("RGB")
         name = Path(name).with_suffix(".jpg").name
-        target = photos / free_name(photos, name)
+        target = photos / free_name(photos, name, taken)
         _confine_write_target(target, photos)
         img.save(target, format="JPEG", quality=92)
     else:
-        target = photos / free_name(photos, name)
+        target = photos / free_name(photos, name, taken)
         _confine_write_target(target, photos)
         target.write_bytes(raw)
     return target.name
@@ -339,7 +349,13 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
             return "Each photo entry needs a non-empty 'file' name."
         if name != Path(name).name:
             return f"Photo file name {name!r} must be a bare filename with no path separators."
-        if _resolve_confined(photos_dir / name, photos_dir) is None:
+        folder = entry.get("folder", "")
+        if not isinstance(folder, str):
+            return "A photo's 'folder' must be text."
+        if folder and ("\\" in folder or folder.startswith("/")
+                       or ".." in folder.split("/")):
+            return f"Photo folder {folder!r} must be a plain subfolder of Photos."
+        if _resolve_confined(jobs.photo_path(job, entry), photos_dir) is None:
             return f"Photo file name {name!r} resolves outside the Photos folder."
         if REVIEWED in entry and not isinstance(entry[REVIEWED], bool):
             return "A photo's reviewed flag must be true or false."
@@ -514,8 +530,12 @@ def thumb(name: str, file: str):
     # Photos/ that points outside it is caught too -- both is_file() and
     # Image.open() below follow symlinks, so the string check alone is not
     # enough.
-    candidate = photos_dir / Path(file).name
-    src = _resolve_confined(candidate, photos_dir)
+    # A photograph's filename is unique across the whole Photos tree, because
+    # the walk drops a repeat, so the bare name in the URL still names exactly
+    # one file wherever it sits.
+    bare = Path(file).name
+    found = next((p for p in jobs.photo_files(job) if p.name == bare), None)
+    src = _resolve_confined(found, photos_dir) if found is not None else None
     if src is None or not src.is_file():
         raise HTTPException(404, "Photo not found.")
     # App-owned storage, outside his job folder. See thumbcache.py.

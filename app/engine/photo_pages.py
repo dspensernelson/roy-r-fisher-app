@@ -443,7 +443,11 @@ def build_photo_docx(manifest_path: Path, template_path: Path,
     for i, entry in enumerate(photos):
         table = doc.tables[i // PHOTOS_PER_TABLE]
         row = table.rows[i % PHOTOS_PER_TABLE]
-        source = photos_dir / entry["file"]
+        # `folder` is the subfolder of Photos the photograph came from, empty
+        # or absent for one sitting at the top. Joining an empty part is a
+        # no-op, so a manifest written before subfolders were read still
+        # resolves exactly where it always did.
+        source = photos_dir / entry.get("folder", "") / entry["file"]
         _fill_cell_image(row.cells[0], prepare(source) if prepare else source)
         _fill_cell_caption(row.cells[1], entry.get("caption", ""))
 

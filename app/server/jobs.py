@@ -4,9 +4,15 @@ from pathlib import Path
 from typing import Optional
 
 import brief
+import thumbcache
 import workspace
 
 PHOTO_EXTS = {".jpg", ".jpeg", ".png", ".heic"}
+
+# Folders inside Photos that are never walked for photographs. The legacy
+# thumbnail cache is the app's own, and it is skipped rather than listed so a
+# Photos folder from before thumbnails moved out still reads correctly.
+PHOTO_SKIP_DIRS = {thumbcache.LEGACY_THUMB_DIR}
 SAFE_NAME = re.compile(r"^[^/\\]{1,120}$")
 
 # Mark's own eight folders, in the order his folder template carries them.
@@ -65,9 +71,130 @@ def photos_dir(job: Path) -> Path:
     return job / "Photos"
 
 
+def resolve_confined(path: Path, base: Path):
+    """`path` resolved, or None if the real thing on disk sits outside `base`.
+
+    Resolving follows symlinks, so this catches a name that is harmless as a
+    string but points somewhere else on disk. Lives here rather than in
+    photos.py because the photo walk below needs it and photos.py already
+    imports this module.
+    """
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(base.resolve())
+    except (OSError, ValueError):
+        return None
+    return resolved
+
+
+def _walk_photos(root: Path):
+    """One pass over the Photos tree, answering both questions about it.
+
+    Returns (photographs, every_name). The first is the photos to show, the
+    second is the bare name of every entry of any kind anywhere in the tree,
+    which is what tells an existing manifest entry apart from a deleted one.
+
+    Measured against the nine real jobs in the corpus on 2026-08-24: four of
+    them keep no photographs directly in Photos at all. Mason City's are in
+    `Raw pics_Walmart...`, Brookside's are split across `3525` and `3575`,
+    Elmore Circle's are in `full size` and `Building`. Reading only the top of
+    Photos, which is what this did until now, showed Mark an empty screen on
+    those four jobs with nothing on it to say why.
+
+    A subfolder is often a second copy at another size rather than more
+    photographs: Bettendorf's `Original` holds the same 71 filenames as the top
+    of Photos, and 4300 E 53rd's `Minimized` holds 11 of its 12. So a filename
+    already seen is passed over, and the top of Photos is read first, which
+    makes the copy Mark works from the one that wins. Names are compared
+    case-folded because Windows would treat IMG_1.JPG and img_1.jpg as one file
+    anyway.
+
+    Symlink loops are bounded by remembering resolved folders rather than by
+    capping the depth: a depth cap would silently stop listing photographs in a
+    tree that was merely nested, which is the failure this whole function
+    exists to end.
+    """
+    photographs: list = []
+    every_name: set = set()
+    seen: set = set()
+    visited: set = set()
+
+    def walk(folder: Path) -> None:
+        resolved = resolve_confined(folder, root)
+        if resolved is None or resolved in visited:
+            return
+        visited.add(resolved)
+        try:
+            entries = sorted(folder.iterdir(), key=lambda e: e.name.lower())
+        except OSError:
+            # An unreadable folder is one Mark cannot use either. The photos
+            # that were readable still list, rather than the whole job failing.
+            return
+        subfolders = []
+        for entry in entries:
+            every_name.add(entry.name)
+            if entry.is_dir():
+                if entry.name not in PHOTO_SKIP_DIRS and not entry.name.startswith("."):
+                    subfolders.append(entry)
+                continue
+            if entry.suffix.lower() not in PHOTO_EXTS:
+                continue
+            key = entry.name.lower()
+            if key in seen or resolve_confined(entry, root) is None:
+                continue
+            seen.add(key)
+            photographs.append(entry)
+        # Files at this level before anything nested under it, so the loose
+        # copy of a photograph outranks the one in Original or Minimized.
+        for sub in subfolders:
+            walk(sub)
+
+    walk(root)
+    return photographs, every_name
+
+
+def photo_files(job: Path) -> list:
+    """Every photograph in the job, wherever inside Photos it sits."""
+    root = photos_dir(job)
+    return _walk_photos(root)[0] if root.is_dir() else []
+
+
+def photo_names(job: Path) -> set:
+    """Bare name of every entry anywhere in the Photos tree, any type."""
+    root = photos_dir(job)
+    return _walk_photos(root)[1] if root.is_dir() else set()
+
+
+def photo_folder(job: Path, photo: Path) -> str:
+    """Which subfolder of Photos a photograph came from, POSIX, '' for the top.
+
+    Stored on the manifest entry beside the bare filename rather than folded
+    into it. The filename stays the photo's identity everywhere -- the manifest
+    key, the caption lookup, the thumbnail URL -- so a manifest written before
+    subfolders were read still loads with no migration and means exactly what
+    it always meant.
+    """
+    try:
+        rel = photo.parent.relative_to(photos_dir(job))
+    except ValueError:
+        return ""
+    return "" if str(rel) == "." else rel.as_posix()
+
+
+def photo_path(job: Path, entry: dict) -> Path:
+    """Where one manifest entry's photograph actually sits on disk.
+
+    The one place that turns an entry back into a path, so the screen, the
+    thumbnail and the built document can never disagree about it.
+    """
+    root = photos_dir(job)
+    folder = str(entry.get("folder") or "")
+    return root.joinpath(*folder.split("/"), entry.get("file", "")) if folder \
+        else root / entry.get("file", "")
+
+
 def count_photos(job: Path) -> int:
-    d = photos_dir(job)
-    return sum(1 for p in d.iterdir() if p.suffix.lower() in PHOTO_EXTS) if d.is_dir() else 0
+    return len(photo_files(job))
 
 
 def resolve_job(home: Optional[Path], name: str) -> Path:

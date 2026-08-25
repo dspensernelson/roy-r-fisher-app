@@ -16,7 +16,12 @@ from typing import Optional
 
 import jobs
 import workspace
-from photos import _resolve_confined
+# Taken from jobs rather than from photos, which would make a circle: classify
+# reads this module, and photos has to ask classify which files Mark called
+# subject photographs. The two helpers do the same thing, and this one also
+# treats a path the operating system refuses to resolve as simply not confined,
+# so an unreadable file is skipped rather than raised.
+from jobs import resolve_confined
 
 # The cap on names sent to one screen. The count always travels separately
 # and is always true, the same shape workspace.describe already uses.
@@ -57,7 +62,7 @@ def _collect(folder: Path, job: Path, out: list) -> None:
             continue
         if child.is_dir():
             _collect(child, job, out)
-        elif child.is_file() and _resolve_confined(child, job) is not None:
+        elif child.is_file() and resolve_confined(child, job) is not None:
             out.append(_entry(child, job, "file"))
 
 
@@ -107,7 +112,7 @@ def read_job(job: Path) -> dict:
         elif child.is_dir():
             (typical if child.name in jobs.MARK_FOLDERS else other).append(
                 _folder_row(child, job))
-        elif child.is_file() and _resolve_confined(child, job) is not None:
+        elif child.is_file() and resolve_confined(child, job) is not None:
             root_files.append(_entry(child, job, "file"))
 
     order = {name: i for i, name in enumerate(jobs.MARK_FOLDERS)}
@@ -124,7 +129,7 @@ def stat_of(job: Path, rel: str) -> Optional[dict]:
     target = job / Path(rel)
     if target.is_symlink() or not target.is_file():
         return None
-    if _resolve_confined(target, job) is None:
+    if resolve_confined(target, job) is None:
         return None
     info = target.stat()
     return {"size": info.st_size, "mtime": info.st_mtime}

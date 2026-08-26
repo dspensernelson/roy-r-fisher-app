@@ -57,17 +57,44 @@ IMAGE_MAX_HEIGHT_IN = 3.0
 _DATETIME_TAG = next(k for k, v in ExifTags.TAGS.items() if v == "DateTimeOriginal")
 
 
+_DIGITS = re.compile(r"(\d+)")
+
+
+def _by_name(name: str):
+    """A sort key that reads runs of digits as numbers, so 2 comes before 10.
+
+    The fallback matters more than it looks. Mark's office shrinks every
+    photograph by hand and shrinking strips the EXIF, so the capture time that
+    would have ordered the shoot is gone and the number typed on the front of
+    the filename is the only record left. As plain text `10 IMG_0570` sorts
+    before `2 IMG_0560`, and his twelve photographs came out 1, 10, 11, 12, 2,
+    3 and so on. Measured on the Maquoketa job, 2026-08-25.
+
+    Digits are compared as numbers and everything else case-folded as text, and
+    the two are never compared with each other, which is what stops a name with
+    a number in it and a name without one from raising.
+    """
+    parts = _DIGITS.split(name.lower())
+    return [(1, int(part), "") if part.isdigit() else (0, 0, part)
+            for part in parts]
+
+
 def exif_order(paths):
-    """Default ordering: EXIF capture time, falling back to filename."""
+    """Default ordering: EXIF capture time, falling back to filename.
+
+    The fallback reads numbers in the name as numbers. A photograph that still
+    carries a capture time is ordered by that time exactly as it always was: a
+    number typed on the front never overrules what the camera recorded.
+    """
     def key(p: Path):
         try:
             exif = Image.open(p).getexif()
             stamp = exif.get(_DATETIME_TAG) or exif.get(306)  # 306 = DateTime
             if stamp:
-                return (0, str(stamp), p.name.lower())
+                return (0, str(stamp), _by_name(p.name))
         except Exception:
             pass
-        return (1, "", p.name.lower())
+        return (1, "", _by_name(p.name))
     return sorted(paths, key=key)
 
 

@@ -27,6 +27,9 @@ export const reveal = (name, file, what) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/reveal`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file, what }) }).then(j);
 export const thumbUrl = (name, file) => `/api/jobs/${encodeURIComponent(name)}/thumb/${encodeURIComponent(file)}`;
 export const jobFolders = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/folders`).then(j);
+export const photoGroups = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/photo-groups`).then(j);
+export const putPhotoGroup = (name, folder) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/photo-group`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder }) }).then(j);
 export const classificationLabels = () => fetch("/api/classifications").then(j);
 export const setClassification = (name, file, label) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/classification`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file, label }) }).then(j);

@@ -611,3 +611,36 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The question asked once per job: which folder holds the report photographs.
+   A row per folder, its real name off the disk, one photograph from it, and a
+   count. The picture is doing the work, because Mark recognises his own
+   photographs and does not necessarily recognise a folder name his helper
+   invented. */
+.folder-choices { display: flex; flex-direction: column; gap: 10px; }
+
+.folder-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.folder-choice:hover { border-color: var(--brand); background: var(--surface-hover, var(--surface)); }
+.folder-choice img {
+  width: 84px; height: 63px; object-fit: cover;
+  border-radius: 4px; flex: 0 0 auto; background: var(--line);
+}
+.folder-choice-name { flex: 1 1 auto; font-weight: 600; overflow-wrap: anywhere; }
+.folder-choice-count { flex: 0 0 auto; color: var(--ink-muted); font-size: 13px; }
+
+/* Which folder the report photographs came from. He chose it, so this is a
+   reminder and not an announcement. */
+.photo-from { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

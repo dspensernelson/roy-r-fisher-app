@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal } from "../api.js";
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal,
+         photoGroups, putPhotoGroup } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -21,11 +22,27 @@ export default function PhotosScreen({ job }) {
   const [fixing, setFixing] = useState(false);
   const [confirming, setConfirming] = useState(null);  // the spend confirmation
   const [running, setRunning] = useState(null);   // which request the run is on
+  const [where, setWhere] = useState(null);   // which folder holds the report photographs
+  const [asked, setAsked] = useState(false);  // he re-opened the question himself
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
   useEffect(() => { getManifest(job).then(setManifest).catch((e) => setError(e.message)); }, [job]);
   useEffect(() => { jobFacts(job).then(setFacts).catch(() => {}); }, [job]);
+  // Where this job keeps its photographs. His office stores every shoot twice,
+  // full size and shrunk by hand, under a folder name that changes job to job,
+  // so the app asks him once which one is the report rather than guessing.
+  useEffect(() => { setAsked(false); photoGroups(job).then(setWhere).catch(() => {}); }, [job]);
+
+  async function onPickFolder(folder) {
+    setError(null);
+    try {
+      await putPhotoGroup(job, folder);
+      setAsked(false);
+      setWhere(await photoGroups(job));
+      setManifest(await getManifest(job));
+    } catch (e) { setError(e.message); }
+  }
 
   // Refreshed whenever the photos change, so the number he is shown before
   // spending money is the number for what is actually there now.
@@ -197,6 +214,70 @@ export default function PhotosScreen({ job }) {
   }
 
   if (!manifest) return <p className="sub">Loading...</p>;
+
+  // The question, asked once, when this job keeps its photographs in more than
+  // one place and he has not said which is the report. It is here rather than
+  // on the job screen because this is the action it shapes: he clicked Open on
+  // Subject Photographs, and this is what that needs an answer to.
+  //
+  // Nothing is guessed from a folder name. Eleven of Mark's jobs use nine
+  // different namings and his new helper has just added a tenth, so the app
+  // shows him the folders his own office made and he says which.
+  const needsFolder = !!where && (where.needs_choice || where.chosen_missing || asked);
+  if (needsFolder) {
+    return (
+      <div>
+        <div className="screen-head">
+          <div>
+            <h1 style={{ margin: 0 }}>Photos</h1>
+            <p className="sub" style={{ margin: "4px 0 0" }}>
+              This job keeps photographs in more than one place.
+            </p>
+          </div>
+        </div>
+
+        {where.chosen_missing && (
+          <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>
+            The folder you chose, <strong>{where.chosen}</strong>, is not in this
+            job any more. Nothing has been built from a different folder. Choose
+            again below.
+          </div>
+        )}
+
+        <div className="confirm" style={{ marginTop: 0 }}>
+          <p style={{ margin: "0 0 4px" }}>
+            <strong>Which folder holds the photographs for this report?</strong>
+          </p>
+          <p className="setting-fine" style={{ margin: "0 0 14px" }}>
+            Every photograph stays where it is. This only says which ones go in
+            the report, and you can change it later.
+          </p>
+
+          <div className="folder-choices">
+            {where.groups.map((g) => (
+              <button key={g.folder || "(top)"} className="folder-choice"
+                      onClick={() => onPickFolder(g.folder)}>
+                <img src={thumbUrl(job, g.sample)} alt="" draggable={false} />
+                <span className="folder-choice-name">
+                  {g.folder || "The Photos folder itself"}
+                </span>
+                <span className="folder-choice-count">
+                  {g.count} {g.count === 1 ? "photograph" : "photographs"}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {asked && !where.chosen_missing && (
+            <div className="setting-actions" style={{ marginTop: 14 }}>
+              <button className="linky" onClick={() => setAsked(false)}>Cancel</button>
+            </div>
+          )}
+        </div>
+        {error && <div className="error" style={{ marginTop: 16 }}>{error}</div>}
+      </div>
+    );
+  }
 
   const count = manifest.photos.length;
   const pages = Math.max(1, Math.ceil(count / 3));
@@ -491,6 +572,16 @@ export default function PhotosScreen({ job }) {
         </div>
       )}
 
+      {/* Where the report photographs came from, said once and quietly. He
+          chose it, so it is a reminder rather than an announcement, and the
+          link is how he changes his mind. */}
+      {where && where.chosen && (
+        <p className="sub photo-from" style={{ margin: "0 0 16px" }}>
+          From <strong>{where.chosen || "the Photos folder itself"}</strong>.
+          <button className="linky" onClick={() => setAsked(true)}>Use a different folder</button>
+        </p>
+      )}
+
       {cutNote && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{cutNote}</div>}
 
       {/* Clearing captions reports itself here too, as a plain sentence. Only
@@ -545,7 +636,11 @@ export default function PhotosScreen({ job }) {
                   shown and the whole path is the tooltip: the real ones run
                   to "Raw pics_Walmart Mason City 4151 4th St SW/All report
                   photos used", which is too long to sit under a thumbnail. */}
-              {p.folder && (
+              {/* Only when it did not come from the folder he chose. Once he
+                  has picked one, saying it again under all sixteen tiles is
+                  the same fact sixteen times; what he needs to see is the odd
+                  one out, the straggler classified in from somewhere else. */}
+              {p.folder && p.folder !== (where && where.chosen) && (
                 <div className="photo-source" title={p.folder}>
                   from {p.folder.split("/").filter(Boolean).pop()}
                 </div>
@@ -595,7 +690,7 @@ export default function PhotosScreen({ job }) {
                 {cutPhotos.map(({ p }) => (
                   <figure key={p.file} className="is-cut" style={{ margin: 0 }}>
                     <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
-                    {p.folder && (
+                    {p.folder && p.folder !== (where && where.chosen) && (
                       <div className="photo-source" title={p.folder}>
                         from {p.folder.split("/").filter(Boolean).pop()}
                       </div>

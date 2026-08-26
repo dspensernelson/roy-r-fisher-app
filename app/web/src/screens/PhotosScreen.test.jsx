@@ -51,7 +51,22 @@ beforeEach(() => {
   vi.spyOn(api, "captionEstimate").mockResolvedValue(estimate());
   vi.spyOn(api, "captionStyles").mockResolvedValue(STYLES);
   vi.spyOn(api, "putManifest").mockResolvedValue({ ok: true });
+  // One place for photographs, so no question is asked. That is the state
+  // every existing job and every job the app makes itself is in.
+  vi.spyOn(api, "photoGroups").mockResolvedValue({
+    groups: [{ folder: "", count: 3, sample: "photo-01.jpg" }],
+    chosen: null, chosen_missing: false, needs_choice: false });
+  vi.spyOn(api, "putPhotoGroup").mockResolvedValue({ chosen: "" });
 });
+
+const TWO_PLACES = {
+  groups: [
+    { folder: "Raw pics_X", count: 16, sample: "IMG_0559.jpeg" },
+    { folder: "Report Photos_X", count: 16, sample: "1 IMG_0559.jpeg" },
+    { folder: "", count: 1, sample: "AERIAL.png" },
+  ],
+  chosen: null, chosen_missing: false, needs_choice: true,
+};
 
 async function show() {
   render(<PhotosScreen job={JOB} />);
@@ -272,5 +287,75 @@ describe("where a photograph came from", () => {
     render(<PhotosScreen job={JOB} />);      // the default manifest has no folder
     await screen.findAllByPlaceholderText("Caption...");
     expect(screen.queryByText(/^from /)).not.toBeInTheDocument();
+  });
+});
+
+
+describe("which folder holds the report photographs", () => {
+  // Mark's office keeps every shoot twice, full size and shrunk by hand, and
+  // names the folders differently every job. Eleven real jobs, nine namings,
+  // and a new helper has just added a tenth. So the app shows him the folders
+  // his own office made and he says which one is the report.
+
+  it("asks nothing when the photographs are all in one place", async () => {
+    await show();
+    expect(screen.queryByText(/Which folder holds the photographs/)).not.toBeInTheDocument();
+    expect(await screen.findAllByPlaceholderText("Caption...")).toHaveLength(3);
+  });
+
+  it("asks instead of showing the photographs when there is more than one place", async () => {
+    api.photoGroups.mockResolvedValue(TWO_PLACES);
+    await show();
+    expect(await screen.findByText(/Which folder holds the photographs/)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Caption...")).not.toBeInTheDocument();
+  });
+
+  it("shows each folder by its real name and its count", async () => {
+    api.photoGroups.mockResolvedValue(TWO_PLACES);
+    await show();
+    expect(await screen.findByText("Report Photos_X")).toBeInTheDocument();
+    expect(screen.getByText("Raw pics_X")).toBeInTheDocument();
+    expect(screen.getAllByText("16 photographs")).toHaveLength(2);
+    expect(screen.getByText("1 photograph")).toBeInTheDocument();
+  });
+
+  it("names the top of Photos in words rather than leaving it blank", async () => {
+    api.photoGroups.mockResolvedValue(TWO_PLACES);
+    await show();
+    expect(await screen.findByText("The Photos folder itself")).toBeInTheDocument();
+  });
+
+  it("records his answer and then shows the photographs", async () => {
+    api.photoGroups.mockResolvedValue(TWO_PLACES);
+    await show();
+    await userEvent.click(await screen.findByText("Report Photos_X"));
+    expect(api.putPhotoGroup).toHaveBeenCalledWith(JOB, "Report Photos_X");
+  });
+
+  it("says where the report photographs came from once he has chosen", async () => {
+    api.photoGroups.mockResolvedValue({
+      ...TWO_PLACES, chosen: "Report Photos_X", needs_choice: false });
+    await show();
+    expect(await screen.findByText(/Use a different folder/)).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText("Caption...")).toHaveLength(3);
+  });
+
+  it("lets him ask again without losing what he already chose", async () => {
+    api.photoGroups.mockResolvedValue({
+      ...TWO_PLACES, chosen: "Report Photos_X", needs_choice: false });
+    await show();
+    await userEvent.click(await screen.findByText(/Use a different folder/));
+    expect(await screen.findByText(/Which folder holds the photographs/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+  });
+
+  it("says plainly when the folder he chose is gone, and never picks another", async () => {
+    api.photoGroups.mockResolvedValue({
+      ...TWO_PLACES, chosen: "Final Photos", chosen_missing: true,
+      needs_choice: false });
+    await show();
+    expect(await screen.findByText(/is not in this job any more/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing has been built from a different folder/)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Caption...")).not.toBeInTheDocument();
   });
 });

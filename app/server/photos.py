@@ -670,6 +670,51 @@ def clear_captions(name: str):
     return {"cleared": cleared, **load_manifest(job)}
 
 
+def _where_it_sits(job: Path, photos_dir: Path, bare: str) -> Optional[Path]:
+    """This photograph's path, asked of the manifest before the folder.
+
+    Mark's jobs are on a mapped network drive, so every filesystem question is
+    a request to another machine and the cost of a screen is the number of
+    questions, not the work. This route used to answer "where is this
+    photograph" by walking the whole Photos tree, once per thumbnail. Measured
+    2026-08-26 on Mason City: 57 photographs, 57 walks, 6,954 path lookups for
+    one screen. A tenth of a second here and up to thirty-five seconds there.
+
+    The app already recorded where each photograph sits when it built the
+    manifest, so the first answer is a file read. The tree walk stays as the
+    fallback for a photograph the manifest has never seen, which is a
+    photograph he dropped into the folder a moment ago, so nothing that used to
+    appear stops appearing.
+
+    The manifest is hand-editable, so the path it yields is confined and
+    checked exactly the way the walk's own answer always was. It is a hint
+    about where to look, never permission to read something.
+    """
+    path = manifest_path(job)
+    if path.is_file():
+        try:
+            saved = json.loads(path.read_text())
+        except ValueError:
+            saved = None
+        if isinstance(saved, dict):
+            for entry in saved.get("photos", []) or []:
+                if not isinstance(entry, dict) or entry.get("file") != bare:
+                    continue
+                folder = entry.get("folder", "")
+                if not isinstance(folder, str):
+                    break
+                guess = _resolve_confined(jobs.photo_path(job, entry), photos_dir)
+                if guess is not None and guess.is_file():
+                    return guess
+                break
+
+    found = next((p for p in jobs.photo_files(job) if p.name == bare), None)
+    if found is None:
+        return None
+    src = _resolve_confined(found, photos_dir)
+    return src if src is not None and src.is_file() else None
+
+
 @router.get("/api/jobs/{name}/thumb/{file}")
 def thumb(name: str, file: str):
     job = _job_or_404(name)
@@ -684,9 +729,8 @@ def thumb(name: str, file: str):
     # the walk drops a repeat, so the bare name in the URL still names exactly
     # one file wherever it sits.
     bare = Path(file).name
-    found = next((p for p in jobs.photo_files(job) if p.name == bare), None)
-    src = _resolve_confined(found, photos_dir) if found is not None else None
-    if src is None or not src.is_file():
+    src = _where_it_sits(job, photos_dir, bare)
+    if src is None:
         raise HTTPException(404, "Photo not found.")
     # App-owned storage, outside his job folder. See thumbcache.py.
     cached = thumbcache.cached_file(photos_dir, file)

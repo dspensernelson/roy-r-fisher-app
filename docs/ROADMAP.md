@@ -244,13 +244,37 @@ list written here, which would start lying the first time anything merges:
 
     git log --oneline --graph --all --decorate
 
-`build/packages/Roy R. Fisher v0.5.2.zip` was cut on 2026-08-26 and carries
+`build/packages/Roy R. Fisher v0.5.3.zip` was cut on 2026-08-26 and carries
 everything in this list. `build/Send to Mark/` still holds the older 0.5.1,
-which predates every fix and was never sent.
+which predates every fix and was never sent. 0.5.2 was cut and then deleted the
+same day rather than left lying about, because the thumbnail fix below landed
+straight after it and two candidates is how the wrong one gets sent.
 
-**0.5.2 has not run on Windows.** Gate D stands: Spenser tests the exact
-package himself before Mark sees it. Sending it untested risks a second failed
-session with someone who will not debug it for you.
+**0.5.3 has not run on Windows.** Gate D stands: Spenser tests the exact
+package himself before Mark sees it.
+
+- **His jobs are on a mapped network drive**, `Z:`, under a path like
+  `Z:\...\NARRATIVE 1\Mark's Appraisal`. Learned 2026-08-26. Every filesystem
+  question the app asks there is a request to another machine, so the cost of a
+  screen is the number of questions it asks and not the work it does. Nothing
+  about that is visible on a Mac.
+
+- **The thumbnail route used to search the whole job for every photograph.**
+  Measured on Mason City: 57 photographs meant 57 full walks and 6,954 path
+  lookups for one screen. A tenth of a second on a local disk, and up to
+  thirty-five seconds over his drive. It now reads where the photograph sits
+  out of the manifest, which the app already wrote, and falls back to the walk
+  only for a photograph the manifest has never seen. 6,954 lookups became 114.
+  `test_thumbnails_do_not_rewalk.py` counts the walks rather than timing them,
+  because a timing test passes forever on a fast disk and says nothing true
+  about his.
+
+- **Path length was ruled out as a cause of the original defect**, using
+  evidence from Mark's own session: the folder listing on the left resolved and
+  stated every one of those deep files on his machine while the photo screen
+  showed one. His longest path is 194 characters below the jobs folder, which
+  leaves roughly 15 to 21 spare under the Windows 260 limit. Real, worth
+  knowing, not a blocker today.
 
 **A defect in the packaging script was found cutting it, and fixed.** The wheel
 cache is shared between builds and grows, and the install list is built by

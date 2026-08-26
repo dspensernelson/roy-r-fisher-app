@@ -31,6 +31,8 @@ export const photoGroups = (name) => fetch(`/api/jobs/${encodeURIComponent(name)
 export const putPhotoGroup = (name, folder) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/photo-group`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folder }) }).then(j);
 export const classificationLabels = () => fetch("/api/classifications").then(j);
+export const setClassifications = (name, files, label) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/classifications`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ files, label }) }).then(j);
 export const setClassification = (name, file, label) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/classification`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file, label }) }).then(j);
 export const clearClassification = (name, file) =>

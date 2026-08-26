@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   jobDetail, jobFolders, classificationLabels,
-  setClassification, clearClassification,
+  setClassification, setClassifications, clearClassification,
 } from "../api.js";
 
 // The only section the app can build today. Everything else is listed so the
@@ -16,7 +16,8 @@ function folderNote(f) {
   return `${f.count} ${f.count === 1 ? "file" : "files"}`;
 }
 
-function FileRow({ file, labels, onPick, onClear, busy }) {
+function FileRow({ file, labels, onPick, onClear, busy,
+                  selecting, ticked, onTick, bulkReason }) {
   const [picking, setPicking] = useState(false);
   // A refusal belongs on the row he clicked, not across the whole screen. The
   // screen-level error replaces the job with one sentence, which is right when
@@ -29,6 +30,13 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
   return (
     <div className="file">
       <div className="file-top">
+        {/* Only while he is choosing several. The rest of the time the row is
+            exactly what it was, because he is not doing this most of the
+            time. */}
+        {selecting && !gone && !link && (
+          <input type="checkbox" className="file-tick" aria-label={file.name}
+                 checked={!!ticked} onChange={() => onTick(file.rel)} />
+        )}
         <span className={gone ? "file-name gone" : "file-name"}>{file.name}</span>
         {file.within && <span className="file-where">in {file.within}</span>}
         {link && <span className="file-where">shortcut, not read</span>}
@@ -64,7 +72,9 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
           than parked on the page beside it. */}
       {/* Said where he clicked, in the app's own words, and nothing was
           written down. */}
-      {refused && <div className="file-refused">{refused}</div>}
+      {(refused || bulkReason) && (
+        <div className="file-refused">{refused || bulkReason}</div>
+      )}
 
       {picking && (
         <div className="say-what">
@@ -84,7 +94,43 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
   );
 }
 
-function FolderRow({ f, open, onToggle, labels, onPick, onClear, busy }) {
+function FolderRow({ f, open, onToggle, labels, onPick, onClear, onBulk, busy }) {
+  // Choosing several at once, and everything about it, lives in the folder it
+  // belongs to. One folder at a time: closing it forgets the ticks, which is
+  // the whole of the rule and needs no explaining on screen.
+  const [selecting, setSelecting] = useState(false);
+  const [ticked, setTicked] = useState([]);
+  const [reasons, setReasons] = useState({});
+  const [picking, setPicking] = useState(false);
+
+  const selectable = f.files.filter((x) => x.kind === "file");
+
+  React.useEffect(() => {
+    if (!open) { setSelecting(false); setTicked([]); setReasons({}); setPicking(false); }
+  }, [open]);
+
+  function stop() {
+    setSelecting(false); setTicked([]); setReasons({}); setPicking(false);
+  }
+
+  function toggleTick(rel) {
+    setTicked((was) => was.includes(rel) ? was.filter((r) => r !== rel) : was.concat(rel));
+  }
+
+  function apply(label) {
+    setPicking(false);
+    onBulk(ticked, label).then((answer) => {
+      const said = {};
+      (answer.refused || []).forEach((r) => { said[r.file] = r.reason; });
+      setReasons(said);
+      // The ones that worked let go. The ones that could not take this label
+      // stay ticked with their reason, so his next click can give them the
+      // label they actually deserve without finding them again.
+      setTicked((answer.refused || []).map((r) => r.file));
+      if (!(answer.refused || []).length) stop();
+    }).catch(() => stop());
+  }
+
   const openable = f.kind !== "shortcut" && !f.unreadable && f.files.length > 0;
   // A folder with nothing in it is still worth listing, because the row is how
   // he sees the shape of a job. It is not worth the same weight as one holding
@@ -104,9 +150,49 @@ function FolderRow({ f, open, onToggle, labels, onPick, onClear, busy }) {
         )}
         <span className="count">{folderNote(f)}</span>
       </div>
+      {open && selectable.length > 0 && (
+        <div className="bulk">
+          {!selecting ? (
+            <button className="linky" onClick={() => setSelecting(true)}>
+              Bulk classify
+            </button>
+          ) : (
+            <>
+              <button className="linky" onClick={() => setTicked(selectable.map((x) => x.rel))}>
+                Select all {selectable.length}
+              </button>
+              {ticked.length > 0 && (
+                <>
+                  <span className="bulk-count">{ticked.length} selected</span>
+                  <button className="linky" disabled={busy}
+                          onClick={() => setPicking(true)}>
+                    Classify these
+                  </button>
+                </>
+              )}
+              <button className="linky" onClick={stop}>Cancel</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* The same nine, drawn from the same list the single file path uses, so
+          what he can pick here and there can never drift apart. */}
+      {picking && (
+        <div className="say-what">
+          {labels.map((label) => (
+            <button key={label} disabled={busy} onClick={() => apply(label)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {open && f.files.map((file) => (
         <FileRow key={file.rel} file={file} labels={labels}
-                 onPick={onPick} onClear={onClear} busy={busy} />
+                 onPick={onPick} onClear={onClear} busy={busy}
+                 selecting={selecting} ticked={ticked.includes(file.rel)}
+                 onTick={toggleTick} bulkReason={reasons[file.rel]} />
       ))}
     </div>
   );
@@ -131,7 +217,13 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
   }, [job]);
 
   function refresh() {
-    return jobFolders(job).then(setFound);
+    // Both, not just the folders. Classifying a photograph as a subject
+    // photograph changes what the section on the right holds, so refreshing
+    // only the left left the count beside Subject Photographs stale: 33
+    // photographs classified in and the row still reading 17 until he
+    // reloaded the page. Found by looking at the screen after a bulk run.
+    return Promise.all([jobFolders(job), jobDetail(job)])
+      .then(([f, d]) => { setFound(f); setDetail(d); });
   }
 
   function pick(file, label) {
@@ -140,6 +232,13 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
     // what the app said instead of the whole screen being replaced by it.
     return setClassification(job, file, label)
       .then(refresh)
+      .finally(() => setBusy(false));
+  }
+
+  function bulk(files, label) {
+    setBusy(true);
+    return setClassifications(job, files, label)
+      .then((answer) => refresh().then(() => answer))
       .finally(() => setBusy(false));
   }
 
@@ -160,7 +259,7 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
 
   const sections = detail.sections || [];
   const heading = [detail.context, detail.engagement].filter(Boolean).join(" · ");
-  const rowProps = { labels, onPick: pick, onClear: clear, busy };
+  const rowProps = { labels, onPick: pick, onClear: clear, onBulk: bulk, busy };
 
   return (
     <>

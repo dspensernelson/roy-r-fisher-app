@@ -661,3 +661,26 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   color: #fff;
   font-size: 13px;
 }
+
+/* Choosing several files at once, inside the folder they are in. Quiet until
+   he asks for it: the link is all there is until he clicks it, and closing the
+   folder puts everything back. */
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 6px 0 2px 0;
+}
+.bulk-count { color: #fff; font-size: 13px; font-weight: 600; }
+
+/* The tick itself. Sized up from the browser default, because this is a real
+   target he hits fifty-seven times in a row, not a decoration. */
+.file-tick {
+  width: 16px;
+  height: 16px;
+  margin: 0 4px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--brand);
+  cursor: pointer;
+}

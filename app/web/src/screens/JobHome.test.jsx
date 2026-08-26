@@ -14,12 +14,34 @@ const LETTER = {
   within: "", kind: "file", classification: null,
 };
 
+function file(name, folder = "Photos") {
+  return { name, rel: `${folder}/${name}`, within: "", kind: "file",
+           classification: null };
+}
+
 function folders(over = {}) {
   return {
     typical: [{ folder: "Subject Information", count: 1, unreadable: false,
                 truncated: false, kind: "folder", files: [LETTER] }],
     other: [], root_files: [], missing_classifications: [], ...over,
   };
+}
+
+// A folder holding three photographs and one PDF, which is the mixed case.
+const MIXED = [file("IMG_0001.jpeg"), file("IMG_0002.jpeg"),
+               file("IMG_0003.jpeg"), file("Scan.pdf")];
+
+function photosFolder() {
+  return folders({
+    typical: [{ folder: "Photos", count: 4, unreadable: false,
+                truncated: false, kind: "folder", files: MIXED }],
+  });
+}
+
+async function openPhotos() {
+  render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+  await screen.findByRole("heading", { name: JOB });
+  await userEvent.click(await screen.findByText("Photos"));
 }
 
 beforeEach(() => {
@@ -30,6 +52,10 @@ beforeEach(() => {
     labels: ["Engagement letter", "Subject photograph"] });
   vi.spyOn(api, "setClassification").mockResolvedValue({ ok: true });
   vi.spyOn(api, "clearClassification").mockResolvedValue({ ok: true });
+  vi.spyOn(api, "setClassifications").mockResolvedValue({
+    applied: ["Photos/IMG_0001.jpeg", "Photos/IMG_0002.jpeg",
+              "Photos/IMG_0003.jpeg"],
+    refused: [] });
 });
 
 async function show() {
@@ -82,5 +108,114 @@ describe("when the app cannot do what a label asks", () => {
       expect(api.setClassification).toHaveBeenCalledWith(
         JOB, LETTER.rel, "Engagement letter"));
     expect(screen.queryByText(/Only photographs/)).not.toBeInTheDocument();
+  });
+});
+
+
+describe("classifying many files at once", () => {
+  // Mason City keeps 57 photographs in one folder. One at a time that is 114
+  // clicks. Nothing appears on a row until he asks for it, so the ninety per
+  // cent of the time he is not doing this the screen is unchanged.
+  const SUBJECT = "Subject photograph";
+  const PDF_REASON = "That is a PDF. Only photographs go on the photo pages.";
+
+  beforeEach(() => { api.jobFolders.mockResolvedValue(photosFolder()); });
+
+  it("offers nothing until the folder is open", async () => {
+    render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+    await screen.findByRole("heading", { name: JOB });
+    expect(screen.queryByRole("button", { name: "Bulk classify" })).not.toBeInTheDocument();
+  });
+
+  it("shows no tick boxes until he asks for them", async () => {
+    await openPhotos();
+    expect(await screen.findByRole("button", { name: "Bulk classify" })).toBeInTheDocument();
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  it("gives every file a tick box when he asks", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+  });
+
+  it("says how many are ticked", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getAllByRole("checkbox")[0]);
+    expect(await screen.findByText("1 selected")).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole("checkbox")[1]);
+    expect(await screen.findByText("2 selected")).toBeInTheDocument();
+  });
+
+  it("ticks the whole folder in one click", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select all 4" }));
+    expect(await screen.findByText("4 selected")).toBeInTheDocument();
+  });
+
+  it("sends every ticked file with the one label", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getAllByRole("checkbox")[0]);
+    await userEvent.click(screen.getAllByRole("checkbox")[1]);
+    await userEvent.click(screen.getByRole("button", { name: "Classify these" }));
+    await userEvent.click(await screen.findByRole("button", { name: SUBJECT }));
+    await waitFor(() => expect(api.setClassifications).toHaveBeenCalledWith(
+      JOB, ["Photos/IMG_0001.jpeg", "Photos/IMG_0002.jpeg"], SUBJECT));
+  });
+
+  it("keeps the refused ones ticked, with the reason, and clears the rest", async () => {
+    api.setClassifications.mockResolvedValue({
+      applied: ["Photos/IMG_0001.jpeg"],
+      refused: [{ file: "Photos/Scan.pdf", reason: PDF_REASON }] });
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select all 4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Classify these" }));
+    await userEvent.click(await screen.findByRole("button", { name: SUBJECT }));
+    // Only the one that could not take the label is still waiting, so his next
+    // click can give it the label it actually deserves.
+    expect(await screen.findByText("1 selected")).toBeInTheDocument();
+    expect(screen.getByText(PDF_REASON)).toBeInTheDocument();
+  });
+
+  it("clears everything on cancel", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select all 4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(await screen.findByRole("button", { name: "Bulk classify" })).toBeInTheDocument();
+  });
+
+  it("forgets the ticks when the folder is closed", async () => {
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select all 4" }));
+    await userEvent.click(screen.getByText("Photos"));      // close it
+    await userEvent.click(await screen.findByText("Photos"));  // open it again
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.queryByText("4 selected")).not.toBeInTheDocument();
+  });
+
+  it("brings the section count back up to date", async () => {
+    // Classifying photographs in changes what the section on the right holds.
+    // Refreshing only the left band left the count beside Subject Photographs
+    // stale until he reloaded the page.
+    api.jobDetail.mockResolvedValue({
+      name: JOB, photo_count: 12, context: "", engagement: "", sections: [] });
+    await openPhotos();
+    await userEvent.click(await screen.findByRole("button", { name: "Bulk classify" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select all 4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Classify these" }));
+    await userEvent.click(await screen.findByRole("button", { name: SUBJECT }));
+    await waitFor(() => expect(api.jobDetail).toHaveBeenCalledTimes(2));
+  });
+
+  it("leaves the single file path alone", async () => {
+    await openPhotos();
+    expect(await screen.findAllByRole("button", { name: "Classify" })).toHaveLength(4);
   });
 });

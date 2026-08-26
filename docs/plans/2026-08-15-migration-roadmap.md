@@ -164,6 +164,85 @@ amended in place, so this file holds one answer and never two.
   section only. No Description of Improvements implementation plan is
   approved until the actual template has been received and inspected.
 
+## Decisions on record (2026-08-25, Spenser, in chat)
+
+Made after Mark's first real session on his own Windows PC, which found almost
+no photographs in any of his jobs. Recorded here because the plan that carried
+out the work has been deleted, and these outlive it.
+
+- **The app never reads a folder name for meaning, and asks Mark instead.**
+  Measured across eleven real jobs on 2026-08-25: every one keeps each shoot
+  twice, full size and shrunk by hand, and the folder names are `Original`,
+  `Raw pics_`, `Minimized`, `full size`, `Building`, `Used`, `Reduced`,
+  `3525`/`3575` and `Report Photos_`. Nine conventions across eleven jobs, and
+  a new helper in Mark's office has just added a tenth. Any rule written
+  against those names breaks the next time somebody in that office invents a
+  folder. So when a job keeps photographs in more than one place the app shows
+  him the folders his own office made, with a photograph and a count from each,
+  and he picks one. `Z`, `Do Not Use`, `Used` and `All report photos used` are
+  read as plain text and nothing else.
+
+- **The office's hand-shrinking is redundant and costs quality.** Measured on
+  the Maquoketa job, 2026-08-25. His helper resizes every photograph to a
+  quarter, 4032 x 3024 down to 1008 x 756. The app already caps at 1,600
+  pixels and never enlarges, so from the raw file it embeds 1600 x 1200, which
+  is 400 dots per inch at four inches wide against 252 from the shrunk copy.
+  Once shrunk the quality cannot be recovered. Worse, resizing strips the EXIF,
+  which destroys the capture order, which is why the helper then numbers every
+  file by hand. Pointed at the raw folder the app reproduced his numbering
+  exactly, from capture times, except one pair he had deliberately swapped.
+  **The case for asking the office to stop is these numbers.** Sixteen raw
+  photographs are 53.2 MB and produce a 3.3 MB document.
+
+- **The right-hand side of the job screen is not the report. It is what
+  generates the report.** The report is the Word file, and once he has built it
+  nothing in the app reaches into it. He can take a photograph out of the
+  staging and build again; he cannot take one out of a document he has already
+  made. The heading `The report` stays, because he reads it as the report he is
+  making. `Cut from report` does not, and is now `Take out`.
+
+- **The app refuses a claim it cannot act on, and says why.** Marking a signed
+  engagement letter a subject photograph used to be recorded, shown back as
+  "confirmed by you", and acted on in no way at all. It now answers "That is a
+  PDF. Only photographs go on the photo pages." and writes nothing. Only
+  `Subject photograph` is ever refused, because it is the only label that
+  decides what gets built. What a file is in every other sense is Mark's to
+  say.
+
+- **One section, one number.** The job screen counted every image in the Photos
+  tree while the Photos screen counted the report, so one section showed 33 on
+  one screen and 16 on the next. The job screen now counts what would build.
+
+### Still owed out of that work
+
+Named here rather than in a plan, because plans are deleted and these are not
+done.
+
+- **Bulk classify.** Spenser's original ask on 2026-08-25 and still the thing
+  he wants: tick many files on the left and give them one label in one action,
+  for any of the nine labels rather than photographs alone. It went out of
+  scope by agreement when the folder question turned out to solve the
+  photographs case in one click, and it was never built. Fifty-seven files at
+  two clicks each is the case it exists for.
+
+- **Suggesting a classification from the filename, for him to confirm.**
+  Currently forbidden: nothing infers a label from a name, a rule set in Phase
+  0 after "Has deed" was manufactured from a filename and was wrong. Spenser
+  reopened it on 2026-08-25 and the corpus supports him. Measured the same day
+  across the delivered reports, his own naming carries a type prefix far more
+  often than not: `DEED` 10 times, `PLAT` 8, `PHOTO` 7, `SKETCH` and
+  `SKETCHES` 7, `FLOOD` 6, `AERIAL` 3, `ZONING MAP` 3. **The distinction that
+  makes this safe is proposing against asserting.** A suggestion he confirms is
+  not the same thing as a stated fact, and the Phase 0 rule was written against
+  stated facts. Not approved, not designed, and it needs its own measurement
+  pass over how often a prefix would be wrong before anyone builds it.
+
+- **A layout pass over the job screen and the photo screen.** Spenser's words
+  on 2026-08-25: it is all a little confusing. Not specified yet.
+
+- **Taking several photographs out at once.** A job like Maquoketa carries four
+  the office marked `Z` for do not use, and they come out one click at a time.
+
 ## The working rhythm (stops are scheduled, not hoped for)
 
 - **A goal conversation before each change.** Before a slice starts, the goal

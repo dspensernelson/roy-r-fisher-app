@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from pathlib import Path
 
@@ -461,6 +462,44 @@ def create_app() -> FastAPI:
         job = photos_routes._job_or_404(name)
         return classify.attach(job, inventory.read_job(job))
 
+    @app.get("/api/jobs/{name}/photo-groups")
+    def photo_groups(name: str):
+        """Where this job keeps its photographs, and which set he chose.
+
+        `needs_choice` is the only thing the screen has to act on: more than
+        one place holds photographs and he has not said which is the report.
+        A job whose photographs all sit in one place never asks.
+        """
+        job = photos_routes._job_or_404(name)
+        groups = photos_routes.photo_groups(job)
+        chosen = jobfacts.photo_folder(job)
+        here = {g["folder"] for g in groups}
+        return {"groups": groups,
+                "chosen": chosen,
+                "chosen_missing": chosen is not None and chosen not in here,
+                "needs_choice": chosen is None and len(groups) > 1}
+
+    class PhotoGroup(BaseModel):
+        folder: str
+
+    @app.put("/api/jobs/{name}/photo-group")
+    def put_photo_group(name: str, body: PhotoGroup):
+        """Record which folder holds the report photographs.
+
+        Refused unless that folder is one the app can see photographs in right
+        now, so no answer can be recorded for a place it has not just looked
+        at. Nothing is written into his job folder: the answer lives in the
+        app's own file, the same as his naming corrections.
+        """
+        job = photos_routes._job_or_404(name)
+        here = {g["folder"] for g in photos_routes.photo_groups(job)}
+        if body.folder not in here:
+            raise HTTPException(
+                400, "There are no photographs in that folder of this job.")
+        with busy.writing():
+            jobfacts.save_photo_folder(job, body.folder)
+        return {"chosen": body.folder}
+
     @app.put("/api/jobs/{name}/classification")
     def put_classification(name: str, body: Classification):
         job = photos_routes._job_or_404(name)
@@ -767,6 +806,32 @@ def create_app() -> FastAPI:
         if error:
             raise HTTPException(400, error)
 
+        # A photograph named in the manifest file that is not in the folder
+        # used to surface as the engine's own exception, because the engine
+        # read that file directly. It no longer does: Mark chooses which
+        # folder holds the report photographs, so the engine is handed the
+        # list instead. That made a dangling entry disappear silently, which
+        # is worse than the crash it replaced, so the check is now explicit
+        # and it runs whether or not he has chosen anything.
+        if manifest_existed:
+            try:
+                raw = json.loads(manifest_file.read_text())
+            except ValueError:
+                raw = {}
+            if isinstance(raw, dict):
+                for entry in raw.get("photos", []) or []:
+                    if not isinstance(entry, dict) or entry.get("cut"):
+                        continue
+                    named = entry.get("file")
+                    if not named:
+                        continue
+                    where = jobs.photo_path(job, entry)
+                    if not where.is_file():
+                        raise HTTPException(
+                            500, "Build failed: %s is named in "
+                                 "photo-manifest.json but is not in the Photos "
+                                 "folder." % named)
+
         # Every included caption has to have been looked at. This is the gate,
         # and it is here rather than only on the screen because the manifest is
         # hand-editable and the screen is courtesy.
@@ -816,9 +881,16 @@ def create_app() -> FastAPI:
             # originals are only ever read.
             with Workspace() as bench:
                 try:
+                    # The list, not the file. Mark chooses which folder
+                    # inside Photos holds the report photographs and the file
+                    # deliberately still holds all of them with their captions,
+                    # so the engine reading it would put photographs in the
+                    # document that he did not choose. This list is the same
+                    # one the gate above already refused to build without.
                     out = build_photo_docx(manifest_file, template,
                                            prepare=bench.copy_for_document,
-                                           out_base=out_base)
+                                           out_base=out_base,
+                                           entries=photos_routes.included(manifest))
                 except Exception as exc:
                     raise HTTPException(500, f"Build failed: {exc}")
         # The folder is named as well as the file, so the screen can offer to

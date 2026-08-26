@@ -415,8 +415,17 @@ def _drop_trailing_blank_paragraphs(doc) -> int:
 
 
 def build_photo_docx(manifest_path: Path, template_path: Path,
-                     prepare=None, out_base: str = DEFAULT_OUTPUT_BASE) -> Path:
+                     prepare=None, out_base: str = DEFAULT_OUTPUT_BASE,
+                     entries=None) -> Path:
     """Build the document. `prepare` decides what bytes actually go in.
+
+    `entries` decides which photographs go in. Without it the manifest file is
+    read from disk and every photograph in it that is not cut is used, which is
+    what the command line entry point does and what this always did. The app
+    passes the list itself, because Mark chooses which folder inside `Photos`
+    holds the report photographs and the file on disk deliberately still holds
+    all of them, captions and all. Reading the file here would put photographs
+    in the document that he did not choose.
 
     Without it the original file is embedded, which is what the command-line
     entry point still does. The app passes a preparer that hands back a
@@ -433,7 +442,8 @@ def build_photo_docx(manifest_path: Path, template_path: Path,
     # the table count follows what is actually printed and no blank rows are
     # left behind. A missing "cut" means the photo is in, which is what every
     # manifest written before this feature says.
-    photos = [e for e in manifest["photos"] if not e.get("cut")]
+    source = manifest["photos"] if entries is None else entries
+    photos = [e for e in source if not e.get("cut")]
     doc = Document(str(template_path))
 
     needed = max(1, -(-len(photos) // PHOTOS_PER_TABLE))  # ceil

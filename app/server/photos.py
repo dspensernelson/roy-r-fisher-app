@@ -12,6 +12,8 @@ from PIL import Image
 import brief
 import busy
 import captions
+import classify
+import jobfacts
 import jobs
 import thumbcache
 
@@ -172,6 +174,61 @@ def photo_groups(job: Path) -> list:
     return sorted(counted.values(), key=lambda g: (-g["count"], g["folder"]))
 
 
+SUBJECT_PHOTOGRAPH = "Subject photograph"
+
+
+def _classified_in(job: Path) -> set:
+    """Photographs Mark pulled in one at a time, as (folder, filename).
+
+    His office sometimes leaves a straggler out of the folder it prepared, so
+    the folder choice is a starting point and this is the top up. Only
+    `Subject photograph` moves anything: a plat map is still a plat map.
+
+    Records are keyed from the job root, so `Photos/Raw pics_X/one.jpeg`
+    becomes ("Raw pics_X", "one.jpeg"). Anything outside `Photos` is not a
+    photograph of the subject however it is labelled, and is ignored here.
+    """
+    picked = set()
+    for rel, record in classify.for_job(job).items():
+        if record.get("label") != SUBJECT_PHOTOGRAPH:
+            continue
+        parts = rel.split("/")
+        if len(parts) < 2 or parts[0] != jobs.photos_dir(job).name:
+            continue
+        picked.add(("/".join(parts[1:-1]), parts[-1]))
+    return picked
+
+
+def _report_set(job: Path, entries: list) -> tuple:
+    """Narrow the job's photographs to the ones that are in the report.
+
+    Returns (photographs, chosen_folder, chosen_folder_is_missing).
+
+    With no answer recorded, every photograph is in. That is what every job
+    did before this existed and what a job with one folder of photographs
+    still does, so nothing starts disappearing on its own: the screen asks the
+    question, the manifest does not answer it by guessing.
+
+    With an answer recorded, the report is that folder plus anything he
+    classified in. If the folder he chose is no longer there, because the
+    office renamed it, the answer is nothing and a flag saying so. It never
+    falls back to another folder: a report quietly built from photographs he
+    did not choose is exactly the confident wrong answer this app must not
+    produce.
+    """
+    chosen = jobfacts.photo_folder(job)
+    if chosen is None:
+        return entries, None, False
+
+    here = {str(e.get("folder") or "") for e in entries}
+    missing = chosen not in here
+    picked = _classified_in(job)
+    kept = [e for e in entries
+            if str(e.get("folder") or "") == chosen
+            or (str(e.get("folder") or ""), e.get("file")) in picked]
+    return kept, chosen, missing
+
+
 def load_manifest(job: Path) -> dict:
     """Load the manifest and reconcile it against what's actually in the
     Photos folder before returning it.
@@ -248,13 +305,51 @@ def load_manifest(job: Path) -> dict:
             entry["folder"] = folder
         kept.append(entry)
 
-    manifest["photos"] = kept
+    # Everything on disk has now been reconciled, so his captions, his order
+    # and his ticks are all accounted for. Only now is the list narrowed to
+    # the report. The file on disk still holds every photograph; this is the
+    # view, and save_manifest below is what keeps the two from diverging.
+    in_report, chosen, missing = _report_set(job, kept)
+    manifest["photos"] = in_report
+    manifest["photo_folder"] = chosen
+    manifest["photo_folder_missing"] = missing
     return manifest
 
 
 def save_manifest(job: Path, manifest: dict):
+    """Write the manifest, keeping every photograph the caller was not shown.
+
+    The screen only ever holds the photographs in the report, so what comes
+    back from it is only those. Writing that straight over the file would
+    throw away every caption he had typed on a photograph currently outside
+    the chosen folder, and he would never see it go.
+
+    So entries already on disk that the caller did not carry are kept, in
+    their existing order, after the ones it did. Nothing he typed is lost by
+    changing his mind about which folder the report comes from.
+    """
     jobs.photos_dir(job).mkdir(parents=True, exist_ok=True)
-    manifest_path(job).write_text(json.dumps(manifest, indent=2))
+    path = manifest_path(job)
+
+    out = dict(manifest)
+    # The view's own bookkeeping. Recomputed on every read, so storing it
+    # would only create a second copy to go stale.
+    out.pop("photo_folder", None)
+    out.pop("photo_folder_missing", None)
+
+    coming = [e for e in out.get("photos", []) if isinstance(e, dict)]
+    known = {e.get("file") for e in coming}
+    kept_back = []
+    if path.is_file():
+        try:
+            existing = json.loads(path.read_text())
+        except ValueError:
+            existing = {}
+        if isinstance(existing, dict):
+            kept_back = [e for e in existing.get("photos", []) or []
+                         if isinstance(e, dict) and e.get("file") not in known]
+    out["photos"] = coming + kept_back
+    path.write_text(json.dumps(out, indent=2))
 
 
 def _resolve_confined(path: Path, base: Path) -> Optional[Path]:

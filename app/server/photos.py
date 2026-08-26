@@ -229,6 +229,26 @@ def _report_set(job: Path, entries: list) -> tuple:
     return kept, chosen, missing
 
 
+def report_count(job: Path) -> int:
+    """How many photographs this job's photo pages would be built from now.
+
+    The job screen and the Photos screen have to agree. The job screen used to
+    count every image in the Photos tree, which after Mark picks a folder is a
+    different number from the one he is looking at: thirty three against
+    sixteen, for the same section, on two screens. So this counts what would
+    actually build, cuts taken off.
+
+    Falls back to the plain count when the manifest cannot be read. A damaged
+    photo-manifest.json is a real condition and it already has its own plain
+    message on the Photos screen. It must not take the whole job screen down
+    on the way past.
+    """
+    try:
+        return len(included(load_manifest(job)))
+    except Exception:
+        return jobs.count_photos(job)
+
+
 def load_manifest(job: Path) -> dict:
     """Load the manifest and reconcile it against what's actually in the
     Photos folder before returning it.
@@ -563,11 +583,17 @@ def _set_cut(job: Path, file: str, cut: bool) -> dict:
     """
     path = manifest_path(job)
     if not path.is_file():
-        raise HTTPException(404, "This job has no photo list yet.")
-    try:
-        manifest = json.loads(path.read_text())
-    except ValueError:
-        raise HTTPException(400, "This job's photo list could not be read.")
+        # No list on disk yet is not an error, it is a job he has just opened.
+        # Nothing writes the manifest until he types a caption or reorders, so
+        # taking a photograph out could be the first thing he ever does in a
+        # job, and it used to answer "This job has no photo list yet". Build
+        # already reconciles rather than refusing here; this now does the same.
+        manifest = load_manifest(job)
+    else:
+        try:
+            manifest = json.loads(path.read_text())
+        except ValueError:
+            raise HTTPException(400, "This job's photo list could not be read.")
 
     error = _validate_manifest_shape(job, manifest)
     if error:

@@ -371,9 +371,16 @@ def create_app() -> FastAPI:
     @app.get("/api/jobs/{name}")
     def job_detail(name: str):
         try:
-            return jobs.job_detail(home_or_400(), name)
+            found = jobs.job_detail(home_or_400(), name)
         except (FileNotFoundError, ValueError):
             raise HTTPException(404, "Job not found.")
+        # The number the Photos screen shows, not the number of files in the
+        # folder. Two screens quoting two numbers for one section is the app
+        # disagreeing with itself in front of him.
+        import photos as photos_for_count
+        found["photo_count"] = photos_for_count.report_count(
+            jobs.resolve_job(home_or_400(), name))
+        return found
 
     import photos as photos_routes
     app.include_router(photos_routes.router)

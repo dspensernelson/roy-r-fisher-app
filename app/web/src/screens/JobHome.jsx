@@ -225,7 +225,11 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
             <span>
               <span className="name">{BUILDABLE}</span>
               <span className="state">
-                {detail.photo_count} {detail.photo_count === 1 ? "photo" : "photos"} in the folder
+                {/* What this section holds now, which is what would build.
+                    Not the number of files in the folder: after he picks a
+                    folder those are different numbers, and the Photos screen
+                    shows the other one. */}
+                {detail.photo_count} {detail.photo_count === 1 ? "photo" : "photos"}
               </span>
             </span>
             <span className="chip">Open</span>

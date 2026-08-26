@@ -359,3 +359,23 @@ describe("which folder holds the report photographs", () => {
     expect(screen.queryByPlaceholderText("Caption...")).not.toBeInTheDocument();
   });
 });
+
+
+describe("the words on the screen", () => {
+  // The right hand side is not the report. It is what the report gets made
+  // out of. So a photograph is taken out of it, not cut from a report that
+  // does not exist until he presses Build. Spenser's call, 2026-08-25.
+  it("offers to take a photograph out, not to cut it from a report", async () => {
+    await show();
+    expect(await screen.findAllByRole("button", { name: "Take out" })).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "Cut from report" })).not.toBeInTheDocument();
+  });
+
+  it("calls the section below Taken out", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: [{ file: "a.jpg", caption: "" }, { file: "b.jpg", caption: "", cut: true }],
+    }));
+    await show();
+    expect(await screen.findByRole("button", { name: /Taken out \(1\)/ })).toBeInTheDocument();
+  });
+});

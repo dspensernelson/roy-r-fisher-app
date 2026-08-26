@@ -381,3 +381,65 @@ def test_the_manifest_route_returns_only_the_chosen_photographs(tmp_path, monkey
                json={"folder": "Report Photos_X"})
     body = client.get("/api/jobs/DAVENPORT_1 Test Street/manifest").json()
     assert len(body["photos"]) == 16
+
+
+# --- one number for one section -------------------------------------------
+def test_the_job_screen_and_the_photos_screen_quote_the_same_number(tmp_path, monkeypatch):
+    """The job screen used to count every image in the Photos tree. After he
+    picks a folder that is a different number from the one he is looking at on
+    the next screen: 33 against 16, for one section, in one job."""
+    maquoketa(tmp_path)
+    client = _client(tmp_path, monkeypatch)
+    name = "DAVENPORT_1 Test Street"
+    client.put("/api/jobs/%s/photo-group" % name, json={"folder": "Report Photos_X"})
+    detail = client.get("/api/jobs/%s" % name).json()
+    manifest = client.get("/api/jobs/%s/manifest" % name).json()
+    assert detail["photo_count"] == len(manifest["photos"]) == 16
+
+
+def test_a_photograph_taken_out_stops_being_counted(tmp_path, monkeypatch):
+    """The number is what would build, so one taken out comes off it."""
+    maquoketa(tmp_path)
+    client = _client(tmp_path, monkeypatch)
+    name = "DAVENPORT_1 Test Street"
+    client.put("/api/jobs/%s/photo-group" % name, json={"folder": "Report Photos_X"})
+    client.get("/api/jobs/%s/manifest" % name)
+    from urllib.parse import quote
+    cut = client.post("/api/jobs/%s/photos/%s/cut"
+                      % (name, quote("1 IMG_0559.jpeg")))
+    assert cut.status_code == 200, cut.text
+    assert client.get("/api/jobs/%s" % name).json()["photo_count"] == 15
+
+
+def test_an_unanswered_job_counts_everything(tmp_path, monkeypatch):
+    """Nothing has been narrowed yet, so the number is still every photograph
+    and it still equals what the Photos screen would show."""
+    maquoketa(tmp_path)
+    client = _client(tmp_path, monkeypatch)
+    assert client.get("/api/jobs/DAVENPORT_1 Test Street").json()["photo_count"] == 33
+
+
+def test_a_damaged_manifest_does_not_take_the_job_screen_down(tmp_path, monkeypatch):
+    """The Photos screen has its own plain message for this. The job screen
+    must not become unopenable on the way past."""
+    job = maquoketa(tmp_path)
+    photos.manifest_path(job).write_text("{not json")
+    client = _client(tmp_path, monkeypatch)
+    answer = client.get("/api/jobs/DAVENPORT_1 Test Street")
+    assert answer.status_code == 200
+    assert answer.json()["photo_count"] == 33
+
+
+def test_taking_one_out_works_before_anything_has_been_typed(tmp_path, monkeypatch):
+    """A job he has just opened has no photo list on disk yet, because nothing
+    writes one until he types a caption or reorders. Taking out a photograph he
+    can see could be the first thing he ever does, and it used to answer
+    "This job has no photo list yet"."""
+    from urllib.parse import quote
+    a_job(tmp_path, "one.jpg", "two.jpg")
+    client = _client(tmp_path, monkeypatch)
+    name = "DAVENPORT_1 Test Street"
+    assert not photos.manifest_path(tmp_path / name).is_file()
+    answer = client.post("/api/jobs/%s/photos/%s/cut" % (name, quote("one.jpg")))
+    assert answer.status_code == 200, answer.text
+    assert client.get("/api/jobs/%s" % name).json()["photo_count"] == 1

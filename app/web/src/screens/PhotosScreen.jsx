@@ -152,7 +152,7 @@ export default function PhotosScreen({ job }) {
     setError(null); setDone(null);
     try {
       setManifest(await cutPhoto(job, file));
-      setCutNote("Moved to Cut photos. The original file was not changed.");
+      setCutNote("Taken out. The original file was not changed.");
     } catch (e) { setError(e.message); }
   }
 
@@ -341,7 +341,7 @@ export default function PhotosScreen({ job }) {
         <div>
           <h1 style={{ margin: 0 }}>Photos</h1>
           <p className="sub" style={{ margin: "4px 0 0" }}>
-            Included: {inPhotos.length} · Cut: {cutPhotos.length}
+            Included: {inPhotos.length} · Taken out: {cutPhotos.length}
             {" "}· about {pagesIn} {pagesIn === 1 ? "page" : "pages"}.
             {" "}Drag a photo to reorder it.
           </p>
@@ -663,7 +663,7 @@ export default function PhotosScreen({ job }) {
                 </button>
                 <button className="linky cut-link" style={{ marginLeft: 0 }}
                         onClick={() => onCut(p.file)}>
-                  Cut from report
+                  Take out
                 </button>
               </div>
             </figure>
@@ -678,13 +678,13 @@ export default function PhotosScreen({ job }) {
         <div className="cut-section">
           <button className="cut-head" onClick={() => setShowCut(!showCut)}>
             <span className="cut-caret">{showCut ? "▾" : "▸"}</span>
-            Cut photos ({cutPhotos.length})
+            Taken out ({cutPhotos.length})
           </button>
           {showCut && (
             <>
               <p className="setting-fine" style={{ margin: "0 0 12px" }}>
-                These are left out of the report and out of caption writing. The
-                files are still in the job's Photos folder, untouched.
+                These are left out of the photo pages and out of caption writing.
+                The files are still in the job's Photos folder, untouched.
               </p>
               <div className="grid">
                 {cutPhotos.map(({ p }) => (

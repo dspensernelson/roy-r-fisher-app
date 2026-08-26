@@ -244,10 +244,22 @@ list written here, which would start lying the first time anything merges:
 
     git log --oneline --graph --all --decorate
 
-`build/Send to Mark/` holds a package built 2026-08-24. It predates every fix
-made on 2026-08-25 and it was never sent. **The next package is the thing that
-unblocks Mark**, and building one is a decision for Spenser, not a step anyone
-takes on the way past.
+`build/packages/Roy R. Fisher v0.5.2.zip` was cut on 2026-08-26 and carries
+everything in this list. `build/Send to Mark/` still holds the older 0.5.1,
+which predates every fix and was never sent.
+
+**0.5.2 has not run on Windows.** Gate D stands: Spenser tests the exact
+package himself before Mark sees it. Sending it untested risks a second failed
+session with someone who will not debug it for you.
+
+**A defect in the packaging script was found cutting it, and fixed.** The wheel
+cache is shared between builds and grows, and the install list is built by
+diffing that directory. Upstream published click 8.5.0 and websockets 17.1
+after the cache was last filled on the 19th, so the build handed pip two
+versions of each and died on a ResolutionImpossible. The script now keeps the
+newest wheel of each distribution and prints what it dropped. It would have
+failed this way on any build made after any dependency released, so it was
+waiting for whoever cut the next package.
 
 ### Carried out of Phase 0, whose plan has been deleted
 

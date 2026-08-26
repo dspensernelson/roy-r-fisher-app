@@ -111,6 +111,61 @@ WINDOWS_ENV = {
 }
 
 
+def _version():
+    """packaging's version parser, from wherever packaging happens to live.
+
+    Same reasoning as _markers below: pip vendors it and pip is certainly
+    installed, because this script shells out to it.
+    """
+    try:
+        from packaging.version import Version
+    except ImportError:
+        from pip._vendor.packaging.version import Version
+    return Version
+
+
+def one_wheel_per_distribution(wheels: list) -> list:
+    """Keep the newest wheel of each distribution, and say what was dropped.
+
+    The wheel cache is shared between builds and it grows. When upstream
+    publishes a new release of something the pinned requirements do not pin,
+    the cache ends up holding both, and this list is built by diffing that
+    directory. Handing pip two versions of one distribution is a
+    ResolutionImpossible and the whole build stops.
+
+    Measured 2026-08-26: a cache last filled on the 19th held click 8.4.2 and
+    websockets 17.0.1; upstream had since published click 8.5.0 and websockets
+    17.1, and the build failed on both.
+
+    Only one version of a distribution can be installed, so choosing the newest
+    is the same answer a fresh resolution into an empty cache would give. What
+    was dropped is printed rather than passed over, because a build quietly
+    choosing between two versions of a dependency is a thing somebody has to be
+    able to see.
+    """
+    Version = _version()
+    best = {}
+    for wheel in wheels:
+        parts = wheel.name.split("-")
+        if len(parts) < 2:
+            continue
+        name = parts[0].lower().replace("_", "-")
+        try:
+            version = Version(parts[1])
+        except Exception:
+            version = None
+        held = best.get(name)
+        if held is None or version is None or held[0] is None or version > held[0]:
+            if held is not None:
+                say("  two versions of %s in the cache, keeping %s and dropping %s"
+                    % (name, wheel.name, held[1].name))
+            best[name] = (version, wheel)
+        else:
+            say("  two versions of %s in the cache, keeping %s and dropping %s"
+                % (name, held[1].name, wheel.name))
+    return [held[1] for held in best.values()]
+
+
 def _markers():
     """packaging's marker and requirement parsers, whichever copy is present.
 
@@ -330,6 +385,7 @@ def build(out: Path, work: Path, offline: bool) -> None:
         downloaded = resolve_closure(reqs, wheels)
         if not downloaded:
             raise SystemExit("no wheels were downloaded, so there is nothing to install")
+        downloaded = one_wheel_per_distribution(downloaded)
         say("installing %d wheels into the package" % len(downloaded))
         # Every wheel the resolution produced, by name, rather than resolving a
         # second time from the requirements file. Resolving twice is how a

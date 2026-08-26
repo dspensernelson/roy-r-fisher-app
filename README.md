@@ -70,6 +70,15 @@ presses their buttons. To run only that: `cd app/web && npm test`.
 
 ## What we know is missing
 
+- **Mark has run it on his own machine, and almost no photographs appeared.**
+  2026-08-25, with Spenser watching. His jobs were found. His photographs were
+  not: the shipped version reads only the top layer of a job's `Photos` folder
+  and his office keeps them one and two folders down. On the job they looked at
+  together, one image out of 33 reached the screen, and it was the aerial. The
+  cause is understood and fixed, together with three defects found behind it,
+  but **that work is on a branch and no package carrying it has been sent.**
+  Until one is, his machine still behaves the way it did on the call.
+
 - **Windows is part way proven, and not accepted.** One pilot run on a Windows
   PC covered delivery and startup. The package was delivered to that PC through
   a browser download. It was extracted with Windows Explorer. The packaged app

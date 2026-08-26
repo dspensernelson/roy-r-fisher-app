@@ -2104,6 +2104,36 @@ A personal API key never goes on an employer-owned machine to satisfy a
 checklist. The work-computer test stops before AI captioning by design, not by
 omission.
 
+### Mark's own session, 2026-08-25. The pilot met his real jobs and failed.
+
+**FACT, observed by Spenser with Mark, 2026-08-25.** A package was installed on
+Mark's machine and pointed at his real jobs folder.
+
+- His jobs were found. That part worked.
+- **Almost none of his photographs were.** The shipped version reads only the
+  top layer of a job's `Photos` folder, and his office keeps photographs one
+  and two folders below it. On the job they looked at together, one image out
+  of 33 reached the Subject Photographs screen, and it was the aerial, because
+  it was the only file lying loose at the top.
+- The photographs were plainly visible in the folder listing on the left the
+  whole time, because that listing already walked subfolders. So the app was
+  showing him files it would not use, with nothing on screen to say why.
+
+**What that says about the acceptance evidence.** Section 16's checklist has no
+item for "his real jobs have photographs in them", because every fixture in the
+suite and every job the app makes puts photographs straight into `Photos`. The
+app had only ever been tested against folders the app itself had laid out. That
+is the gap this session found, and it is worth more than the defect.
+
+**Fixed, on a branch, not delivered.** The walk now reads the whole `Photos`
+tree; where a job keeps its photographs in more than one place the app asks him
+once which folder is the report; and three further defects surfaced behind it.
+The measured findings are recorded in the roadmap's 2026-08-25 decisions.
+**No package carrying any of it has been built or sent.** Until one is, Mark's
+machine behaves exactly as it did on the call.
+
+**Gate D is unchanged and still ahead.** Nothing here is acceptance.
+
 ### Spenser's uninterrupted implementation pass, authorized 2026-08-20
 
 **APPROVED, 2026-08-20.** Gates B and C stop being approval stops and become

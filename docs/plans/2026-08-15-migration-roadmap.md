@@ -230,6 +230,27 @@ out the work has been deleted, and these outlive it.
   file list left it stale: 33 photographs classified in and the section still
   reading 17 until the page was reloaded. Found by looking, not by a test.
 
+### Where the work sits, 2026-08-25
+
+Recorded because the two plans that carried it have deleted themselves, and a
+session opening this repository cold would otherwise find four branches and no
+account of them.
+
+Nothing is merged and nothing is pushed. The branches chain, each cut from the
+one above it:
+
+| Branch | Holds |
+|---|---|
+| `main` | The Phase 0 merge and nothing since. It does not have the Windows pilot at all |
+| `windows-photo-pilot` | The pilot through v0.5.0, and the package Mark was given |
+| `photo-folder-choice` | Photographs found in subfolders, the folder question, the ordering fix, the refusals |
+| `bulk-classify` | Bulk classify. **This is the tip and everything above is in it** |
+
+`build/Send to Mark/` holds `Roy R. Fisher v0.5.1.zip`, built 2026-08-24. It
+predates every fix in this list and it was never sent. **The next package is
+the thing that unblocks Mark**, and building one is a decision for Spenser, not
+a step anyone takes on the way past.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not

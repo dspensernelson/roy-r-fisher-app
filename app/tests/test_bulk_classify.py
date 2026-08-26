@@ -260,3 +260,93 @@ def test_the_single_file_route_still_works(tmp_path, monkeypatch):
                         json={"file": "Photos/one.jpeg", "label": SUBJECT})
     assert answer.status_code == 200
     assert labels_in(job) == {"Photos/one.jpeg": SUBJECT}
+
+
+# --- against the real corpus, read only -----------------------------------
+from conftest import CORPUS  # noqa: E402
+
+REAL = pytest.mark.skipif(not CORPUS.is_dir(),
+                          reason="the corpus is private and not in this repository")
+
+# Measured 2026-08-25. Mason City is the job this feature exists for. Its
+# chosen photographs are 50 in one folder, which one at a time is 100 clicks,
+# and its 7 rejects sit in `Do Not Use` beside them. 57 is the two together,
+# and this test is about the one folder he would actually select.
+MASON = "MASON CITY_Walmart_4151 4th St SW"
+USED = ("Photos/Raw pics_Walmart Mason City 4151 4th St SW/"
+        "All report photos used")
+
+
+def _rels_in(job: Path, folder: str) -> list:
+    import inventory
+    listing = inventory.read_job(job)
+    rows = listing["typical"] + listing["other"]
+    out = []
+    for row in rows:
+        for entry in row["files"]:
+            if entry["rel"].startswith(folder + "/") and entry["kind"] == "file":
+                out.append(entry["rel"])
+    return sorted(out)
+
+
+@REAL
+def test_mason_citys_whole_photo_folder_takes_one_label_in_one_call(tmp_path):
+    job = CORPUS / MASON
+    rels = _rels_in(job, USED)
+    if not rels:
+        pytest.skip("this job's photographs are not in this checkout")
+    answer = classify.set_labels(job, rels, SUBJECT)
+    assert len(answer["applied"]) == 50
+    assert answer["refused"] == []
+    assert len(labels_in(job)) == 50
+
+
+@REAL
+def test_a_real_mixed_folder_names_exactly_what_it_could_not_take(tmp_path):
+    """Subject Information holds his deed, his assessment record and his
+    engagement letter. None of them can go on a photo page and all three are
+    named in the answer."""
+    job = CORPUS / MASON
+    rels = _rels_in(job, "Subject Information")
+    if not rels:
+        pytest.skip("this job's Subject Information is not in this checkout")
+    answer = classify.set_labels(job, rels, SUBJECT)
+    assert answer["applied"] == []
+    assert sorted(r["file"] for r in answer["refused"]) == rels
+    assert all(r["reason"] for r in answer["refused"])
+
+
+@REAL
+def test_the_same_real_folder_takes_a_label_that_does_fit(tmp_path):
+    """The refusal is about one label, not about the files. Every one of them
+    can be a deed as far as the app is concerned, because what a file is, is
+    Mark's to say."""
+    job = CORPUS / MASON
+    rels = _rels_in(job, "Subject Information")
+    if not rels:
+        pytest.skip("this job's Subject Information is not in this checkout")
+    answer = classify.set_labels(job, rels, "Deed")
+    assert sorted(answer["applied"]) == rels
+    assert answer["refused"] == []
+
+
+@REAL
+def test_classifying_a_real_job_writes_nothing_into_it():
+    """The whole corpus is read only. If this ever fails, that is the bug."""
+    job = CORPUS / MASON
+    rels = _rels_in(job, USED)
+    if not rels:
+        pytest.skip("this job's photographs are not in this checkout")
+
+    def prints():
+        found = {}
+        for path in sorted(job.rglob("*")):
+            if path.is_file():
+                st = path.stat()
+                found[str(path)] = (st.st_size, st.st_mtime)
+        return found
+
+    before = prints()
+    classify.set_labels(job, rels, SUBJECT)
+    classify.set_labels(job, rels, "Deed")
+    assert prints() == before

@@ -111,6 +111,9 @@ Every plan destroys itself. A plan is a work list, and a finished work list is
 clutter that the next session reads as current. The last task in any plan is to
 fold what was learned into these files and then delete the plan. What is worth
 keeping is a decision or a measurement, and neither of those lives in a plan.
+Plans live in `docs/plans/`; what they leave behind goes to `docs/ROADMAP.md`,
+which is the one document meant to grow. A test enforces this, because a rule
+nobody is reminded of lasts until the first busy session.
 
 ## Approval
 

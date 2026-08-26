@@ -59,7 +59,7 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-The suite last measured 1,039 passed, nothing skipped, on 2026-08-25. That is
+The suite last measured 1,042 passed, nothing skipped, on 2026-08-26. That is
 the result of that run, not a permanent number: it moves every time tests are
 added. Tests that need Mark's private material skip on a machine without it;
 they run here because the reports sit next door in `RRF`.

@@ -1,4 +1,10 @@
-# Migration roadmap: the locker system becomes the app
+# Roadmap: the locker system becomes the app
+
+**This file does not delete itself.** Plans do, once their work is done and
+their learnings are folded back into here. This is where those learnings land,
+so it is the one document in the repository that is meant to grow. It lives
+outside `docs/plans/` on purpose: everything in that folder is a work list with
+a death date, and this is not one.
 
 Written 2026-08-15 from a full review of both systems with Spenser. This is
 the durable record of the shape and the decisions. It is context, not a work
@@ -232,24 +238,31 @@ out the work has been deleted, and these outlive it.
 
 ### Where the work sits, 2026-08-25
 
-Recorded because the two plans that carried it have deleted themselves, and a
-session opening this repository cold would otherwise find four branches and no
-account of them.
+Nothing is merged and nothing is pushed. `bulk-classify` is the tip and every
+branch below it is already in it. Ask git for the rest rather than trusting a
+list written here, which would start lying the first time anything merges:
 
-Nothing is merged and nothing is pushed. The branches chain, each cut from the
-one above it:
+    git log --oneline --graph --all --decorate
 
-| Branch | Holds |
-|---|---|
-| `main` | The Phase 0 merge and nothing since. It does not have the Windows pilot at all |
-| `windows-photo-pilot` | The pilot through v0.5.0, and the package Mark was given |
-| `photo-folder-choice` | Photographs found in subfolders, the folder question, the ordering fix, the refusals |
-| `bulk-classify` | Bulk classify. **This is the tip and everything above is in it** |
+`build/Send to Mark/` holds a package built 2026-08-24. It predates every fix
+made on 2026-08-25 and it was never sent. **The next package is the thing that
+unblocks Mark**, and building one is a decision for Spenser, not a step anyone
+takes on the way past.
 
-`build/Send to Mark/` holds `Roy R. Fisher v0.5.1.zip`, built 2026-08-24. It
-predates every fix in this list and it was never sent. **The next package is
-the thing that unblocks Mark**, and building one is a decision for Spenser, not
-a step anyone takes on the way past.
+### Carried out of Phase 0, whose plan has been deleted
+
+Two facts from that plan's closeout that live nowhere else. Everything else in
+it was either superseded (its test counts, its "nothing has ever run on
+Windows") or is already stated in the README.
+
+- **`readiness_scan.REQUIREMENTS` and its command line are in the tree and
+  nothing calls them.** Deliberate. The rewritten Task 7 withdrew the row
+  mapping that would have used them, and they wait for the later
+  information-needs slice. They are not dead code to be tidied away.
+
+- **The pinned requirements are proven to install on the Mac only.** Phase 0
+  built a clean virtual environment from `app/server/requirements.txt` and ran
+  the suite green from it. That says nothing about any other platform.
 
 ### Still owed out of that work
 
@@ -302,7 +315,8 @@ done.
 **Phase 0: make what exists true.** Fix the known defects, pin what is
 unpinned, make the README stop lying, and fix the readiness panel so it
 never silently discards a requirement and never states an unproven claim.
-Plan exists: `2026-08-15-phase-0-truth-and-defects.md`. Runs on the Mac.
+That plan is executed and deleted; what it left behind is under
+"Carried out of Phase 0" below. Ran on the Mac.
 The readiness task changes the job screen, so this phase carries one goal
 conversation, one row-by-row mapping review, and one small screen stop.
 

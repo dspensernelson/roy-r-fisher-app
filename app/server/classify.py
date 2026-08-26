@@ -141,11 +141,7 @@ def set_label(job: Path, rel: str, label: str) -> dict:
         raise ValueError("that is not one of the classifications")
     if not inventory.holds(job, rel):
         raise LookupError(rel)
-    facts = inventory.stat_of(job, rel)
-    record = {"label": label,
-              "confirmed_at": datetime.date.today().isoformat(),
-              "size": facts["size"],
-              "mtime": facts["mtime"]}
+    record = _record(label, inventory.stat_of(job, rel))
 
     data = _read()
     everything = data.setdefault("jobs", {})
@@ -159,6 +155,70 @@ def set_label(job: Path, rel: str, label: str) -> dict:
     mine[rel] = record
     _write(data)
     return record
+
+
+MISSING = "That file is not in this job any more."
+
+
+def _record(label: str, facts: dict) -> dict:
+    """One answer, in the shape the store has always held.
+
+    Lifted out of set_label so the single path and the bulk path build the same
+    record. Two places writing the same shape is two places for it to drift.
+    """
+    return {"label": label,
+            "confirmed_at": datetime.date.today().isoformat(),
+            "size": facts["size"],
+            "mtime": facts["mtime"]}
+
+
+def set_labels(job: Path, rels: list, label: str) -> dict:
+    """Give one label to many files, in one read and one write.
+
+    Returns `{"applied": [rel, ...], "refused": [{"file": rel, "reason": str}]}`.
+
+    Mason City keeps 57 photographs in one folder. One at a time that is 114
+    clicks, and 57 separate saves of a file holding every answer he has ever
+    given about every job, which is 57 chances to be interrupted halfway.
+
+    **A batch may half succeed, on purpose.** Sixteen files where two are PDFs
+    gives fourteen applied and two refused, rather than refusing all sixteen
+    and punishing him for the app's own rule. The reasons come from `refusal`,
+    the same function the single-file path uses, so the two can never explain
+    the same thing differently.
+
+    A label outside the approved list raises, before anything is written. That
+    is a programming error rather than something one file can be wrong about.
+    """
+    if label not in LABELS:
+        raise ValueError("that is not one of the classifications")
+
+    applied, refused, records = [], [], {}
+    for rel in rels:
+        said = refusal(job, rel, label)
+        if said:
+            refused.append({"file": rel, "reason": said})
+            continue
+        if not inventory.holds(job, rel):
+            refused.append({"file": rel, "reason": MISSING})
+            continue
+        records[rel] = _record(label, inventory.stat_of(job, rel))
+        applied.append(rel)
+
+    if records:
+        data = _read()
+        everything = data.setdefault("jobs", {})
+        if not isinstance(everything, dict):
+            everything = {}
+            data["jobs"] = everything
+        mine = everything.setdefault(_key(job), {})
+        if not isinstance(mine, dict):
+            mine = {}
+            everything[_key(job)] = mine
+        mine.update(records)
+        _write(data)
+
+    return {"applied": applied, "refused": refused}
 
 
 def remove_label(job: Path, rel: str) -> None:

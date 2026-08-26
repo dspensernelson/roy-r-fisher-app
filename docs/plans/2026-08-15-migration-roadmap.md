@@ -213,17 +213,27 @@ out the work has been deleted, and these outlive it.
   tree while the Photos screen counted the report, so one section showed 33 on
   one screen and 16 on the next. The job screen now counts what would build.
 
+- **Bulk classify, built 2026-08-25.** He opens a folder, clicks
+  `Bulk classify`, ticks what he wants or `Select all`, and one label lands on
+  all of them in a single write. Nothing appears on a row until he asks, so the
+  screen is unchanged the rest of the time. **A batch may half succeed on
+  purpose:** 37 files where 4 are documents applies 33 and refuses 4, each with
+  its own reason, and the refused ones stay ticked so his next click can give
+  them the label they actually deserve. Refusing all 37 because of 4 would
+  punish him for the app's own rule. Ticks die when the folder closes, and
+  selecting across folders is deliberately not built until he has wanted it
+  twice. Measured on Mason City: 50 photographs in one folder, one click,
+  where it was 100.
+
+- **The screen refreshes both bands after a classification, not one.** The
+  count beside a section depends on classifications now, so refreshing only the
+  file list left it stale: 33 photographs classified in and the section still
+  reading 17 until the page was reloaded. Found by looking, not by a test.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not
 done.
-
-- **Bulk classify.** Spenser's original ask on 2026-08-25 and still the thing
-  he wants: tick many files on the left and give them one label in one action,
-  for any of the nine labels rather than photographs alone. It went out of
-  scope by agreement when the folder question turned out to solve the
-  photographs case in one click, and it was never built. Fifty-seven files at
-  two clicks each is the case it exists for.
 
 - **Suggesting a classification from the filename, for him to confirm.**
   Currently forbidden: nothing infers a label from a name, a rule set in Phase
@@ -242,6 +252,13 @@ done.
 
 - **Taking several photographs out at once.** A job like Maquoketa carries four
   the office marked `Z` for do not use, and they come out one click at a time.
+  Bulk classify does not solve this: taking a photograph out of a section is a
+  question about the section, and it lives on the right, where there is no
+  choosing-several yet.
+
+- **Selecting across more than one folder at once.** Not built on purpose,
+  2026-08-25. It is a different feature from choosing several inside one
+  folder, and it waits until he has wanted it twice.
 
 ## The working rhythm (stops are scheduled, not hoped for)
 

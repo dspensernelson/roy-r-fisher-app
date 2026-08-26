@@ -644,3 +644,20 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 /* Which folder the report photographs came from. He chose it, so this is a
    reminder and not an announcement. */
 .photo-from { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+/* Why one file cannot be one label, said on the row he clicked. Never across
+   the whole screen: that is for the server having gone away, not for the app
+   declining one thing. */
+.file-refused {
+  margin: 6px 0 2px 0;
+  padding: 7px 10px;
+  border-left: 3px solid var(--brand);
+  /* Light on the dark band, matching the filename beside it. The first
+     version used the page's own ink and surface, which inside an opened
+     folder came out near black on near black and could not be read at all.
+     Found by looking at it, not by a test: every test it had passed only
+     asked whether the words were present. */
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+}

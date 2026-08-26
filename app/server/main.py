@@ -510,6 +510,11 @@ def create_app() -> FastAPI:
     @app.put("/api/jobs/{name}/classification")
     def put_classification(name: str, body: Classification):
         job = photos_routes._job_or_404(name)
+        # Refused before anything is written, so a claim the app cannot act on
+        # never becomes a record that does nothing.
+        said = classify.refusal(job, body.file, body.label)
+        if said:
+            raise HTTPException(400, said)
         try:
             record = classify.set_label(job, body.file, body.label)
         except ValueError:

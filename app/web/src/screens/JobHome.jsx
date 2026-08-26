@@ -18,6 +18,10 @@ function folderNote(f) {
 
 function FileRow({ file, labels, onPick, onClear, busy }) {
   const [picking, setPicking] = useState(false);
+  // A refusal belongs on the row he clicked, not across the whole screen. The
+  // screen-level error replaces the job with one sentence, which is right when
+  // the server has gone and wrong when one file cannot be one label.
+  const [refused, setRefused] = useState("");
   const chosen = file.classification;
   const gone = file.kind === "missing";
   const link = file.kind === "shortcut";
@@ -42,7 +46,7 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
           <span className="file-acts">
             {!gone && (
               <button className="linky" disabled={busy}
-                      onClick={() => setPicking(!picking)}>
+                      onClick={() => { setRefused(""); setPicking(!picking); }}>
                 {chosen ? "Change" : "Classify"}
               </button>
             )}
@@ -58,11 +62,19 @@ function FileRow({ file, labels, onPick, onClear, busy }) {
 
       {/* The choice lives inside the action, asked when he clicks it, rather
           than parked on the page beside it. */}
+      {/* Said where he clicked, in the app's own words, and nothing was
+          written down. */}
+      {refused && <div className="file-refused">{refused}</div>}
+
       {picking && (
         <div className="say-what">
           {labels.map((label) => (
             <button key={label} disabled={busy}
-                    onClick={() => { setPicking(false); onPick(file.rel, label); }}>
+                    onClick={() => {
+                      setPicking(false);
+                      setRefused("");
+                      onPick(file.rel, label).catch((e) => setRefused(e.message));
+                    }}>
               {label}
             </button>
           ))}
@@ -124,9 +136,10 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
 
   function pick(file, label) {
     setBusy(true);
-    setClassification(job, file, label)
+    // Returned rather than swallowed, so the row that was clicked can show
+    // what the app said instead of the whole screen being replaced by it.
+    return setClassification(job, file, label)
       .then(refresh)
-      .catch((e) => setError(e.message || reachError))
       .finally(() => setBusy(false));
   }
 

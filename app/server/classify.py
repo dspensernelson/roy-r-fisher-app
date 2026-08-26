@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import inventory
+import jobs
 import state
 
 STORE_NAME = ".rrf-classifications.json"
@@ -37,6 +38,54 @@ LABELS = (
     "Comparable sale document",
     "Valuation workbook",
 )
+
+
+SUBJECT_PHOTOGRAPH = "Subject photograph"
+
+# What to call a file that is plainly not a photograph, in Mark's words rather
+# than in file extensions. Anything not named here is refused as "not a
+# photograph", because guessing at a name for it would be worse than not
+# offering one.
+KIND = {
+    ".pdf": "a PDF",
+    ".doc": "a Word document",
+    ".docx": "a Word document",
+    ".xls": "a spreadsheet",
+    ".xlsx": "a spreadsheet",
+    ".xlsm": "a spreadsheet",
+}
+
+
+def refusal(job: Path, rel: str, label: str) -> Optional[str]:
+    """Why this file cannot be a subject photograph, or None when it can.
+
+    `Subject photograph` is the one label that decides what gets built, so it
+    is the one label the app can fail to act on. Marking a signed engagement
+    letter a subject photograph used to be recorded, shown back as "confirmed
+    by you", and acted on in no way at all: a PDF is not a photograph, and it
+    was not in the Photos folder either. An instruction taken and not carried
+    out is worse than one refused, so this refuses it and says which wall it
+    hit.
+
+    Every other label is left alone on purpose. A PDF really is an engagement
+    letter. What a file is, is Mark's to say, and the app has no business
+    arguing with him about it. It refuses only a claim it cannot act on.
+    """
+    if label != SUBJECT_PHOTOGRAPH:
+        return None
+
+    suffix = Path(rel).suffix.lower()
+    if suffix not in jobs.PHOTO_EXTS:
+        return ("That is %s. Only photographs go on the photo pages."
+                % KIND.get(suffix, "not a photograph"))
+
+    parts = rel.split("/")
+    photos = jobs.photos_dir(job).name
+    if len(parts) < 2 or parts[0] != photos:
+        where = parts[0] if len(parts) > 1 else "the job folder"
+        return ("That photograph is in %s. The photo pages are built from the "
+                "job's %s folder." % (where, photos))
+    return None
 
 
 def store_file() -> Path:

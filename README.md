@@ -30,6 +30,7 @@ product. The app runs on one machine, offline, for one person.
 |---|---|
 | `app/` | The product. Python server, React screens, its own engine and templates. The code reads no project files outside app/. At run time it also uses the settings and key files in the home folder and the jobs folder Mark points it at. Two dev tools reach wider: demo reset finds the repo root, and one styling test reads brand/ |
 | `brand/` | The design system source: components, tokens, and the real logo and photography files |
+| `docs/` | `ROADMAP.md` is the durable record: every decision, what was measured, and what is still owed. `docs/plans/` holds work lists only, and a plan deletes itself when its work is done |
 | `Start Roy R. Fisher.command` | Double-click to run it on a Mac |
 
 ## What is deliberately not here

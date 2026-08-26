@@ -16,6 +16,15 @@ delete itself.
 This test cannot tell whether the fold-back actually happened. Nothing can.
 What it can do is stop a finished plan sitting in the folder pretending to be
 live work, which is the failure that matters.
+
+**It only sees plans written with task checkboxes**, which is the format the
+two plans of 2026-08-25 used and the format the rule was written against.
+`2026-08-17-windows-photo-pilot.md` marks its tasks with COMPLETE in the
+heading instead and carries no boxes at all, so this test is blind to it and
+will not notice when it finishes. Measured 2026-08-26: zero ticked, zero open.
+Widening the test to read headings would mean guessing at prose, so the honest
+answer is that the guard covers the checkbox format and somebody still has to
+retire that one by hand.
 """
 import re
 from pathlib import Path

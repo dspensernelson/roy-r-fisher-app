@@ -525,6 +525,33 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "That file is not in this job.")
         return {"file": body.file, "label": record["label"], "state": "present"}
 
+    class Classifications(BaseModel):
+        files: list
+        label: str
+
+    @app.put("/api/jobs/{name}/classifications")
+    def put_classifications(name: str, body: Classifications):
+        """One label onto many files, in one write.
+
+        The answer names what was applied and what was refused, with the
+        reason, because a batch may half succeed on purpose: sixteen files
+        where two are PDFs gives fourteen and two, rather than refusing all
+        sixteen and punishing him for the app's own rule.
+
+        A label outside the nine refuses the whole call. That is a programming
+        error rather than something one file can be wrong about, and it never
+        reaches the store.
+        """
+        job = photos_routes._job_or_404(name)
+        if not body.files:
+            raise HTTPException(400, "No files were chosen.")
+        with busy.writing():
+            try:
+                return classify.set_labels(job, [str(f) for f in body.files],
+                                           body.label)
+            except ValueError:
+                raise HTTPException(400, "That is not one of the classifications.")
+
     @app.delete("/api/jobs/{name}/classification")
     def delete_classification(name: str, body: FileOnly):
         # Works whether or not the file is still there, which is how a record

@@ -193,3 +193,70 @@ def test_nothing_is_written_inside_the_job_folder(tmp_path):
     before = fingerprint(job)
     classify.set_labels(job, rels, SUBJECT)
     assert fingerprint(job) == before
+
+
+# --- the route ------------------------------------------------------------
+def _client(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+    monkeypatch.setenv("RRF_JOBS_HOME", str(tmp_path))
+    return TestClient(main.create_app())
+
+
+URL = "/api/jobs/DAVENPORT_1 Test Street/classifications"
+
+
+def test_one_call_classifies_many(tmp_path, monkeypatch):
+    rels = photos_named(57)
+    job = a_job(tmp_path, *rels)
+    client = _client(tmp_path, monkeypatch)
+    answer = client.put(URL, json={"files": rels, "label": SUBJECT})
+    assert answer.status_code == 200
+    assert len(answer.json()["applied"]) == 57
+    assert answer.json()["refused"] == []
+    assert len(labels_in(job)) == 57
+
+
+def test_the_answer_names_what_was_refused_and_why(tmp_path, monkeypatch):
+    good = photos_named(3)
+    bad = ["Photos/Signed Engagement Letter.pdf"]
+    a_job(tmp_path, *(good + bad))
+    client = _client(tmp_path, monkeypatch)
+    body = client.put(URL, json={"files": good + bad, "label": SUBJECT}).json()
+    assert sorted(body["applied"]) == sorted(good)
+    assert body["refused"] == [{
+        "file": "Photos/Signed Engagement Letter.pdf",
+        "reason": "That is a PDF. Only photographs go on the photo pages."}]
+
+
+def test_a_label_outside_the_nine_is_refused_whole(tmp_path, monkeypatch):
+    rels = photos_named(3)
+    job = a_job(tmp_path, *rels)
+    client = _client(tmp_path, monkeypatch)
+    answer = client.put(URL, json={"files": rels, "label": "Whatever I like"})
+    assert answer.status_code == 400
+    assert labels_in(job) == {}
+
+
+def test_an_empty_list_is_refused(tmp_path, monkeypatch):
+    a_job(tmp_path, "Photos/one.jpeg")
+    client = _client(tmp_path, monkeypatch)
+    assert client.put(URL, json={"files": [], "label": SUBJECT}).status_code == 400
+
+
+def test_a_job_that_is_not_there_is_a_404(tmp_path, monkeypatch):
+    a_job(tmp_path, "Photos/one.jpeg")
+    client = _client(tmp_path, monkeypatch)
+    answer = client.put("/api/jobs/NOWHERE_1 Nothing/classifications",
+                        json={"files": ["Photos/one.jpeg"], "label": SUBJECT})
+    assert answer.status_code == 404
+
+
+def test_the_single_file_route_still_works(tmp_path, monkeypatch):
+    """Bulk is an addition. The path Mark already uses is untouched."""
+    job = a_job(tmp_path, "Photos/one.jpeg")
+    client = _client(tmp_path, monkeypatch)
+    answer = client.put("/api/jobs/DAVENPORT_1 Test Street/classification",
+                        json={"file": "Photos/one.jpeg", "label": SUBJECT})
+    assert answer.status_code == 200
+    assert labels_in(job) == {"Photos/one.jpeg": SUBJECT}

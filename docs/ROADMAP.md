@@ -300,6 +300,30 @@ Windows") or is already stated in the README.
   built a clean virtual environment from `app/server/requirements.txt` and ran
   the suite green from it. That says nothing about any other platform.
 
+### Where updates will be pushed from, 2026-08-27
+
+Cloudflare R2 bucket `rrf-app-updates`, Eastern North America, created
+2026-08-27. Public read is on, through R2's development URL:
+
+    https://pub-62e06bebd88c4f8cb46a00672f5057b2.r2.dev
+
+Public because Mark's machine downloads with no login. The package holds no
+key and no client material, so what is exposed is the app itself. Spenser's
+call, made knowingly.
+
+Cloudflare labels that URL rate limited and not for production, which is a
+warning aimed at public websites. One appraiser downloading a package now and
+then is nowhere near it. A custom domain is the upgrade if it ever matters.
+
+**Approved 2026-08-27: Mark presses a button in the app and it updates
+itself.** Not automatic and not silent, so the pilot's "no automatic updater,
+Spenser installs updates" decision is amended rather than ignored. What makes
+it survivable already exists: `install_windows.py` keeps the previous version
+and only repoints the Desktop icon, so a bad update is undone by running the
+old version's install file.
+
+Not built. Nothing in the bucket yet.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not

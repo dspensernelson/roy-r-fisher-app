@@ -277,30 +277,30 @@ One rule, and it is stated in the module.
 
 ### Task 5: The child that does the installing
 
-- [ ] New `app/update_apply.py`, beside `run_app.py` and `install_windows.py`.
+- [x] New `app/update_apply.py`, beside `run_app.py` and `install_windows.py`.
       Stdlib only. Its docstring says why it exists in one paragraph: Windows
       will not let a running program replace its own files.
-- [ ] Arguments: the unpacked package folder, and nothing else it could get
+- [x] Arguments: the unpacked package folder, and nothing else it could get
       wrong. It finds the install home the same way `install_windows.py` does.
-- [ ] It waits for the coast to clear by calling
+- [x] It waits for the coast to clear by calling
       `install_windows._refuse_if_anything_is_running` on a bounded loop,
       because that is the exact condition the install needs rather than a proxy
       for it. Bounded at 90 seconds.
-- [ ] Still running after the bound: it refuses plainly, names the version that
+- [x] Still running after the bound: it refuses plainly, names the version that
       is still up, says nothing was changed, and keeps its window open.
-- [ ] Coast clear: it calls `install_windows.install(unpacked)` and prints what
+- [x] Coast clear: it calls `install_windows.install(unpacked)` and prints what
       that already prints.
-- [ ] On success it starts the newly installed version's launcher and exits.
-- [ ] On any failure it prints the reason, states that the previous version is
+- [x] On success it starts the newly installed version's launcher and exits.
+- [x] On any failure it prints the reason, states that the previous version is
       still installed and still works, names the Desktop icon, and keeps the
       window open.
-- [ ] It never deletes the folder it is running from.
-- [ ] Tests in `test_update_apply.py`, with `RRF_INSTALL_HOME` and
+- [x] It never deletes the folder it is running from.
+- [x] Tests in `test_update_apply.py`, with `RRF_INSTALL_HOME` and
       `RRF_DESKTOP` pointed at temporary folders: it waits while something is
       answering; it refuses after the bound and names the version; it installs
       when nothing is answering; a failed install leaves the previous version
       folder present and the message names the Desktop icon.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 6: The handoff, and the app closing itself
 

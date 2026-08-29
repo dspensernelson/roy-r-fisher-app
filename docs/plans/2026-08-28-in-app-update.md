@@ -396,18 +396,18 @@ One rule, and it is stated in the module.
 
 ### Task 10: The honesty pass
 
-- [ ] Read every new sentence that reaches Mark's screen and every refusal
+- [x] Read every new sentence that reaches Mark's screen and every refusal
       message against `HOW-WE-WORK.md`: main point first, short sentences,
       common words, no term he would not recognise, no em dashes.
-- [ ] No message states a fact the app has not observed. In particular nothing
+- [x] No message states a fact the app has not observed. In particular nothing
       claims the update is safe, verified, or signed. It says the download
       matched its checksum, which is what happened.
-- [ ] One line in `README FIRST.txt` about the button, written by
+- [x] One line in `README FIRST.txt` about the button, written by
       `package_windows.readme_text`, so the packaged readme and the app do not
       drift.
-- [ ] Confirm no new file, log, or error can carry key material. Nothing in
+- [x] Confirm no new file, log, or error can carry key material. Nothing in
       this slice reads a key; this is the check that it stayed that way.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 11: The stop
 

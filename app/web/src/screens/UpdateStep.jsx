@@ -141,10 +141,10 @@ export default function UpdateStep({ version, available, size, onClose }) {
         not kept inside the app and are not touched.
       </p>
       <p className="setting-fine" style={{ margin: "0 0 12px" }}>
-        The download is checked against the checksum published with it, which
+        The app checks that what arrives is exactly what was published. That
         catches a damaged or incomplete download. It does not prove who made
         the file. If anything goes wrong, nothing is changed and the version
-        you have now keeps working.
+        you have now is not touched.
       </p>
       <div className="setting-actions">
         <button className="button" onClick={onStart}>Update now</button>

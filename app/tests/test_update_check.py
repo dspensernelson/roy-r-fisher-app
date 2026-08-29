@@ -191,3 +191,47 @@ def test_a_look_never_raises_however_badly_it_goes(monkeypatch, installed):
     updates.forget()
     assert updates.look(installed) == {}
     assert updates.looked()
+
+
+# --- what the update path may and may not touch -----------------------------
+def test_nothing_in_the_update_path_reads_a_key_or_a_setting():
+    """Never move, print, or copy a key. Nothing here has any reason to read
+    one, and this is the test that it stays that way when somebody adds a
+    feature to this file later."""
+    for name in ("updates.py",):
+        source = (APP / "server" / name).read_text()
+        assert "import settings" not in source
+        assert "import captions" not in source
+        assert "sk-ant" not in source
+    child = (APP / "update_apply.py").read_text()
+    assert "import settings" not in child
+
+
+def test_it_only_ever_fetches_and_never_sends(fake_bucket, installed):
+    """The app asks the bucket for files. It never posts anything anywhere, so
+    nothing about Mark, his jobs, or his machine leaves this computer.
+
+    Asserted by watching every request the module makes rather than by reading
+    the source, because a `data=` argument added later would still be a GET in
+    the source and a POST on the wire.
+    """
+    seen = []
+    real = updates.urllib.request.urlopen
+
+    def watch(url, *args, **kwargs):
+        seen.append(url)
+        return real(url, *args, **kwargs)
+
+    updates.urllib.request.urlopen = watch
+    try:
+        put_latest(fake_bucket, **GOOD)
+        updates.available(installed)
+    finally:
+        updates.urllib.request.urlopen = real
+
+    assert seen, "it did not ask the bucket anything"
+    for asked in seen:
+        # A plain string URL. A urllib Request object is how a body gets
+        # attached, so anything that is not a string is worth failing on.
+        assert isinstance(asked, str), "the update path built a request with a body"
+        assert asked.startswith(fake_bucket.url)

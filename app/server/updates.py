@@ -444,15 +444,15 @@ def verify_download(path, name: str) -> str:
                                         MAX_SIDECAR_BYTES))
     if not published:
         raise UpdateRefused(
-            "The update could not be checked, because the checksum published "
-            "with it is missing or unreadable. Nothing was installed and "
-            "nothing has changed.")
+            "The update could not be checked, because the file that says what "
+            "it should have looked like is missing or unreadable. Nothing was "
+            "installed and nothing has changed.")
     actual = sha256_of(path)
     if actual != published:
         raise UpdateRefused(
             "The update did not arrive intact and was not installed.\n"
-            "The download does not match its published checksum, which "
-            "usually means it was interrupted.\n"
+            "What arrived is not what was published, which usually means the "
+            "download was interrupted.\n"
             "Nothing has changed. Try again.")
     return actual
 
@@ -787,7 +787,7 @@ def hand_off(package, spawn=None) -> list:
         raise UpdateRefused(
             "The update was downloaded and checked but could not be started:\n"
             "    %s\n"
-            "Nothing has changed and the app you are using still works." % exc)
+            "Nothing has changed and this app is still running." % exc)
     return command
 
 

@@ -133,7 +133,10 @@ def test_a_spawn_that_fails_leaves_the_app_alive_and_says_so(tmp_path):
 
     with pytest.raises(updates.UpdateRefused) as refused:
         updates.hand_off(package, spawn=cannot)
-    assert "still works" in refused.value.message
+    # What it can observe: this process is the one answering, so it is running.
+    # Whether it "works" is not something it can see.
+    assert "this app is still running" in refused.value.message
+    assert "Nothing has changed" in refused.value.message
 
 
 # --- the whole prepared run -------------------------------------------------

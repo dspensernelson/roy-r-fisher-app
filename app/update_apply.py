@@ -46,8 +46,12 @@ WAIT_SECONDS = 90.0
 POLL_SECONDS = 1.0
 
 # Said after every failure, because it is the only sentence that matters.
+# What it can actually see: the previous version's folder was never touched,
+# because installing copies into a new folder beside it and refuses before
+# copying anything at all. Whether that version *works* is not something this
+# can observe, so it does not say so.
 STILL_WORKS = (
-    "The version you had is still installed and still works.\n"
+    "The version you had is still installed and was not changed.\n"
     "Start it from the Roy R. Fisher icon on your Desktop.")
 
 

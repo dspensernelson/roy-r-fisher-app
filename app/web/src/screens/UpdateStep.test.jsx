@@ -41,11 +41,14 @@ describe("what he is told before he agrees", () => {
     open();
     expect(screen.getByText(/does not prove who made/)).toBeInTheDocument();
     expect(screen.getByText(/damaged or incomplete download/)).toBeInTheDocument();
+    // Plain words. "Checksum" is a term he would not recognise, and
+    // HOW-WE-WORK calls that a defect in the writing.
+    expect(screen.queryByText(/checksum/i)).toBeNull();
   });
 
   it("says nothing changes if it goes wrong", () => {
     open();
-    expect(screen.getByText(/the version you have now keeps working/i))
+    expect(screen.getByText(/the version you have now is not touched/i))
       .toBeInTheDocument();
   });
 

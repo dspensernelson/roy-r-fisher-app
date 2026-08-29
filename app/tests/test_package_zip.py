@@ -377,3 +377,4 @@ def test_the_real_archive_carries_no_build_machine_paths():
     distribution, so the build machine's username shipped to Mark."""
     with zipfile.ZipFile(REAL_ZIP) as archive:
         assert not [n for n in archive.namelist() if n.endswith("direct_url.json")]
+

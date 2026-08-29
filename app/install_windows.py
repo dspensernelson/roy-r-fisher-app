@@ -107,25 +107,23 @@ def version_folders(home: Path) -> list:
         found = [p for p in home.iterdir() if p.is_dir()]
     except OSError:
         return []
-    return sorted(found, key=lambda p: (_as_numbers(p.name), p.name), reverse=True)
-
-
-def _as_numbers(name: str) -> tuple:
-    """`0.10.0` sorts above `0.9.0`, which sorting the text does not do."""
-    parts = []
-    for piece in name.split("."):
-        parts.append(int(piece) if piece.isdigit() else -1)
-    return tuple(parts)
+    return sorted(found, key=lambda p: (packaging.version_numbers(p.name), p.name),
+                  reverse=True)
 
 
 # ------------------------------------------------------- refusing early ----
-def _refuse_if_anything_is_running(home: Path) -> None:
-    """No copying over a version that is serving.
+def something_running(home: Path) -> str:
+    """The version currently serving out of one of these folders, or empty.
 
     Asks each installed version the same question the launcher asks: is
     something answering on the port this folder recorded, and is it us. A
     folder with a stale runtime.json answers nothing and is not a reason to
     stop.
+
+    Public because the update handoff waits on exactly this condition. It used
+    to be private and the waiting code reached in for it, which meant the rule
+    the installer enforces and the rule the waiting obeyed were the same line
+    read two ways.
     """
     for folder in version_folders(home):
         recorded = startup.read_runtime(folder)
@@ -134,9 +132,17 @@ def _refuse_if_anything_is_running(home: Path) -> None:
             continue
         answering = startup.ask_version(port)
         if answering:
-            raise InstallRefused(
-                "Roy R. Fisher %s is running.\n"
-                "Close its window, then run this again." % answering)
+            return answering
+    return ""
+
+
+def _refuse_if_anything_is_running(home: Path) -> None:
+    """No copying over a version that is serving."""
+    answering = something_running(home)
+    if answering:
+        raise InstallRefused(
+            "Roy R. Fisher %s is running.\n"
+            "Close its window, then run this again." % answering)
 
 
 def _check_package(source: Path) -> str:

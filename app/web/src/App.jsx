@@ -7,7 +7,8 @@ import Settings from "./screens/Settings.jsx";
 import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
-import { getWorkspace, getDemo, resetDemo, appVersion, listJobs } from "./api.js";
+import UpdateStep from "./screens/UpdateStep.jsx";
+import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
 
@@ -48,6 +49,11 @@ export default function App() {
   const [resetError, setResetError] = useState("");
   const [wsError, setWsError] = useState("");
   const [version, setVersion] = useState("");
+  // What the startup look found, and whether he has opened the step.
+  // Nothing here goes to the network: the look already happened, in the
+  // background, when the app started.
+  const [update, setUpdate] = useState(null);
+  const [updating, setUpdating] = useState(false);
 
   // Two different failures, and they used to read the same. A damaged
   // settings file is not an unreachable server, and telling Mark to restart
@@ -83,6 +89,10 @@ export default function App() {
     // Shown on every screen, because the masthead is on every screen. It is
     // how Spenser tells which installed folder he actually launched.
     appVersion().then((v) => setVersion(v.version || "")).catch(() => {});
+    // The masthead is on every screen, so the notice is too. A bucket that is
+    // down, no internet, or a development checkout all answer the same way and
+    // nothing renders.
+    updateStatus().then(setUpdate).catch(() => {});
   }, []);
 
   async function runReset() {
@@ -94,6 +104,13 @@ export default function App() {
     } catch (e) { setResetError(e.message); }
     setResetting("");
   }
+
+  const offered = !!(update && update.available);
+
+  const updateStep = updating && (
+    <UpdateStep version={version} available={update.available} size={update.size}
+                onClose={() => setUpdating(false)} />
+  );
 
   const masthead = (
     <header className="masthead">
@@ -108,7 +125,17 @@ export default function App() {
       </div>
       {/* Only ever here when this computer is explicitly set up for testing.
           Mark's install has no demo configuration, so it never renders. */}
-      {version && <span className="version" title="Installed version">v{version}</span>}
+      {version && !offered && (
+        <span className="version" title="Installed version">v{version}</span>
+      )}
+      {/* Quiet until there is something to say. A click leads to a step: the
+          question about whether to update is asked inside the action. */}
+      {offered && (
+        <button className="version version-update" onClick={() => setUpdating(true)}
+                title={`You are on version ${version}`}>
+          Update available
+        </button>
+      )}
       {demo.demo_mode && (
         <button className="reset-demo" onClick={() => setAsking(true)} disabled={!!resetting}>
           {resetting ? "Resetting..." : "Reset demo"}
@@ -155,7 +182,7 @@ export default function App() {
       <>
         {masthead}
         <div className="frame">
-          {resetStep}{resetNote}
+          {updateStep}{resetStep}{resetNote}
           <ChooseFolder first missing={ws.chosen ? ws.path : ""}
                         onSaved={(saved) => { setWs(saved); setSetup(true); }} />
         </div>
@@ -169,7 +196,7 @@ export default function App() {
       <>
         {masthead}
         <div className="frame">
-          {resetStep}{resetNote}
+          {updateStep}{resetStep}{resetNote}
           <ActiveJobs first onDone={() => { setSetup(false); setView({ screen: "jobs", job: null }); }} />
         </div>
       </>
@@ -198,7 +225,7 @@ export default function App() {
         </nav>
       </div>
       <div className="frame">
-        {resetStep}{resetNote}
+        {updateStep}{resetStep}{resetNote}
         {view.screen === "jobs" && <JobsPortal onOpen={(job) => setView({ screen: "job", job })}
                                             onNew={() => setView({ screen: "new", job: null })}
                                             onManage={() => setView({ screen: "active", job: null })}
@@ -222,7 +249,7 @@ export default function App() {
         )}
         {view.screen === "photos" && <PhotosScreen job={view.job} />}
         {view.screen === "settings" && (
-          <Settings workspace={ws}
+          <Settings workspace={ws} version={version}
                     onChangeFolder={() => setView({ screen: "choose", job: null })}
                     onWorkspaceChanged={(saved) => { setWs(saved); toJobs(); }} />
         )}

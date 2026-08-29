@@ -83,3 +83,11 @@ export async function uploadPhotos(name, files) {
   [...files].forEach((f) => form.append("files", f));
   return fetch(`/api/jobs/${encodeURIComponent(name)}/photos`, { method: "POST", body: form }).then(j);
 }
+
+// Updating the app itself. Only startUpdate changes anything, and Mark has to
+// click for it. The rest report.
+export const updateStatus = () => fetch("/api/update").then(j);
+export const checkForUpdate = () => fetch("/api/update/check", { method: "POST" }).then(j);
+export const updateProgress = () => fetch("/api/update/progress").then(j);
+export const startUpdate = () => fetch("/api/update/start", { method: "POST" }).then(j);
+export const cancelUpdate = () => fetch("/api/update/cancel", { method: "POST" }).then(j);

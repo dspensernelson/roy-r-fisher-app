@@ -684,3 +684,25 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   accent-color: var(--brand);
   cursor: pointer;
 }
+
+/* ---- The update notice, 2026-08-28 ---------------------------------------
+   The same chip as the version it replaces, so the masthead does not move when
+   one becomes the other. It reads rather than shouts: he is told a new version
+   exists and he chooses, and a notice that nags is a notice he learns to
+   ignore. */
+.masthead .version-update {
+  margin-left: auto;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--brand);
+  border-color: var(--brand);
+  background: transparent;
+}
+.masthead .version-update:hover { background: rgba(120, 32, 40, .06); }
+
+/* A real proportion, not the indeterminate sweep. The size is known before the
+   download starts, so the bar can tell him how far along a 53 MB download is
+   instead of only that something is happening. */
+.update-bar { width: 100%; max-width: 320px; }
+.update-bar span { width: 0; transition: width .25s linear; animation: none; }
+.update-step { max-width: 560px; }

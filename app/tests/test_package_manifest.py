@@ -232,7 +232,7 @@ def test_the_package_still_verifies_after_a_normal_start(copy, damaged):
     """The contradiction this design had to fix: runtime.json used to be
     inside the package, so the app invalidated its own copy the first time it
     ran."""
-    sys.path.insert(0, str(REPO / "app" / "server"))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
     import startup
 
     packaging.verify(damaged)
@@ -379,3 +379,83 @@ def test_the_script_knows_httpx_is_not_test_only():
     text = SCRIPT.read_text(encoding="utf-8")
     assert '"pytest"' in text
     assert '"httpx"' not in text.split("TEST_ONLY")[1].split(")")[0]
+
+
+# --- what an update needs the package to carry ------------------------------
+def test_the_package_carries_the_part_that_finishes_an_update(program):
+    """The in-app update hands off to the *new* package's copy of this, run by
+    the new package's own Python. Leave it out and an update installs a version
+    that cannot itself be updated, which nothing would notice until the update
+    after that one."""
+    assert (program / "app" / "update_apply.py").is_file()
+
+
+def test_the_manifest_lists_it(program):
+    listed = packaging.read_manifest(program)["files"]
+    assert "app/update_apply.py" in listed
+
+
+def test_the_package_is_built_with_a_python_of_its_own():
+    """The handoff runs the new package's python.exe, so that the old version
+    folder is not held open while it is being copied over.
+
+    Asserted on the script rather than on the built package, because `built`
+    is an offline build and offline is exactly the flag that skips the runtime.
+    A test that asserted an empty `python/` was full would only ever have
+    passed by accident.
+    """
+    packager = SCRIPT.read_text()
+    assert 'python_dir = program / "python"' in packager
+    assert "unpack_archive(str(fetch_runtime(work)), str(python_dir))" in packager
+
+
+def test_the_update_module_ships_and_the_tests_do_not(program):
+    listed = packaging.read_manifest(program)["files"]
+    assert "app/server/updates.py" in listed
+    assert not [name for name in listed if name.startswith("app/tests")]
+
+
+@pytest.fixture
+def built_zip(built):
+    """The archive the same build produced, beside the package folder."""
+    return built.with_name(built.name + ".zip")
+
+# --- what Spenser uploads to the bucket -------------------------------------
+def test_the_script_writes_the_pointer_file_beside_the_archive(built_zip):
+    """Three files go to the bucket and he authors none of their contents, so a
+    mistyped version or a mistyped hash is not a thing that can happen."""
+    import json
+    latest = built_zip.with_name("latest.json")
+    assert latest.is_file()
+    found = json.loads(latest.read_text(encoding="utf-8"))
+    assert found["zip"] == built_zip.name
+    assert found["size"] == built_zip.stat().st_size
+    assert found["version"]
+
+
+def test_the_pointer_file_is_what_the_app_reads(built_zip):
+    """The app validates this exact file. If the two ever disagreed about the
+    shape, nobody would be offered an update and nothing would say why."""
+    import json
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+    import updates
+
+    found = json.loads(built_zip.with_name("latest.json").read_text(encoding="utf-8"))
+    assert updates.read_latest(json.dumps(found)) == {
+        "version": found["version"], "zip": found["zip"], "size": found["size"]}
+
+
+def test_the_pointer_file_carries_no_hash_of_its_own(built_zip):
+    """One hash of record. It lives in the sidecar, written from the archive
+    itself, so there are not two values that can disagree."""
+    import json
+    found = json.loads(built_zip.with_name("latest.json").read_text(encoding="utf-8"))
+    assert "sha256" not in found and "hash" not in found
+
+
+def test_the_pointer_file_is_not_inside_the_archive(built_zip):
+    import zipfile
+    with zipfile.ZipFile(built_zip) as archive:
+        names = archive.namelist()
+    assert not [n for n in names if n.endswith("latest.json")]

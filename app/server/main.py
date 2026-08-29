@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -27,6 +29,7 @@ import packaging
 import sections
 import settings
 import state
+import updates
 import workspace
 
 # Spenser's testing tool, and the one module that is not in the package Mark
@@ -116,6 +119,19 @@ class Intake(BaseModel):
     file_number: str = ""
 
 
+# Two folders, and they are the same one in a development checkout. PROGRAM
+# holds VERSION and MANIFEST and is what the package check verifies. HOME is
+# the version folder Mark sees, and is what the sibling scan and the runtime
+# record are about. Computed once here rather than in each route, because
+# run_app.py already learned that lesson for the same two paths.
+# Long enough for the screen's next poll to land on "Closing", so the last
+# thing Mark reads is what is about to happen rather than a dead tab.
+CLOSING_PAUSE = 1.5
+
+PROGRAM = Path(__file__).resolve().parents[2]
+HOME = PROGRAM.parent if PROGRAM.name == packaging.PROGRAM_DIR else PROGRAM
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Roy R. Fisher App")
 
@@ -184,6 +200,92 @@ def create_app() -> FastAPI:
         """
         return {"version": packaging.version_of(
             Path(__file__).resolve().parents[2])}
+
+    # --- updating itself ---------------------------------------------------
+    # Approved 2026-08-27: Mark presses a button and the app updates itself.
+    # Not automatic, not silent, not on a timer. Everything below reports; the
+    # only route that changes anything is /api/update/start, and he has to
+    # click for it.
+    def _update_answer() -> dict:
+        offer = updates.known()
+        return {"version": packaging.version_of(PROGRAM),
+                "available": offer.get("version", ""),
+                "size": offer.get("size", 0),
+                "looked": updates.looked(),
+                "run": updates.run_state()}
+
+    @app.get("/api/update")
+    def update_status():
+        """What the last look found, and how any run in progress is going.
+
+        Never looks for itself. The look happens once in the background when
+        the app starts, and again when he asks on Settings, so opening a screen
+        can never cost a request to the internet.
+        """
+        return _update_answer()
+
+    @app.post("/api/update/check")
+    def update_check():
+        """Look now. This is `Check now` on the Settings screen.
+
+        The startup look is silent because he did not ask for it. This one
+        answers either way, because he did.
+        """
+        updates.look(PROGRAM)
+        return _update_answer()
+
+    @app.get("/api/update/progress")
+    def update_progress():
+        """Polled by the screen while a run is going. Deliberately cheap."""
+        return updates.run_state()
+
+    @app.post("/api/update/cancel")
+    def update_cancel():
+        """Stop at the next chunk. Not a kill: the run notices and tidies."""
+        updates.request_cancel()
+        return updates.run_state()
+
+    @app.post("/api/update/start")
+    def update_start():
+        """Download it, check it twice, hand it over, and close.
+
+        Answers straight away and does the work on a thread, because the
+        download takes minutes and the screen has a progress bar to draw. What
+        the screen shows after this returns comes from /api/update/progress.
+        """
+        busy.check_not_resetting()
+        if updates.running():
+            raise HTTPException(409, "An update is already running.")
+        offer = updates.known()
+        if not offer:
+            raise HTTPException(400, "There is no update to install.")
+
+        updates.begin_run(offer["version"], int(offer["size"]))
+
+        def run():
+            try:
+                package = updates.prepare(offer, on_progress=updates.advance)
+                updates.set_stage(updates.INSTALLING)
+                updates.hand_off(package)
+            except updates.UpdateRefused as exc:
+                updates.fail_run(exc.message)
+                return
+            except Exception as exc:
+                updates.fail_run(
+                    "The update did not finish:\n    %s\nNothing has changed "
+                    "and this app still works." % exc)
+                return
+            # The installer is waiting for this process to go. Before it does:
+            # let the screen show that it is closing, and let any write already
+            # in flight finish, because everything the app writes is moved into
+            # place atomically but an interrupted write is still a lost one.
+            updates.set_stage(updates.CLOSING)
+            busy.wait_until_idle()
+            time.sleep(CLOSING_PAUSE)
+            updates.close_the_app(HOME)
+
+        threading.Thread(target=run, daemon=True).start()
+        return _update_answer()
 
     if demo is not None:
         @app.get("/api/demo")

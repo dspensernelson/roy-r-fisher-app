@@ -130,7 +130,27 @@ def main() -> int:
             # itself. Nothing depends on it having run.
             pass
 
+    # Look once for a newer version, off the startup path and silently.
+    #
+    # Approved 2026-08-28. Looking is not updating: nothing downloads, nothing
+    # installs, and nothing appears on screen unless a newer version is
+    # actually being offered. It is one request for one small public file, and
+    # it is what makes "he is told and he chooses" possible at all.
+    #
+    # Silent on failure on purpose. No internet, a bucket that is down, or a
+    # slow morning must look exactly like there being no update, because none
+    # of those are things Mark can act on.
+    def look_for_an_update():
+        try:
+            import updates
+            updates.look(ROOT)
+        except Exception:
+            # Same rule as the cache tidy above. Nothing depends on this having
+            # run, and it may never take the app down.
+            pass
+
     threading.Thread(target=tidy_cache, daemon=True).start()
+    threading.Thread(target=look_for_an_update, daemon=True).start()
     threading.Thread(target=when_up, daemon=True).start()
 
     import uvicorn          # the first third-party import in the whole file

@@ -136,6 +136,44 @@ def version_of(root: Path) -> str:
         return ""
 
 
+def version_numbers(version: str) -> tuple:
+    """A version string as numbers, so `0.10.0` sorts above `0.9.0`.
+
+    Sorting the text does not do that, and it is not a cosmetic difference:
+    the installer picks the version to fall back to by this order, so getting
+    it wrong sends Mark back to the wrong version on the day a new one has
+    already failed him.
+
+    A part that is not a number sorts below every real one rather than
+    raising. A folder somebody renamed by hand is a thing to sort past, not a
+    thing to crash on.
+    """
+    parts = []
+    for piece in str(version).strip().split("."):
+        parts.append(int(piece) if piece.isdigit() else -1)
+    return tuple(parts)
+
+
+def newer(candidate: str, running: str) -> bool:
+    """True when `candidate` is a later version than `running`.
+
+    Deliberately strict about what it will compare. If either side does not
+    begin with a real number, the answer is False. Nothing is ever offered to
+    Mark as an update on the strength of a string the app could not read: a
+    bucket serving nonsense, an empty VERSION file, or a folder named
+    something else entirely all mean "no update", never "update".
+    """
+    left, right = version_numbers(candidate), version_numbers(running)
+    if not _readable(left) or not _readable(right):
+        return False
+    return left > right
+
+
+def _readable(numbers: tuple) -> bool:
+    """A version we are willing to compare has a real number in front."""
+    return bool(numbers) and numbers[0] >= 0
+
+
 def _walk(root: Path):
     """Every immutable file under root, as relative posix paths, sorted.
 

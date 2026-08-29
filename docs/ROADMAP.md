@@ -322,7 +322,125 @@ it survivable already exists: `install_windows.py` keeps the previous version
 and only repoints the Desktop icon, so a bad update is undone by running the
 old version's install file.
 
-Not built. Nothing in the bucket yet.
+**Built 2026-08-28** on the `in-app-update` branch. Nothing is in the bucket
+yet, nothing is packaged, and nothing has run on Windows. What follows is the
+durable part of the plan that carried it out, which has been deleted.
+
+### How the update works, and why it is shaped that way, 2026-08-28
+
+**Windows will not let a running program replace its own files.** That single
+fact shapes everything else: the app cannot install an update over itself, so
+it fetches, checks, hands off to a separate process, and exits.
+
+The order, and the order is the safety property:
+
+1. The app reads `latest.json` from the bucket once when it starts, in the
+   background. Nothing is shown unless a newer version is actually offered.
+2. Mark clicks. He is told which version, how big, and what will happen.
+3. The zip downloads into `~/.rrf-app-download/`.
+4. It is checked against the `.sha256` published beside it.
+5. It is unpacked and checked with `packaging.verify`, the same check the
+   launcher runs on every start.
+6. Only now does anything out of the bucket execute: the **new** package's
+   `python.exe` running the **new** package's `app/update_apply.py`, in its own
+   console window.
+7. The app clears its `runtime.json` and exits.
+8. The child waits on `install_windows.something_running`, which is the exact
+   condition the install refuses on, then calls `install_windows.install()`.
+9. The child starts the new version and exits.
+
+**The child runs the new package's Python, not the old one's.** Once the
+handoff starts, nothing in the old version folder is held open, which is what
+leaves `install_windows.py` free to copy over it and to prune it.
+
+**`hand_off` refuses any package not recorded as having passed both checks in
+this run.** That record is written inside `prepare`, where no caller can reach
+it. An order that depends on every caller remembering the order is not a safety
+property, so it is not implemented as one.
+
+**Rollback is the one that already existed and was not touched.**
+`install_windows.py` keeps the previous version and repoints one Desktop
+shortcut. No second mechanism was built.
+
+### What the checking does and does not do, 2026-08-28
+
+It catches a damaged or incomplete download: an interrupted transfer, a
+truncated file, a flipped byte, a package that did not unzip whole.
+
+Without code signing it does **not** prove who built the package, and it does
+**not** protect against anybody able to rewrite both the zip in the bucket and
+the `.sha256` beside it. Whoever can replace one can replace the other. This is
+an integrity check against accident, not a security control against an
+adversary. It is the same limit `packaging.py` already states about the
+manifest, and it is said in those words in the code and on the screen where
+Mark decides.
+
+The bucket is public and the app only ever fetches from it. Nothing about Mark,
+his jobs, or his machine leaves the computer. A test watches the requests
+rather than reading the source, because a body added later would still look
+like a GET in the source and be a POST on the wire.
+
+### Decisions on record (2026-08-28, Spenser, in chat)
+
+- **`latest.json` is what the app reads to learn a version exists.** The
+  packaging script writes it, holding the version, the zip's filename and its
+  size. The hash is deliberately not in it: it stays in the `.sha256` sidecar,
+  written from the archive itself, so there is one value of record rather than
+  two that can disagree. Spenser uploads three files and authors none of their
+  contents, so a mistyped version or hash stops being possible. The script
+  prints the three names and says to upload `latest.json` last, because until
+  it changes nobody is offered the version.
+- **The notice sits in the masthead beside the version, on every screen.** It
+  is the same chip, so nothing moves when one becomes the other.
+- **A real progress bar in megabytes**, a sentence per stage, and a Cancel
+  during the download. His jobs are on a network drive and a bar that says
+  nothing looks like a hang.
+- **At the end the app closes itself and the new version opens on its own.**
+  One action from him, which is the rule for his machine.
+- **The app looks once at startup, in the background, silently.** No internet
+  and a bucket that is down look exactly like no update, because neither is
+  something he can act on. `Check now` on Settings answers either way, because
+  there he asked.
+
+### Measured, 2026-08-28
+
+- The real v0.5.3 package is 53.3 MB zipped and 116.8 MB unpacked, a ratio of
+  2.19. `install_windows.py` then copies it again, so one update needs about
+  287 MB on disk at once. The free-space floor is written as that arithmetic
+  with the measurement beside it, not as a number somebody picked.
+- The scratch folder is `~/.rrf-app-download/` and deliberately not inside the
+  install home: `install_windows.version_folders` reads every folder there as a
+  version and `_prune` deletes the oldest, so a scratch folder there would
+  eventually be deleted as one. It is cleared at the start of every attempt,
+  never at the end, because the process that finishes an update is running out
+  of it and cannot delete the ground it stands on. So up to about 170 MB sits
+  there between updates.
+- `tools/photo_source.py` could not find `Report Examples` from a git worktree,
+  which errored fifty packaging tests on a machine with the corpus sitting
+  right there. `app/tests/conftest.py` hit the same thing when the repository
+  was split out and fixed it by looking in more than one place; this module
+  never got that fix. It has it now, plus an `RRF_PHOTO_SOURCE` override.
+- `busy.wait_until_idle` was added because the update ends by exiting the
+  process. Every app-owned file is written to a temporary file and moved into
+  place, so an interruption cannot corrupt one. It can still lose one, and
+  losing a caption run he has just approved is a bad way to find that out.
+
+### What is proven, and what is not, 2026-08-28
+
+Proven on the Mac: reading and validating the bucket, refusing every shape of
+nonsense it can serve, the download, the hash check, the archive safety check,
+the manifest check, the guard that stops anything unchecked being run, the
+command line the handoff builds, the child's waiting and refusing and
+installing, that a spawned child outlives its parent, the routes, and the
+screens.
+
+**Not proven, and all of it needs Windows:** that `CREATE_NEW_CONSOLE` gives
+the child a readable window, that the child survives the parent's console
+closing, that a real download from R2 through Mark's network completes, that
+SmartScreen does not object to a bundled `python.exe` spawning another one, and
+that the whole thing works end to end on his machine. Gate D still stands:
+Spenser runs the exact package himself before Mark sees it.
+
 
 ### Still owed out of that work
 
@@ -340,6 +458,14 @@ done.
   not the same thing as a stated fact, and the Phase 0 rule was written against
   stated facts. Not approved, not designed, and it needs its own measurement
   pass over how often a prefix would be wrong before anyone builds it.
+
+- **Putting the way back somewhere Mark can find it.**
+  `install_windows.py` writes `Start previous version.bat` into
+  `%LOCALAPPDATA%\Roy R. Fisher\`, which is a folder he will never navigate
+  to on his own. The rollback mechanism works; reaching it does not. Noticed
+  2026-08-28 while building the update button, and deliberately not fixed
+  there, because the moment he needs it is the moment a new version is not
+  working and reading is the last thing he wants to do.
 
 - **A layout pass over the job screen and the photo screen.** Spenser's words
   on 2026-08-25: it is all a little confusing. Not specified yet.

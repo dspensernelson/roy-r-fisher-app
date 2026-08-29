@@ -250,3 +250,293 @@ def look(root) -> dict:
         found = {}
     remember(found)
     return found
+
+
+# ============================================================= fetching it ==
+# Everything below this line touches the disk. Nothing below this line
+# executes anything out of the package: that is `hand_off`, and it comes after
+# both checks have passed.
+import hashlib          # noqa: E402  grouped with the code that uses them
+import shutil           # noqa: E402
+
+
+class UpdateRefused(Exception):
+    """A reason not to go on, already worded the way Mark should read it.
+
+    Same shape as `InstallRefused` and `StartupRefused`, on purpose. Every
+    refusal in this app carries its own sentence rather than a code somebody
+    has to look up.
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+DOWNLOAD_DIR_NAME = ".rrf-app-download"
+
+# Measured 2026-08-28 on the real v0.5.3 package: the zip is 53.3 MB and
+# unpacks to 116.8 MB.
+UNPACKED_RATIO = 2.2
+
+# Three copies exist at once during an update: the zip, the tree it unpacks
+# into, and the copy install_windows.py makes in the install home. Written as
+# that arithmetic rather than as a number somebody picked, so it stays true if
+# a package ever changes shape.
+SPACE_FACTOR = 1 + 2 * UNPACKED_RATIO
+
+# A little over, because free space reported is not free space delivered and
+# the last thing this should do is fill his disk.
+SPACE_MARGIN = 1.15
+
+# Read in chunks so progress can be reported and a cancel can be noticed.
+CHUNK = 1 << 18
+
+DOWNLOAD_TIMEOUT = 60.0
+
+# The sidecar is one line: the hash, two spaces, the filename.
+HASH_CHARS = 64
+MAX_SIDECAR_BYTES = 4096
+
+
+def download_dir():
+    """The scratch folder, in his home area and nowhere near his work.
+
+    RRF_DOWNLOAD_DIR overrides, for tests, the same way RRF_KEY_FILE already
+    does for the key.
+
+    Deliberately not inside the install home. `install_windows.version_folders`
+    reads every directory there as a version and `_prune` deletes the oldest,
+    so a scratch folder there would be sorted as a version and eventually
+    deleted as one. Deliberately not inside a version folder either, where
+    `packaging.verify` would count it as a file that was not in the package and
+    refuse to start the app.
+    """
+    from pathlib import Path
+    override = os.environ.get("RRF_DOWNLOAD_DIR")
+    return Path(override) if override else Path.home() / DOWNLOAD_DIR_NAME
+
+
+def clear_scratch() -> None:
+    """Empty the scratch folder, at the start of every attempt.
+
+    At the start rather than at the end, because the process that finishes an
+    update is running out of this folder and cannot delete the ground it is
+    standing on. One rule, applied in one place, rather than a tidy-up that
+    only sometimes gets to run.
+    """
+    folder = download_dir()
+    if folder.exists():
+        shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True, exist_ok=True)
+
+
+def space_needed(size: int) -> int:
+    """Bytes that must be free before a download of this size is worth starting."""
+    return int(size * SPACE_FACTOR * SPACE_MARGIN)
+
+
+def _megabytes(count) -> str:
+    return "%.0f MB" % (float(count) / (1024 * 1024))
+
+
+def check_space(size: int) -> None:
+    """Refuse before the network is touched, not half way through it."""
+    folder = download_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    needed = space_needed(size)
+    try:
+        free = shutil.disk_usage(str(folder)).free
+    except OSError:
+        # Nothing can be said about the disk. Refusing on that would stop an
+        # update that would have worked, so this is not treated as too little
+        # space. A genuinely full disk fails on the write instead, plainly.
+        return
+    if free < needed:
+        raise UpdateRefused(
+            "There is not enough room on this computer to install the update.\n"
+            "It needs about %s free and there is %s.\n"
+            "Nothing was downloaded and nothing has changed."
+            % (_megabytes(needed), _megabytes(free)))
+
+
+def fetch_to_file(url: str, target, size: int, on_progress=None,
+                  cancelled=None, timeout: float = DOWNLOAD_TIMEOUT):
+    """Stream the package to disk, reporting progress and honouring a cancel.
+
+    Bounded by the announced size with a chunk of slack. A file that keeps
+    arriving after it should have ended is not our package, and reading it to
+    the end would be filling his disk on a stranger's say-so.
+    """
+    ceiling = size + CHUNK
+    done = 0
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            with open(str(target), "wb") as handle:
+                while True:
+                    if cancelled is not None and cancelled():
+                        raise UpdateRefused(
+                            "The update was stopped. Nothing has changed.")
+                    chunk = response.read(CHUNK)
+                    if not chunk:
+                        break
+                    done += len(chunk)
+                    if done > ceiling:
+                        raise UpdateRefused(
+                            "The download did not match the size it said it "
+                            "would be, so it was stopped. Nothing has changed.")
+                    handle.write(chunk)
+                    if on_progress is not None:
+                        on_progress(done)
+    except UpdateRefused:
+        raise
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise UpdateRefused(
+            "The update could not be downloaded.\n"
+            "    %s\n"
+            "Check the internet connection and try again. Nothing has changed."
+            % exc)
+    return done
+
+
+def sha256_of(path) -> str:
+    h = hashlib.sha256()
+    with open(str(path), "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def read_sidecar(text: str) -> str:
+    """The hash out of a `sha256sum` line, or empty.
+
+    The conventional shape is the hash, two spaces, the filename. Only the
+    first field is read, and only if it looks like a SHA-256.
+    """
+    if not isinstance(text, str):
+        return ""
+    head = text.strip().split()
+    if not head:
+        return ""
+    candidate = head[0].strip().lower()
+    if len(candidate) != HASH_CHARS:
+        return ""
+    try:
+        int(candidate, 16)
+    except ValueError:
+        return ""
+    return candidate
+
+
+def verify_download(path, name: str) -> str:
+    """Check the file on disk against the hash published beside it.
+
+    An unreadable, empty, or malformed sidecar is a refusal and never a skip. A
+    download whose hash cannot be checked is never treated as good, because
+    "we could not check" and "it is fine" are the two answers this must never
+    confuse.
+
+    What this proves: the file arrived whole and unaltered from whatever the
+    bucket served. What it does not prove: who put it there. Without code
+    signing, anyone who can replace the zip can replace this sidecar beside it.
+    """
+    published = read_sidecar(fetch_text(file_url(name + ".sha256"),
+                                        MAX_SIDECAR_BYTES))
+    if not published:
+        raise UpdateRefused(
+            "The update could not be checked, because the checksum published "
+            "with it is missing or unreadable. Nothing was installed and "
+            "nothing has changed.")
+    actual = sha256_of(path)
+    if actual != published:
+        raise UpdateRefused(
+            "The update did not arrive intact and was not installed.\n"
+            "The download does not match its published checksum, which "
+            "usually means it was interrupted.\n"
+            "Nothing has changed. Try again.")
+    return actual
+
+
+# ================================================== how far it has got ======
+# The same shape as progress.py beside it: a dictionary behind a lock, cleared
+# when the run ends, never written to disk. It is a progress light and it is
+# not authoritative about anything. What is true about the update is on the
+# disk; this is only what to draw on the screen while it happens.
+#
+# Stages, in the order Mark sees them. Each is a plain sentence rather than a
+# code, because it is shown to him and not to us.
+DOWNLOADING = "Downloading"
+CHECKING = "Checking the download"
+UNPACKING = "Unpacking"
+INSTALLING = "Installing"
+CLOSING = "Closing"
+
+_run_lock = threading.Lock()
+_run = {}
+_cancel = threading.Event()
+
+
+def _blank_run() -> dict:
+    return {"running": False, "stage": "", "done": 0, "total": 0,
+            "error": "", "version": ""}
+
+
+def begin_run(version: str, total: int) -> None:
+    """A run is starting. Replaces anything left by an earlier one."""
+    _cancel.clear()
+    with _run_lock:
+        _run.clear()
+        _run.update({"running": True, "stage": DOWNLOADING, "done": 0,
+                     "total": int(total), "error": "", "version": str(version)})
+
+
+def set_stage(name: str) -> None:
+    with _run_lock:
+        if _run.get("running"):
+            _run["stage"] = str(name)
+
+
+def advance(done: int) -> None:
+    with _run_lock:
+        if _run.get("running"):
+            _run["done"] = int(done)
+
+
+def fail_run(message: str) -> None:
+    """The run is over and it did not work. The sentence stays on screen.
+
+    `running` goes false so the screen stops polling, and the error stays so
+    there is something to read. A failure that cleared itself would leave him
+    looking at a screen that had silently gone back to normal.
+    """
+    with _run_lock:
+        _run["running"] = False
+        _run["stage"] = ""
+        _run["error"] = str(message)
+
+
+def end_run() -> None:
+    with _run_lock:
+        _run.clear()
+        _run.update(_blank_run())
+
+
+def run_state() -> dict:
+    with _run_lock:
+        found = dict(_run) if _run else _blank_run()
+    found["cancelling"] = _cancel.is_set()
+    return found
+
+
+def running() -> bool:
+    with _run_lock:
+        return bool(_run.get("running"))
+
+
+def request_cancel() -> None:
+    """Stop at the next chunk. Not a kill: the run notices and tidies up."""
+    _cancel.set()
+
+
+def cancelled() -> bool:
+    return _cancel.is_set()

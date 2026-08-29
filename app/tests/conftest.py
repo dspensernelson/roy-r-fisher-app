@@ -83,8 +83,92 @@ def never_touch_the_real_home(tmp_path_factory, monkeypatch):
     # predicts: every suite run left a fresh folder of thumbnails in the
     # real home directory, one per pytest tmp_path, accumulating for ever.
     monkeypatch.setenv("RRF_CACHE_DIR", str(box / ".rrf-app-cache"))
+    # The update scratch folder, added 2026-08-28 with the in-app update
+    # button. Same reason as every line above it: a test that downloads a
+    # package without this would write 53 MB into his real home folder, once
+    # per run, for ever.
+    monkeypatch.setenv("RRF_DOWNLOAD_DIR", str(box / ".rrf-app-download"))
 
 
 @pytest.fixture
 def template_path() -> Path:
     return TEMPLATE_DOCX
+
+
+# --- a stand-in for the update bucket ---------------------------------------
+class FakeBucket:
+    """A real HTTP server on a loopback port, serving whatever it is told to.
+
+    Shared rather than copied into each test file, because two copies of a test
+    double drift the same way two copies of anything else do.
+
+    This proves a narrow mechanic: reading, validating, downloading and
+    refusing. It claims nothing about Cloudflare, about R2, or about Mark's
+    network, and it is not evidence that any of those work.
+    """
+
+    def __init__(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        self.files = {}
+        outer = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                from urllib.parse import unquote
+                body = outer.files.get(unquote(self.path.lstrip("/")))
+                if body is None:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                pass
+
+        class Quiet(HTTPServer):
+            # A cancelled or refused download closes the connection part way
+            # through, which is the behaviour under test. socketserver prints a
+            # traceback for it, which would make a passing suite look broken.
+            def handle_error(self, *_args):
+                pass
+
+        self.server = Quiet(("127.0.0.1", 0), Handler)
+        # A short poll interval, because the default is half a second and
+        # shutdown waits for it. Sixty tests each paying that would add half a
+        # minute to a suite that runs in under thirty seconds.
+        self.thread = threading.Thread(
+            target=self.server.serve_forever, kwargs={"poll_interval": 0.01},
+            daemon=True)
+        self.thread.start()
+
+    @property
+    def url(self) -> str:
+        return "http://127.0.0.1:%d" % self.server.server_address[1]
+
+    def put(self, name, body) -> None:
+        self.files[name] = body if isinstance(body, bytes) else body.encode("utf-8")
+
+    def close(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+
+
+@pytest.fixture
+def fake_bucket(monkeypatch):
+    """A bucket the app will read from, already pointed at by the environment."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+    import updates
+
+    made = FakeBucket()
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", made.url)
+    updates.forget()
+    updates.end_run()
+    yield made
+    made.close()
+    updates.forget()
+    updates.end_run()

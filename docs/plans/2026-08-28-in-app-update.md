@@ -228,30 +228,30 @@ One rule, and it is stated in the module.
 
 ### Task 3: The download, and the hash
 
-- [ ] `updates.download()` writes into the scratch folder, clearing it first.
-- [ ] Before a byte is fetched, check free space with `shutil.disk_usage`
+- [x] `updates.download()` writes into the scratch folder, clearing it first.
+- [x] Before a byte is fetched, check free space with `shutil.disk_usage`
       against a floor derived from the announced size. Measured 2026-08-28: an
       update needs the zip plus 2.19 times the zip unpacked plus the same again
       installed. The floor is stated as that arithmetic in the code, with the
       measurement in the comment, not as a magic number. Too little space is a
       plain refusal before any network call.
-- [ ] Progress is reported through a module in the shape of `progress.py`: a
+- [x] Progress is reported through a module in the shape of `progress.py`: a
       dictionary behind a lock, worthless a second after the run ends, never
       written to disk.
-- [ ] Cancel is a `threading.Event` checked between chunks. Cancelling deletes
+- [x] Cancel is a `threading.Event` checked between chunks. Cancelling deletes
       the partial file and the scratch folder and reports plainly.
-- [ ] `updates.verify_download()` fetches `<zip>.sha256`, parses the first
+- [x] `updates.verify_download()` fetches `<zip>.sha256`, parses the first
       whitespace-separated token as the hash, and compares it with the sha256
       of the file on disk. A mismatch deletes the download and refuses.
-- [ ] An unreadable, empty, or malformed sidecar is a refusal, never a skip.
+- [x] An unreadable, empty, or malformed sidecar is a refusal, never a skip.
       A download whose hash cannot be checked is never treated as good.
-- [ ] Tests in `test_update_download.py`: a good download verifies; a truncated
+- [x] Tests in `test_update_download.py`: a good download verifies; a truncated
       file is refused and deleted; a byte flipped is refused; a missing sidecar
       is refused; a sidecar with no hash in it is refused; too little free space
       refuses before the network is touched; cancel mid-download leaves nothing
       behind. Each asserts that no process was spawned and nothing outside the
       scratch folder changed.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 4: Unpacking, and the manifest
 

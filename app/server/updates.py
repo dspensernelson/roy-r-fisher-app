@@ -668,3 +668,147 @@ def unpack(zip_path, expect_version: str):
             "was not installed. Nothing has changed. Send Spenser this "
             "message." % (expect_version, found or "unnamed"))
     return package
+
+
+# ============================================== handing over, and leaving ===
+import subprocess       # noqa: E402  grouped with the code that uses it
+
+import startup          # noqa: E402  standard library only, like this module
+
+# What passed both checks in this run, and nothing else may be executed.
+#
+# The order of this file is the safety property: download, check the hash,
+# unpack, check the manifest, and only then run something. An order that
+# depends on every caller remembering it is not a safety property, so the
+# record below is written inside `prepare` and cannot be set from outside.
+# `hand_off` refuses anything that is not in it.
+_cleared_lock = threading.Lock()
+_cleared = {"package": "", "sha256": ""}
+
+
+def _mark_cleared(package, digest: str) -> None:
+    with _cleared_lock:
+        _cleared["package"] = str(package)
+        _cleared["sha256"] = str(digest)
+
+
+def _is_cleared(package) -> bool:
+    with _cleared_lock:
+        return bool(_cleared["sha256"]) and _cleared["package"] == str(package)
+
+
+def forget_cleared() -> None:
+    with _cleared_lock:
+        _cleared["package"] = ""
+        _cleared["sha256"] = ""
+
+
+def prepare(offer: dict, on_progress=None):
+    """Download it, check it, unpack it, check it again. Returns the package.
+
+    Nothing out of the bucket has executed when this returns. That is the whole
+    point of it being one function: the four steps happen in one place, in one
+    order, and the thing that follows them refuses to run anything this did not
+    clear.
+    """
+    from pathlib import Path
+
+    forget_cleared()
+    clear_scratch()
+    check_space(int(offer["size"]))
+
+    target = Path(download_dir()) / offer["zip"]
+    set_stage(DOWNLOADING)
+    fetch_to_file(file_url(offer["zip"]), target, int(offer["size"]),
+                  on_progress=on_progress, cancelled=cancelled)
+
+    set_stage(CHECKING)
+    digest = verify_download(target, offer["zip"])
+
+    set_stage(UNPACKING)
+    package = unpack(target, offer["version"])
+
+    _mark_cleared(package, digest)
+    return package
+
+
+def handoff_command(package):
+    """The command that finishes the update, or a refusal.
+
+    The new package's own Python running the new package's own
+    `update_apply.py`. Never the running version's copy of either: once this
+    starts, nothing in the old version folder may be held open, because that is
+    what leaves `install_windows.py` free to copy over it and to prune it.
+    """
+    from pathlib import Path
+
+    inner = Path(packaging.program_dir(package))
+    python = inner / "python" / "python.exe"
+    script = inner / "app" / "update_apply.py"
+    if not script.is_file():
+        raise UpdateRefused(
+            "The update does not carry the part that installs it, so it was "
+            "not installed. Nothing has changed. Send Spenser this message.")
+    if not python.is_file():
+        raise UpdateRefused(
+            "The update does not carry the Python it needs, so it was not "
+            "installed. Nothing has changed. Send Spenser this message.")
+    return [str(python), str(script)]
+
+
+def hand_off(package, spawn=None) -> list:
+    """Start the process that will finish the update, and return its command.
+
+    Refuses anything that did not pass both checks in this run. This is the
+    first line in the whole update that executes something out of the bucket,
+    and it is guarded by a record no caller can write.
+    """
+    if not _is_cleared(package):
+        raise UpdateRefused(
+            "The update was not checked, so it was not installed. Nothing has "
+            "changed. Send Spenser this message.")
+
+    command = handoff_command(package)
+    if spawn is None:
+        spawn = subprocess.Popen
+
+    options = {"cwd": str(packaging.program_dir(package)), "close_fds": True}
+    # Its own console window on Windows. That window is the only place a plain
+    # failure message can land once this app has closed, and the pilot decision
+    # to keep the console visible applies to it at least as much as to the
+    # launcher.
+    flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+    if flags:
+        options["creationflags"] = flags
+
+    try:
+        spawn(command, **options)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise UpdateRefused(
+            "The update was downloaded and checked but could not be started:\n"
+            "    %s\n"
+            "Nothing has changed and the app you are using still works." % exc)
+    return command
+
+
+def close_the_app(home, exit_now=None) -> None:
+    """Clear this copy's runtime record and go.
+
+    The record describes a running app, so leaving it behind names a process
+    that is not there. The installer waiting on the other side asks the port it
+    names whether our version answers, and a dead port answers nothing, so a
+    missed tidy-up is already safe. Doing it properly costs one line.
+
+    Exits rather than shutting uvicorn down politely, because the whole purpose
+    of this call is to stop holding files open. `exit_now` is injected so a
+    test can watch it happen without dying.
+    """
+    set_stage(CLOSING)
+    try:
+        startup.clear_runtime(home)
+    except Exception:
+        pass
+    if exit_now is None:
+        def exit_now():
+            os._exit(0)
+    exit_now()

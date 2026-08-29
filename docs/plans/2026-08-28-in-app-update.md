@@ -304,31 +304,31 @@ One rule, and it is stated in the module.
 
 ### Task 6: The handoff, and the app closing itself
 
-- [ ] `updates.hand_off()` builds the command line: the unpacked package's
+- [x] `updates.hand_off()` builds the command line: the unpacked package's
       `program/python/python.exe` and its `program/app/update_apply.py`. Never
       the running version's copies of either.
-- [ ] It refuses to spawn unless both the hash check and the manifest check
+- [x] It refuses to spawn unless both the hash check and the manifest check
       have passed in this run. The state that records that lives in the module
       and is not something a caller can assert on its own behalf.
-- [ ] On Windows it spawns with `CREATE_NEW_CONSOLE` so the child has its own
+- [x] On Windows it spawns with `CREATE_NEW_CONSOLE` so the child has its own
       visible window, which is where its plain messages land. The pilot's
       "keep the console visible" decision applies to the child as much as to
       the launcher.
-- [ ] If the spawn raises, the app does **not** exit. It reports plainly and
+- [x] If the spawn raises, the app does **not** exit. It reports plainly and
       stays up.
-- [ ] `updates.close_the_app()` clears `runtime.json` through
+- [x] `updates.close_the_app()` clears `runtime.json` through
       `startup.clear_runtime` and then exits the process. It takes the exit
       function as an argument so a test can watch it without dying. It is
       called from a short timer thread so the HTTP answer reaches the browser
       first.
-- [ ] Tests in `test_update_handoff.py`: the command line names the new
+- [x] Tests in `test_update_handoff.py`: the command line names the new
       package's python and the new package's `update_apply.py`; nothing is
       spawned when either check has not passed; a spawn that raises leaves the
       app alive and never calls exit; the close helper clears `runtime.json`
       before exiting; a real harmless child spawned on the Mac outlives its
       parent, which is the one thing about detachment worth proving rather than
       asserting.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 7: The endpoints
 

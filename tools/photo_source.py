@@ -28,7 +28,44 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 # The read-only source Spenser authorised.
-SOURCE = Path(__file__).resolve().parents[2] / "RRF" / "Report Examples"
+#
+# Looked for in more than one place, and overridable, for the same reason
+# app/tests/conftest.py already does it: the corpus moved next door when the
+# application repository was split out of the evidence vault, and a single
+# hardcoded path went stale without saying so. This module never got that fix,
+# and the cost showed up on 2026-08-28: from a git worktree, which sits deeper
+# than the checkout, the relative path misses and fifty packaging tests error
+# on a machine that has the corpus sitting right there.
+#
+# Read-only in every one of them. Nothing here ever writes, moves, renames or
+# deletes anything in the source, whichever path it was found at.
+REPO = Path(__file__).resolve().parents[1]
+
+
+def _find_source() -> Path:
+    """The corpus, wherever it is on this machine.
+
+    RRF_PHOTO_SOURCE overrides, the same way RRF_KEY_FILE already does for the
+    key. Otherwise: beside the repository, inside it, or beside the checkout
+    this worktree belongs to. The last of those is what makes the suite run
+    from a worktree instead of only from the original clone.
+    """
+    override = os.environ.get("RRF_PHOTO_SOURCE")
+    if override:
+        return Path(override)
+    here = REPO
+    for _ in range(4):
+        beside = here.parent / "RRF" / "Report Examples"
+        if beside.is_dir():
+            return beside
+        inside = here / "Report Examples"
+        if inside.is_dir():
+            return inside
+        here = here.parent
+    return REPO.parent / "RRF" / "Report Examples"
+
+
+SOURCE = _find_source()
 
 # Real camera photographs, by size. Below this is a logo or an icon; above it
 # is usually a scan rather than a photograph.

@@ -332,22 +332,22 @@ One rule, and it is stated in the module.
 
 ### Task 7: The endpoints
 
-- [ ] `GET /api/update` reports the running version, the available version if
+- [x] `GET /api/update` reports the running version, the available version if
       one is known, its size, and the state of any run in progress.
-- [ ] `POST /api/update/check` looks now. This is the `Check now` on Settings.
-- [ ] `POST /api/update/start` runs download, verify, unpack, hand off, close.
-- [ ] `GET /api/update/progress` is what the screen polls.
-- [ ] `POST /api/update/cancel` stops it.
-- [ ] The startup check runs once, in a background thread, off the startup
+- [x] `POST /api/update/check` looks now. This is the `Check now` on Settings.
+- [x] `POST /api/update/start` runs download, verify, unpack, hand off, close.
+- [x] `GET /api/update/progress` is what the screen polls.
+- [x] `POST /api/update/cancel` stops it.
+- [x] The startup check runs once, in a background thread, off the startup
       path, in the shape of the existing `tidy_cache` thread in `run_app.py`.
       It never delays serving and it never says anything when it fails.
-- [ ] `busy.writing()` is held where it should be, so an update cannot start
+- [x] `busy.writing()` is held where it should be, so an update cannot start
       while a demo reset holds the floor and the reverse.
-- [ ] Two updates cannot run at once.
-- [ ] Tests in `test_update_api.py`: each route's shape; start refuses when one
+- [x] Two updates cannot run at once.
+- [x] Tests in `test_update_api.py`: each route's shape; start refuses when one
       is already running; cancel during a run; the routes report no update in a
       checkout; a failed run leaves the app answering normally afterwards.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 8: What Mark sees
 

@@ -13,6 +13,7 @@ threading.Lock is the right primitive because the web server answers plain
 `def` endpoints on a pool of threads.
 """
 import threading
+import time
 from contextlib import contextmanager
 
 # What the caller is told, and what the screens repeat back word for word.
@@ -83,3 +84,26 @@ def state() -> dict:
     """For tests. Never exposed over the API."""
     with _lock:
         return {"writers": _writers, "resetting": _resetting}
+
+
+def wait_until_idle(seconds: float = 30.0, sleep=time.sleep,
+                    now=time.monotonic) -> bool:
+    """Wait for writes already in flight to finish. True if they did.
+
+    Added 2026-08-28 for the in-app update, which ends by exiting the process.
+    Everything the app writes is written to a temporary file and moved into
+    place, so an interrupted write cannot corrupt a file. What it can do is
+    lose the write, and losing a caption run he has just approved because he
+    pressed Update while it was still saving is a bad way to find that out.
+
+    Bounded, and the caller carries on either way. A wait that could last for
+    ever would turn one stuck write into an app that will not close.
+    """
+    deadline = now() + seconds
+    while True:
+        with _lock:
+            if not _writers:
+                return True
+        if now() >= deadline:
+            return False
+        sleep(0.1)

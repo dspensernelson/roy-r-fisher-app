@@ -107,15 +107,8 @@ def version_folders(home: Path) -> list:
         found = [p for p in home.iterdir() if p.is_dir()]
     except OSError:
         return []
-    return sorted(found, key=lambda p: (_as_numbers(p.name), p.name), reverse=True)
-
-
-def _as_numbers(name: str) -> tuple:
-    """`0.10.0` sorts above `0.9.0`, which sorting the text does not do."""
-    parts = []
-    for piece in name.split("."):
-        parts.append(int(piece) if piece.isdigit() else -1)
-    return tuple(parts)
+    return sorted(found, key=lambda p: (packaging.version_numbers(p.name), p.name),
+                  reverse=True)
 
 
 # ------------------------------------------------------- refusing early ----

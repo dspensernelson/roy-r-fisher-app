@@ -320,3 +320,49 @@ def test_the_installer_travels_with_the_package_it_installs():
     packager = (APP.parent / "tools" / "package_windows.py").read_text()
     assert 'shutil.copy2(REPO / "app" / "install_windows.py"' in packager
     assert '"Install or update Roy R. Fisher.bat"' in packager
+
+
+# --- one place that knows which version is newer ---------------------------
+# The installer sorts version folders by this, and the in-app update check asks
+# it whether the bucket is offering something later than what is running. Two
+# copies of that rule would eventually disagree, and the day they disagreed
+# would be the day Mark needed to go back a version.
+def test_ten_sorts_above_nine():
+    """Sorting the text puts 0.9.0 above 0.10.0, which would send him back to
+    the wrong version."""
+    assert packaging.version_numbers("0.10.0") > packaging.version_numbers("0.9.0")
+    assert packaging.newer("0.10.0", "0.9.0")
+    assert not packaging.newer("0.9.0", "0.10.0")
+
+
+def test_a_folder_renamed_by_hand_is_sorted_past_and_never_raises():
+    assert packaging.version_numbers("downloads") == (-1,)
+    assert packaging.version_numbers("0.5.x") == (0, 5, -1)
+    assert packaging.version_numbers("") == (-1,)
+
+
+def test_an_unreadable_version_is_never_newer_than_anything():
+    """A bucket serving nonsense, or a VERSION file that did not survive the
+    unzip, means no update. It never means update."""
+    for nonsense in ("", "   ", "latest", "v0.5.4", "??"):
+        assert not packaging.newer(nonsense, "0.5.3")
+        assert not packaging.newer("0.5.4", nonsense)
+
+
+def test_the_same_version_is_not_newer_than_itself():
+    assert not packaging.newer("0.5.3", "0.5.3")
+    assert not packaging.newer("0.5.3 ", " 0.5.3")
+
+
+def test_a_longer_version_is_newer_than_the_one_it_extends():
+    assert packaging.newer("0.5.3.1", "0.5.3")
+    assert not packaging.newer("0.5.3", "0.5.3.1")
+
+
+def test_the_installer_and_the_update_check_share_the_one_rule():
+    """install_windows keeps no copy of its own. Asserted on the source,
+    because a second copy would pass every behaviour test above while still
+    being a second copy."""
+    source = (APP / "install_windows.py").read_text()
+    assert "_as_numbers" not in source
+    assert "packaging.version_numbers" in source

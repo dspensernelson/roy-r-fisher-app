@@ -378,21 +378,21 @@ One rule, and it is stated in the module.
 
 ### Task 9: Packaging
 
-- [ ] `tools/package_windows.py` copies `app/update_apply.py` into the package
+- [x] `tools/package_windows.py` copies `app/update_apply.py` into the package
       the same way it already copies `run_app.py` and `install_windows.py`.
-- [ ] It writes `latest.json` beside the zip and the sidecar, holding the
+- [x] It writes `latest.json` beside the zip and the sidecar, holding the
       version, the zip's filename, and its size in bytes. Machine-written, so
       Spenser uploads three files and types none of their contents.
-- [ ] `latest.json` is a sibling of the zip and is never inside the package,
+- [x] `latest.json` is a sibling of the zip and is never inside the package,
       the same way the zip and the sidecar already are.
-- [ ] Add to `test_package_manifest.py`: `app/update_apply.py` is present in
+- [x] Add to `test_package_manifest.py`: `app/update_apply.py` is present in
       the built package. Without it, an update installs a version that cannot
       itself be updated.
-- [ ] Add to `test_package_zip.py`: `latest.json` is written, its fields match
+- [x] Add to `test_package_zip.py`: `latest.json` is written, its fields match
       the built zip, and it is not inside the archive.
-- [ ] Note in the packaging script's own output what the three files to upload
+- [x] Note in the packaging script's own output what the three files to upload
       are, so the dashboard step is not remembered from a chat message.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 10: The honesty pass
 

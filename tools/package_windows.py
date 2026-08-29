@@ -22,6 +22,7 @@ in the package it produces.
 """
 import argparse
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -318,6 +319,12 @@ def copy_app(out: Path) -> None:
     # The installer travels with the package it installs, so the .bat beside it
     # is a shim and the logic has one home.
     shutil.copy2(REPO / "app" / "install_windows.py", app_out / "install_windows.py")
+    # The process the in-app update hands off to. It has to be in the package
+    # because it is the *new* package's copy that runs, out of the new
+    # package's own Python. Leave it out and an update installs a version that
+    # cannot itself be updated, which nothing would notice until the update
+    # after that one.
+    shutil.copy2(REPO / "app" / "update_apply.py", app_out / "update_apply.py")
 
     for part in APP_PARTS:
         source = REPO / "app" / part
@@ -435,6 +442,7 @@ def build(out: Path, work: Path, offline: bool) -> None:
     zip_path = out.with_name(out.name + ".zip")
     make_zip(out, zip_path)
     sidecar = write_sidecar(zip_path)
+    latest = write_latest(zip_path, packaging.version_of(program))
 
     say("extracting it somewhere new and checking it")
     checked = verify_zip(out, zip_path)
@@ -453,6 +461,16 @@ def build(out: Path, work: Path, offline: bool) -> None:
     print()
     print("This extraction was done on the Mac with Python's zipfile. It is not")
     print("the Gate A test, which needs a browser download and Windows Explorer.")
+    print()
+    # Written here rather than remembered from a chat message, because the
+    # dashboard step is the one part of publishing that is done by hand.
+    print("To publish this as an update, upload these three to the")
+    print("rrf-app-updates bucket, all of them, together:")
+    for one in (zip_path, sidecar, latest):
+        print("    %s" % one.name)
+    print()
+    print("Nothing in them is typed. Upload latest.json last: it is what the")
+    print("app reads, so until it changes nobody is offered this version.")
 
 
 # ----------------------------------------------------------------- the zip --
@@ -583,6 +601,30 @@ def write_sidecar(zip_path: Path) -> Path:
     sidecar.write_text("%s  %s\n" % (sha256_of(zip_path), zip_path.name),
                        encoding="utf-8")
     return sidecar
+
+
+# What the app reads from the bucket to learn a version exists. Named here and
+# in app/server/updates.py, and a test asserts they agree.
+LATEST_NAME = "latest.json"
+
+
+def write_latest(zip_path: Path, version: str) -> Path:
+    """The pointer file Spenser uploads beside the archive.
+
+    Written by this script rather than typed, which is the whole point of it.
+    Three files go to the bucket and he authors none of their contents, so a
+    mistyped version or a mistyped hash is not a thing that can happen.
+
+    The hash is deliberately *not* in here. It lives in the sidecar, which is
+    written from the archive itself, so there is one hash of record rather than
+    two that can disagree.
+    """
+    latest = zip_path.with_name(LATEST_NAME)
+    latest.write_text(json.dumps({"version": version,
+                                  "zip": zip_path.name,
+                                  "size": zip_path.stat().st_size},
+                                 indent=2) + "\n", encoding="utf-8")
+    return latest
 
 
 def verify_zip(folder: Path, zip_path: Path) -> dict:

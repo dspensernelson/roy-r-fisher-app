@@ -540,3 +540,131 @@ def request_cancel() -> None:
 
 def cancelled() -> bool:
     return _cancel.is_set()
+
+
+# =============================================================== unpacking ==
+import zipfile           # noqa: E402  grouped with the code that uses it
+
+UNPACKED_DIR = "unpacked"
+
+# A package unpacks to about two and a bit times its archive. Measured
+# 2026-08-28: 53.3 MB to 116.8 MB, a ratio of 2.19. The ceiling is a generous
+# multiple of that rather than a tight one, because its job is to refuse
+# something absurd. An archive that claims to expand twenty times is not a
+# package of ours whatever else it is.
+MAX_EXPANSION = 20
+
+
+def _entry_is_safe(name: str, top: str) -> bool:
+    """Whether one archive entry may be written to disk.
+
+    Mirrors `package_windows._arcname`, which refuses these same shapes when
+    the archive is built. Checked again here because the archive now arrives
+    over the internet, and because Python's own extractor quietly sanitises a
+    dangerous name instead of refusing it. Quietly sanitising is the wrong
+    answer: an entry like this means the archive is not ours, and the useful
+    thing to do is stop and say which entry.
+    """
+    if not name or name.startswith("/") or name.startswith("\\"):
+        return False
+    if "\\" in name or ":" in name:
+        return False
+    parts = name.split("/")
+    if ".." in parts:
+        return False
+    if parts[0] != top:
+        return False
+    return True
+
+
+def check_archive(zip_path) -> str:
+    """Look through the archive without writing anything. Returns the top folder.
+
+    Nothing is extracted until this has passed, so a hostile or damaged archive
+    never gets to put a file anywhere.
+    """
+    try:
+        with zipfile.ZipFile(str(zip_path)) as archive:
+            entries = archive.infolist()
+            if not entries:
+                raise UpdateRefused(
+                    "The update file is empty, so it was not installed. "
+                    "Nothing has changed.")
+            first = entries[0].filename.split("/")[0]
+            if not first:
+                raise UpdateRefused(
+                    "The update file is not shaped like a Roy R. Fisher "
+                    "package, so it was not installed. Nothing has changed.")
+            declared = 0
+            for entry in entries:
+                if not _entry_is_safe(entry.filename, first):
+                    raise UpdateRefused(
+                        "The update file contains something that does not "
+                        "belong in it, so it was not installed:\n"
+                        "    %s\n"
+                        "Nothing has changed. Send Spenser this message."
+                        % entry.filename)
+                declared += entry.file_size
+    except UpdateRefused:
+        raise
+    except (zipfile.BadZipFile, OSError, ValueError):
+        raise UpdateRefused(
+            "The update file could not be opened, which usually means the "
+            "download was interrupted. Nothing has changed. Try again.")
+
+    try:
+        on_disk = os.path.getsize(str(zip_path))
+    except OSError:
+        on_disk = 0
+    if on_disk and declared > on_disk * MAX_EXPANSION:
+        raise UpdateRefused(
+            "The update file claims to unpack to far more than it could "
+            "hold, so it was not installed. Nothing has changed.")
+    return first
+
+
+def unpack(zip_path, expect_version: str):
+    """Extract the package and check it against its own manifest.
+
+    Returns the unpacked package folder, the one holding the launcher and
+    `program/`.
+
+    This is the second of the two checks, and the last thing that happens
+    before anything out of the bucket is allowed to execute. It is the same
+    `packaging.verify` the launcher runs on every start, so a package that
+    would not have started is refused here rather than after it is installed.
+    """
+    from pathlib import Path
+
+    top = check_archive(zip_path)
+    where = download_dir() / UNPACKED_DIR
+    if where.exists():
+        shutil.rmtree(where, ignore_errors=True)
+    where.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with zipfile.ZipFile(str(zip_path)) as archive:
+            archive.extractall(str(where))
+    except (zipfile.BadZipFile, OSError, ValueError) as exc:
+        shutil.rmtree(where, ignore_errors=True)
+        raise UpdateRefused(
+            "The update could not be unpacked:\n"
+            "    %s\n"
+            "Nothing has changed. Try again." % exc)
+
+    package = Path(where) / top
+    inner = packaging.program_dir(package)
+    try:
+        packaging.verify(inner)
+    except packaging.PackageDamaged as exc:
+        shutil.rmtree(where, ignore_errors=True)
+        raise UpdateRefused(exc.message)
+
+    found = packaging.version_of(inner)
+    if found != str(expect_version).strip():
+        shutil.rmtree(where, ignore_errors=True)
+        raise UpdateRefused(
+            "The update said it was version %s and turned out to be %s, so it "
+            "was not installed. Nothing has changed. Send Spenser this "
+            "message." % (expect_version, found or "unnamed"))
+    return package

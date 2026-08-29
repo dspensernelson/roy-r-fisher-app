@@ -255,25 +255,25 @@ One rule, and it is stated in the module.
 
 ### Task 4: Unpacking, and the manifest
 
-- [ ] `updates.unpack()` extracts into the scratch folder.
-- [ ] Every entry name is checked before extraction: no absolute path, no `..`,
+- [x] `updates.unpack()` extracts into the scratch folder.
+- [x] Every entry name is checked before extraction: no absolute path, no `..`,
       no backslash, no colon, and every entry inside one top-level folder. This
       mirrors `package_windows._arcname` in reverse. Python's own extractor
       sanitizes silently; this refuses loudly and names the entry.
-- [ ] The sum of the declared uncompressed sizes is checked against a ceiling
+- [x] The sum of the declared uncompressed sizes is checked against a ceiling
       before extracting, so a small file cannot ask for an enormous unpack.
-- [ ] After extraction, `packaging.verify(packaging.program_dir(unpacked))`.
+- [x] After extraction, `packaging.verify(packaging.program_dir(unpacked))`.
       A failure deletes the unpacked tree and refuses with the sentence
       `packaging.py` already wrote.
-- [ ] `packaging.version_of` on the unpacked tree must equal the version
+- [x] `packaging.version_of` on the unpacked tree must equal the version
       `latest.json` announced. A package that says it is a different version
       than the one advertised is refused.
-- [ ] Tests in `test_update_unpack.py`: a good package unpacks and verifies; an
+- [x] Tests in `test_update_unpack.py`: a good package unpacks and verifies; an
       entry escaping the top folder is refused and named; a zip declaring an
       absurd uncompressed size is refused; a package whose manifest does not
       match is refused with the manifest's own wording; a package whose VERSION
       disagrees with `latest.json` is refused. Each asserts nothing was spawned.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 5: The child that does the installing
 

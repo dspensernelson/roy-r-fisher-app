@@ -351,30 +351,30 @@ One rule, and it is stated in the module.
 
 ### Task 8: What Mark sees
 
-- [ ] The masthead's `v0.5.3` becomes a quiet button when an update is known,
+- [x] The masthead's `v0.5.3` becomes a quiet button when an update is known,
       reading `Update available`. It renders on every screen because the
       masthead does. With no update known it is exactly what it is today.
-- [ ] Clicking it opens the step, in the app's existing `confirm` shape: which
+- [x] Clicking it opens the step, in the app's existing `confirm` shape: which
       version, how big in megabytes, what will happen in three short sentences,
       and the honest limit of the check in one. Then `Update now` and
       `Not now`. The choice lives inside the action, which is the rule.
-- [ ] During the run: a real bar in megabytes of the total, and one sentence
+- [x] During the run: a real bar in megabytes of the total, and one sentence
       per stage. `Downloading 12 MB of 53 MB`, then `Checking the download`,
       then `Unpacking`, then `Installing`. A `Cancel` that works during the
       download.
-- [ ] The last screen before the app goes: `Closing now. The new version will
+- [x] The last screen before the app goes: `Closing now. The new version will
       open in a few seconds. If it does not, use the Roy R. Fisher icon on your
       Desktop.`
-- [ ] Every failure renders as one plain sentence in the app's existing `error`
+- [x] Every failure renders as one plain sentence in the app's existing `error`
       shape, and the app is still usable underneath it.
-- [ ] `Check now` on Settings, with a plain answer either way, including
+- [x] `Check now` on Settings, with a plain answer either way, including
       `You are on the newest version` and a sentence when the bucket could not
       be reached. The startup check is silent; this one is not, because he
       asked.
-- [ ] Vitest: the button appears only when an update is known; the step shows
+- [x] Vitest: the button appears only when an update is known; the step shows
       the version and the size; progress renders megabytes; cancel calls the
       route; the closing screen appears; a failed run leaves the app usable.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 9: Packaging
 

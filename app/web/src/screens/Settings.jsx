@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate } from "../api.js";
 
-export default function Settings({ workspace, onChangeFolder, onWorkspaceChanged }) {
+export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged }) {
   const [state, setState] = useState(null);
   const [typed, setTyped] = useState("");
   const [replacing, setReplacing] = useState(false);
@@ -9,6 +9,10 @@ export default function Settings({ workspace, onChangeFolder, onWorkspaceChanged
   const [note, setNote] = useState(null);
   const [error, setError] = useState(null);
   const [forgetting, setForgetting] = useState(false);
+  // The look at startup is silent because he did not ask for it. This one
+  // answers either way, because he did.
+  const [looking, setLooking] = useState(false);
+  const [looked, setLooked] = useState(null);
 
   useEffect(() => {
     getSettings().then(setState)
@@ -42,6 +46,36 @@ export default function Settings({ workspace, onChangeFolder, onWorkspaceChanged
     <>
       <h1>Settings</h1>
       <p className="sub">Set this up once. The app remembers it on this computer.</p>
+
+      <div className="setting">
+        <div className="setting-head"><h2>The version you are running</h2></div>
+        <p className="setting-body">
+          This computer is running <strong>version {version || "unknown"}</strong>.
+        </p>
+        <div className="setting-actions">
+          <button className="button" disabled={looking} onClick={async () => {
+            setLooking(true); setLooked(null);
+            try {
+              const found = await checkForUpdate();
+              setLooked(found.available
+                ? `Version ${found.available} is available. Use the Update available button at the top of the screen.`
+                : "You are on the newest version.");
+            } catch {
+              setLooked("The update service could not be reached just now. Nothing has changed.");
+            }
+            setLooking(false);
+          }}>
+            Check now
+          </button>
+          {looking && (
+            <span className="working">
+              <span className="loading-bar"><span /></span>
+              <span className="working-text">Checking...</span>
+            </span>
+          )}
+        </div>
+        {looked && <p className="setting-fine">{looked}</p>}
+      </div>
 
       <div className="setting">
         <div className="setting-head"><h2>Where your jobs live</h2></div>

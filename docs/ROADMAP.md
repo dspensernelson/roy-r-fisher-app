@@ -168,7 +168,8 @@ amended in place, so this file holds one answer and never two.
   overrule the new template. This is the one place where measuring the
   corpus yields to a stated instruction from Mark, and it yields for this
   section only. No Description of Improvements implementation plan is
-  approved until the actual template has been received and inspected.
+  approved until the actual template has been received and inspected. Received
+  and inspected 2026-08-28; what it turned out to be is below.
 
 ## Decisions on record (2026-08-25, Spenser, in chat)
 
@@ -353,6 +354,88 @@ done.
 - **Selecting across more than one folder at once.** Not built on purpose,
   2026-08-25. It is a different feature from choosing several inside one
   folder, and it waits until he has wanted it twice.
+
+## Description of Improvements, measured (2026-08-28)
+
+Replaces an earlier attribution built from Mason City alone, which was wrong.
+That job's Description of Improvements traces to the Clinton Walmart report in
+its own `Old Reports` folder, and that report's text is Iowa City's. One job is
+not a measurement, which is a rule this file already carried.
+
+### Decided
+
+- **Narrative1 is replaced, not fed.** Mark's workbook pushes values into Word
+  through `DOCVARIABLE` fields (`BuildingsTotalGBA`, `Building1YearBuilt`,
+  `BuildingsParkingSpaces`, `BuildingsLandtoBuildingRatio`,
+  `BuildingsCapsuleDescription`), all present in both his documents and the
+  workbook itself. The app neither writes into that chain nor reads it. It
+  reads the sources and writes the document. Consequence: the app owns the
+  arithmetic N1 used to do.
+- **The section is built toward Blaul Lofts**, after Spenser spoke to Mark.
+- **Mechanical Equipment and Site Improvements are in the layout** even though
+  Blaul omits both, labels taken from 215 E 37th. Blaul's own transcript
+  carries the mechanical detail its document does not print, so the omission is
+  Mark's rather than the source's.
+- **The template is authored, not stripped from a delivered report.** It is the
+  layout, the file Spenser can open and change, and the yardstick the tests
+  measure against, all as one artifact.
+
+### Measured
+
+- **No firm-wide layout exists.** Nine delivered reports carry the section and
+  no two share a 60-character run of text, compared letters-only so PDF spacing
+  cannot hide a match. The property-independent boilerplate appears in one
+  report each.
+- **The Mills Fleet Farm rack is one lineage, not a standard.** Its blocks
+  (Overall Rating, Equipment and Mechanical, Interior Description, Remodeling,
+  Building Floorplan) appear in 1 of those 9. It descends Iowa City to Clinton
+  to Mason City to Mills. Do not propose it again as the template.
+- **Blaul Lofts, 215 E 37th and Brookside are one layout family.** Foundation,
+  Exterior Walls, Roof and Windows appear in all three with identical labels in
+  identical order. That is the only hard spine in the corpus.
+- **Where Blaul's values come from**, measured against its own assessor card
+  and inspection transcript, both in the vault at
+  `Report Examples/BURLINGTON_425 Valley St, (Blaul Lofts)`:
+
+  | Source | Labeled fields, of 21 |
+  |---|---|
+  | Transcript alone | 9 |
+  | Transcript and PRC together | 3 |
+  | PRC alone | 1 |
+  | One source plus a third | 3 |
+  | Neither source | 4 |
+  | Contradicts its own source | 1 |
+
+  **The transcript is the primary source, not the assessor card.** The numbers
+  split cleanly: four exact PRC reads (GBA 70,607, 39 units, built 1915, the
+  7,672 fourth floor), two calculations (land to building, 21,294 / 70,607 =
+  0.30 to 1; actual age from 1915), one from the lease (4,134 commercial
+  suite), and two judgments that are always Mark's (effective age 20, remaining
+  economic life 30).
+
+- **Four fields have no source at all**: Store Fronts; Ceilings and Lighting
+  under common areas; Parking under the commercial suite. They come out blank
+  and marked. They are where a filler would invent.
+
+- **Mark already performs the extraction step by hand.** The Blaul folder holds
+  his raw dictation and a cleaned version reorganised under Building Exterior,
+  Building Interior and Common Areas, Apartment Units, and Commercial and Event
+  Spaces. Those are the document's own blocks. The seam the app needs is one he
+  is already working.
+
+- **Two drifts in the delivered document, found by attributing it.** Bathrooms
+  says full baths in every unit; his transcript records three-quarter baths in
+  four of the six units inspected. Kitchens says granite; the transcript says
+  hard surface six times and never granite. Neither is large, and both are what
+  a draft showing its sources would have caught. That is the argument for
+  showing them.
+
+### Owed
+
+- The fill is unproven. Nothing reads a PRC or a transcript yet.
+- The layout rests on three documents, one of which is not delivered work.
+  Further apartment or mixed-use reports from Mark are worth more than any
+  additional work against this corpus.
 
 ## The working rhythm (stops are scheduled, not hoped for)
 

@@ -39,6 +39,30 @@ means, and what you recommend. One recommendation, not a survey of options.
 He directs the build. He does not work in the code. If he meets a term he does
 not recognise, that is a defect in the writing, not a gap in him.
 
+**Do not talk in riddles.** Say the thing. Do not hint at it, do not build up
+to it, and do not make him ask twice.
+
+**Answer first (BLUF).** The first sentence is the answer. Then the reason.
+Then detail, only if he needs it. He must be able to stop after one line and
+still have what he asked for.
+
+**Write in Simplified Technical English (ASD-STE100).** The rules that matter
+here:
+
+- One word, one meaning. A word is a noun or a verb, not both.
+- Use the plain word. Never the fancy one.
+- 20 words per sentence for instructions. 25 for everything else.
+- 6 sentences per paragraph.
+- Active voice. Present tense.
+- Do not stack nouns. Write "the rules for laying out a section", not
+  "section layout rules".
+- Define any technical word the first time you use it. Words taken from the
+  old project documents are not exempt. "Furniture" was one of these. It cost
+  Spenser three sessions of guessing.
+
+**Do not over-explain.** Explain how something works only when it changes what
+he decides. Otherwise leave it out.
+
 No em dashes, anywhere, ever. Hyphens instead. En dashes are fine; they are
 Mark's own caption style.
 

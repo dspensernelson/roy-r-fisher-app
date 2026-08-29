@@ -190,41 +190,41 @@ One rule, and it is stated in the module.
 
 ### Task 1: One place that knows 0.10.0 is newer than 0.9.0
 
-- [ ] Move `install_windows._as_numbers` into `packaging.py` as a named,
+- [x] Move `install_windows._as_numbers` into `packaging.py` as a named,
       documented function, and add `newer(a, b)`. Both stdlib only.
-- [ ] `install_windows.py` uses it instead of its own copy. Behaviour of
+- [x] `install_windows.py` uses it instead of its own copy. Behaviour of
       `version_folders` is unchanged, which its existing tests already assert.
-- [ ] Test: `0.10.0` sorts above `0.9.0`, a non-numeric part never raises, an
+- [x] Test: `0.10.0` sorts above `0.9.0`, a non-numeric part never raises, an
       empty string is never newer than anything, and equal versions are not
       newer than each other.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 2: Reading the bucket
 
-- [ ] New `app/server/updates.py`. Its docstring states the shape above, the
+- [x] New `app/server/updates.py`. Its docstring states the shape above, the
       scratch-folder reasoning, and the honest limit of the check. Stdlib only.
-- [ ] `BUCKET` constant holds the R2 base URL, in one place, with a comment
+- [x] `BUCKET` constant holds the R2 base URL, in one place, with a comment
       saying it is public on purpose because Mark's machine downloads with no
       login and the package holds no key and no client material.
-- [ ] `check()` fetches `latest.json`, bounded timeout, bounded response size.
+- [x] `check()` fetches `latest.json`, bounded timeout, bounded response size.
       Returns what is known or an empty answer. It never raises to a caller.
-- [ ] `latest.json` shape: `version`, `zip`, `size`. Nothing else is read. A
+- [x] `latest.json` shape: `version`, `zip`, `size`. Nothing else is read. A
       missing field, a wrong type, unparseable JSON, a 404, a timeout, and a
       body that is not JSON all mean the same thing: nothing is known, nothing
       is shown, nothing changes.
-- [ ] The `zip` field is a filename and is refused if it contains a slash, a
+- [x] The `zip` field is a filename and is refused if it contains a slash, a
       backslash, a colon, or `..`. It is joined to the bucket URL and must
       never be able to point somewhere else.
-- [ ] An announced version that is not newer than the running version is not an
+- [x] An announced version that is not newer than the running version is not an
       update and shows nothing.
-- [ ] In a checkout (`packaging.is_checkout`) `check()` does nothing and
+- [x] In a checkout (`packaging.is_checkout`) `check()` does nothing and
       reports nothing.
-- [ ] Tests against a local HTTP server standing in for the bucket, in
+- [x] Tests against a local HTTP server standing in for the bucket, in
       `test_update_check.py`: newer, same, older, missing file, 404, timeout,
       HTML instead of JSON, JSON with no version, a `zip` field trying to
       escape, an oversized body, and the checkout gate. Every one of them
       leaves the app reporting no update and changes nothing on disk.
-- [ ] Suite green.
+- [x] Suite green.
 
 ### Task 3: The download, and the hash
 

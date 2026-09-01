@@ -39,7 +39,7 @@ function photosFolder() {
 }
 
 async function openPhotos() {
-  render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+  render(<JobHome job={JOB} onOpenSection={() => {}} onEditSections={() => {}} />);
   await screen.findByRole("heading", { name: JOB });
   await userEvent.click(await screen.findByText("Photos"));
 }
@@ -59,7 +59,7 @@ beforeEach(() => {
 });
 
 async function show() {
-  render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+  render(<JobHome job={JOB} onOpenSection={() => {}} onEditSections={() => {}} />);
   await screen.findByRole("heading", { name: JOB });
   await userEvent.click(await screen.findByText("Subject Information"));
 }
@@ -122,7 +122,7 @@ describe("classifying many files at once", () => {
   beforeEach(() => { api.jobFolders.mockResolvedValue(photosFolder()); });
 
   it("offers nothing until the folder is open", async () => {
-    render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+    render(<JobHome job={JOB} onOpenSection={() => {}} onEditSections={() => {}} />);
     await screen.findByRole("heading", { name: JOB });
     expect(screen.queryByRole("button", { name: "Bulk classify" })).not.toBeInTheDocument();
   });
@@ -218,4 +218,21 @@ describe("classifying many files at once", () => {
     await openPhotos();
     expect(await screen.findAllByRole("button", { name: "Classify" })).toHaveLength(4);
   });
+});
+
+test("both sections open, and each one says which it is", async () => {
+  // The row used to be a single hardcoded string. It is a list now, and a
+  // test that never clicked it let a renamed prop through unnoticed.
+  const opened = [];
+  render(<JobHome job={JOB} onOpenSection={(k) => opened.push(k)} onEditSections={() => {}} />);
+  await screen.findByRole("heading", { name: JOB });
+  await userEvent.click(await screen.findByRole("button", { name: /Subject Photographs/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Description of Improvements/ }));
+  expect(opened).toEqual(["photos", "improvements"]);
+});
+
+test("Description of Improvements is no longer listed as unavailable", async () => {
+  render(<JobHome job={JOB} onOpenSection={() => {}} onEditSections={() => {}} />);
+  await screen.findByRole("button", { name: /Description of Improvements/ });
+  expect(screen.queryByText(/Not available in this pilot/)).toBeNull();
 });

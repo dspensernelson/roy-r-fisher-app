@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import JobsPortal from "./screens/JobsPortal.jsx";
 import JobHome from "./screens/JobHome.jsx";
 import PhotosScreen from "./screens/PhotosScreen.jsx";
+import ImprovementsScreen from "./screens/ImprovementsScreen.jsx";
 import SectionPicker from "./screens/SectionPicker.jsx";
 import Settings from "./screens/Settings.jsx";
 import NewJob from "./screens/NewJob.jsx";
@@ -214,13 +215,17 @@ export default function App() {
         )}
         {view.screen === "job" && (
           <JobHome job={view.job}
-                   onOpenPhotos={() => setView({ screen: "photos", job: view.job })}
+                   onOpenSection={(key) => setView({ screen: key === "photos" ? "photos" : "improvements", job: view.job })}
                    onEditSections={() => setView({ screen: "sections", job: view.job })} />
         )}
         {view.screen === "sections" && (
           <SectionPicker job={view.job} onDone={() => setView({ screen: "job", job: view.job })} />
         )}
         {view.screen === "photos" && <PhotosScreen job={view.job} />}
+        {view.screen === "improvements" && (
+          <ImprovementsScreen job={view.job}
+                              onBack={() => setView({ screen: "job", job: view.job })} />
+        )}
         {view.screen === "settings" && (
           <Settings workspace={ws}
                     onChangeFolder={() => setView({ screen: "choose", job: null })}

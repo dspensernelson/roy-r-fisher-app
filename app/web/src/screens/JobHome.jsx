@@ -6,7 +6,13 @@ import {
 
 // The only section the app can build today. Everything else is listed so the
 // report's real shape is visible, and says plainly that it is not ready yet.
-const BUILDABLE = "Subject Photographs";
+/* The sections that build. One string became a list on 2026-09-01, when
+   Description of Improvements arrived and made "the buildable section"
+   two things instead of one. */
+const BUILDABLE = [
+  { key: "photos", name: "Subject Photographs" },
+  { key: "improvements", name: "Description of Improvements" },
+];
 
 // What a folder row is allowed to say about itself. A shortcut is not opened
 // and an unreadable folder is not guessed at, so neither gets a file count.
@@ -198,7 +204,7 @@ function FolderRow({ f, open, onToggle, labels, onPick, onClear, onBulk, busy })
   );
 }
 
-export default function JobHome({ job, onOpenPhotos, onEditSections }) {
+export default function JobHome({ job, onOpenSection, onEditSections }) {
   const [detail, setDetail] = useState(null);
   const [found, setFound] = useState(null);
   const [labels, setLabels] = useState([]);
@@ -329,46 +335,31 @@ export default function JobHome({ job, onOpenPhotos, onEditSections }) {
         <div>
           <div className="band-head">
             <h2>The report</h2>
-            <span className="note">Subject Photographs</span>
+            <span className="note">{BUILDABLE.length} sections</span>
           </div>
 
-          <button className="section-row live" onClick={onOpenPhotos}>
-            <span className="num">1</span>
-            <span>
-              <span className="name">{BUILDABLE}</span>
-              <span className="state">
-                {/* What this section holds now, which is what would build.
-                    Not the number of files in the folder: after he picks a
-                    folder those are different numbers, and the Photos screen
-                    shows the other one. */}
-                {detail.photo_count} {detail.photo_count === 1 ? "photo" : "photos"}
+          {BUILDABLE.map((section, index) => (
+            <button key={section.key} className="section-row live"
+                    onClick={() => onOpenSection(section.key)}>
+              <span className="num">{index + 1}</span>
+              <span>
+                <span className="name">{section.name}</span>
+                <span className="state">
+                  {/* What this section holds now, which is what would build.
+                      Not the number of files in the folder: after he picks a
+                      folder those are different numbers, and the Photos screen
+                      shows the other one. */}
+                  {section.key === "photos"
+                    ? `${detail.photo_count} ${detail.photo_count === 1 ? "photo" : "photos"}`
+                    : "from the PRC and the inspection transcript"}
+                </span>
               </span>
-            </span>
-            <span className="chip">Open</span>
-          </button>
+              <span className="chip">Open</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* One band at the bottom, below the folder bands, holding one plain
-          row. Nothing here is a control: it does not respond to a click, it
-          carries no button styling, and it sits below everything that works
-          so it cannot be mistaken for part of the workflow. The actions on
-          this screen live at the top on the title's row.
-
-          Deliberately not "Coming soon", and deliberately with no date. The
-          row says what is true today and promises nothing. */}
-      <div className="bands">
-        <div className="band planned">
-          <div className="band-head sub-head"><h2>Planned workflows</h2></div>
-          <p className="band-note">
-            Not part of this pilot. Listed so the report's real shape is visible.
-          </p>
-          <div className="planned-row" aria-disabled="true">
-            <span className="name">Description of Improvements</span>
-            <span className="planned-state">Not available in this pilot</span>
-          </div>
-        </div>
-      </div>
     </>
   );
 }

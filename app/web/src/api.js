@@ -83,3 +83,19 @@ export async function uploadPhotos(name, files) {
   [...files].forEach((f) => form.append("files", f));
   return fetch(`/api/jobs/${encodeURIComponent(name)}/photos`, { method: "POST", body: form }).then(j);
 }
+
+// The Description of Improvements screen. Reading and writing both cost money,
+// so both are an explicit action by Mark and neither happens on open.
+export const improvementSources = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/improvements/sources`).then(j);
+export const improvementState = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/improvements`).then(j);
+export const saveImprovements = (name, body) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/improvements`,
+        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);
+export const readImprovements = (name, body) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/improvements/read`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);
+export const writeParagraph = (name, body) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/improvements/paragraph`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);

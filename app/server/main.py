@@ -384,6 +384,8 @@ def create_app() -> FastAPI:
 
     import photos as photos_routes
     app.include_router(photos_routes.router)
+    import improvements_routes
+    app.include_router(improvements_routes.router)
 
     @app.get("/api/jobs/{name}/sections")
     def get_sections(name: str):

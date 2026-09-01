@@ -10,9 +10,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+
 from conftest import CORPUS  # noqa: E402
-from engine import improvements_read as read  # noqa: E402
-from server import improvements as imp  # noqa: E402
+import improvements_read as read  # noqa: E402
+import improvements as imp  # noqa: E402
 
 BLAUL = CORPUS / "BURLINGTON_425 Valley St, (Blaul Lofts)"
 needs_blaul = pytest.mark.skipif(

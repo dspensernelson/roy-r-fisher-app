@@ -113,7 +113,9 @@ def ai_available() -> bool:
 
 
 def flatten(text: str) -> str:
-    from engine.improvements_read import flatten as _f
+    # The engine folder is put on sys.path by the routes module, the same way
+    # photos.py does it for the photo engine.
+    from improvements_read import flatten as _f
     return _f(text)
 
 

@@ -39,8 +39,22 @@ means, and what you recommend. One recommendation, not a survey of options.
 He directs the build. He does not work in the code. If he meets a term he does
 not recognise, that is a defect in the writing, not a gap in him.
 
+**Why these rules exist.** On 2026-08-29 Spenser said the writing here reads
+like Greek. He was right. Three sessions used the word "furniture" for the
+headings and spacing in a Word file and never once said so. He had to guess,
+and guessing is not his job. A week later he was asked to choose between
+reading the code and carrying on, which is not a choice he can make, because he
+directs the build and does not work in the code. Both faults are the same
+fault: writing that serves the writer instead of the reader. These rules are
+the fix, and they are not style preferences.
+
 **Do not talk in riddles.** Say the thing. Do not hint at it, do not build up
 to it, and do not make him ask twice.
+
+**Never offer him a choice he has no way to judge.** Every option must be one
+he can weigh from what he knows. "Review the code" is not an option. If a
+decision needs knowledge he does not have, make it and tell him what you
+decided and why.
 
 **Answer first (BLUF).** The first sentence is the answer. Then the reason.
 Then detail, only if he needs it. He must be able to stop after one line and

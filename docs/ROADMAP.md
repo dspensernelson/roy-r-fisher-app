@@ -328,8 +328,8 @@ Not built. Nothing in the bucket yet.
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not
-done. They are also ticked in `docs/PUNCHLIST.md`, which is the running work
-list. The reasoning stays here; the list of what is left lives there.
+done. These four are not approved. The punch list further down this file is
+approved work, which is a different thing.
 
 - **Suggesting a classification from the filename, for him to confirm.**
   Currently forbidden: nothing infers a label from a name, a rule set in Phase
@@ -440,8 +440,10 @@ not a measurement, which is a rule this file already carried.
 
 ## The punch list, highest first
 
-Work Spenser has approved and parked. Not a plan: a plan is a work list with a
-death date, and this outlives any one session. Highest priority at the top.
+Work Spenser has decided on and parked. Not a plan: a plan is a work list with
+a death date, and this outlives any one session. Highest priority at the top.
+Each item says whether it is approved to build. Designed and approved are not
+the same thing and the difference is the gate.
 
 ### 1. The photo screen looks broken on Mark's PC, 2026-09-02
 
@@ -489,6 +491,62 @@ roadmap says network drive. It is the difference between a minute and ten.
 the first version Mark can take without a manual install. That makes it the
 first real test of the button, which has never run on Windows. The zip and
 `Install or update Roy R. Fisher.bat` remain the fallback.
+
+### 2. Photo bands, 2026-09-02
+
+**Designed 2026-09-02 with Spenser, in chat. Not approved to build.** The
+design is here rather than in a plan because no slice has opened and a plan is
+a work list with a death date.
+
+Mark turns bands on, clicks one dot under each photograph, and the photo pages
+come out arranged the way the property reads. One click per photograph instead
+of one drag per photograph.
+
+Three locked bands, A first, B middle, C last, whose position is their meaning
+and which therefore never move. Typed bands slide anywhere between A and C,
+never before A and never after C. Each tile grows one dot row: one dot per
+band, then the Reviewed tick as the last dot, which is where the separate
+`Mark Reviewed` button goes. The toggle and the band list are per job and live
+in the manifest.
+
+**Three constraints the build has to hold. They are the reason this works.**
+
+1. **Turning bands on moves nothing.** Photographs already loaded sit in an
+   unassigned strip and drain as Mark clicks. `photos.py` promises a human's
+   ordering is never reshuffled and this keeps that promise. Build waits for
+   the strip to empty, the gate `allReviewed` already uses.
+2. **A band click resorts `manifest["photos"]` itself,** so array order always
+   equals band order then position within band. The array stays the one
+   ordering fact, and `photos.included()` and `build_photo_docx` change not at
+   all. Bands must never become a second ordering system the build reconciles.
+3. **A band's letter is assigned at creation and frozen.** First letter, then
+   first two on collision, then three. Adding, renaming or deleting a band
+   never relabels an existing one. Warehouse keeps W when Workshop arrives and
+   takes Wo.
+
+Edges decided the same day: a cut photograph keeps its band and sorts with it,
+so uncutting restores its place; bands off reorders nothing; an empty on band
+shows its header so Mark can see he still owes it photographs; deleting a band
+returns its photographs to unassigned.
+
+**These three constraints belong in a docstring and a test once the code
+exists**, next to the one on `photos.included()`, which is the only place they
+cannot drift from what they describe. Until then they are here.
+
+Risks named before building: the dot row grows with every band on a screen
+Spenser already called confusing, and nobody has measured which areas Mark's
+reports actually use, which is why bands are typed rather than a fixed
+vocabulary.
+
+Absorbs two earlier wants. Moving a photograph to the front is one click on A,
+now that the grid order is known to be the print order. The `Mark Reviewed`
+button becomes the last dot in the row.
+
+### 3. Click a photograph, see it bigger, 2026-09-02
+
+Not designed. While captions are being written the thumbnail is too small to
+check what is actually in the frame. Unrelated to bands.
+
 
 ## The working rhythm (stops are scheduled, not hoped for)
 

@@ -578,14 +578,31 @@ def create_app() -> FastAPI:
         parallel path check. A photo that already has a caption is not here,
         which is what makes a retry send only what is left and never pay for
         the same picture twice.
+
+        The path comes from `jobs.photo_path`, which says of itself that it is
+        the one place that turns an entry back into a path so the screen, the
+        thumbnail and the built document can never disagree. This was the one
+        place that did not call it: it rebuilt the path as `Photos / file` and
+        dropped the entry's `folder`. Every photograph in a subfolder then
+        failed its is_file() check and fell out of this list, and the corpus
+        says a subfolder is where they usually are.
+
+        Spenser hit it on 2026-09-02 on Blaul Lofts, 61 photographs in
+        `RAW pics_425 Valley St, Burlington (Blaul Lofts)`, none captioned.
+        An empty list here is reported as "nothing_to_do", so the screen said
+        "Every photo in the report already has a caption" and greyed out
+        Generate captions. The failure is silent by construction: this one
+        answer serves both "there is no work" and "I could not find any of
+        it", so it must never be reached by failing to look in the right
+        place.
         """
         photos_dir = jobs.photos_dir(job)
         waiting = []
         for entry in photos_routes.included(manifest):
             if str(entry.get("caption", "")).strip():
                 continue
-            candidate = photos_dir / Path(entry["file"]).name
-            resolved = photos_routes._resolve_confined(candidate, photos_dir)
+            resolved = photos_routes._resolve_confined(
+                jobs.photo_path(job, entry), photos_dir)
             if resolved is not None and resolved.is_file():
                 waiting.append(resolved)
         return waiting

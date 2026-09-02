@@ -198,8 +198,14 @@ def create_app() -> FastAPI:
         Empty when there is no VERSION file, which is what a checkout without
         one looks like. Never guessed at.
         """
-        return {"version": packaging.version_of(
-            Path(__file__).resolve().parents[2])}
+        # PROGRAM, not the same expression written out a second time. The two
+        # were identical and one of them quietly stopped agreeing with the
+        # other: this route ignored a patched PROGRAM while /api/update
+        # honoured it, so a test that meant "the version did not change" was
+        # really reading the repository's own VERSION file and passed only
+        # while that file said 0.5.3. Found by bumping it. Same value at run
+        # time, one place that knows it.
+        return {"version": packaging.version_of(PROGRAM)}
 
     # --- updating itself ---------------------------------------------------
     # Approved 2026-08-27: Mark presses a button and the app updates itself.

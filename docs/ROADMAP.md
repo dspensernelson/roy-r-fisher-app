@@ -480,6 +480,13 @@ done.
   2026-08-25. It is a different feature from choosing several inside one
   folder, and it waits until he has wanted it twice.
 
+## The punch list
+
+It lives in `docs/PUNCHLIST.md`. It is a work list, and this file is not one:
+this file is context and decisions, read cold by somebody who was not in the
+room. The reasoning behind an item stays here. What is left to do is there.
+
+
 ## The working rhythm (stops are scheduled, not hoped for)
 
 - **A goal conversation before each change.** Before a slice starts, the goal

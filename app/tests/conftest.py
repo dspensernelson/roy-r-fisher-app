@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -14,10 +15,30 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # including the one that compares a built document against a delivered report.
 # Both places are checked so the same suite works either side of that split and
 # on a clone that has neither.
+#
+# Walking up came later, on 2026-09-02, and it is the same defect a third time.
+# A git worktree sits deeper than the checkout, so the path beside it misses
+# and 124 tests skipped on a machine with the corpus sitting right there. That
+# is worse than a failure: a skip reads as "this machine does not have it" and
+# a candidate looks proven when it was never run. `tools/photo_source.py` was
+# fixed this way on 2026-08-28 and this module never got it.
+#
+# RRF_CORPUS overrides, the same way RRF_PHOTO_SOURCE already does. Read-only
+# in every one of these places. Nothing here ever writes to the corpus.
 def _find_corpus() -> Path:
-    beside = REPO_ROOT.parent / "RRF" / "Report Examples"
-    inside = REPO_ROOT / "Report Examples"
-    return inside if inside.is_dir() else beside
+    override = os.environ.get("RRF_CORPUS")
+    if override:
+        return Path(override)
+    here = REPO_ROOT
+    for _ in range(4):
+        beside = here.parent / "RRF" / "Report Examples"
+        if beside.is_dir():
+            return beside
+        inside = here / "Report Examples"
+        if inside.is_dir():
+            return inside
+        here = here.parent
+    return REPO_ROOT.parent / "RRF" / "Report Examples"
 
 
 CORPUS = _find_corpus()

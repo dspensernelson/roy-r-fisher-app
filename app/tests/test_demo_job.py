@@ -225,7 +225,7 @@ def test_the_generator_reads_no_protected_directory():
                if isinstance(n, ast.Constant) and isinstance(n.value, str)
                and n.value not in docstrings]
 
-    for forbidden in ("Report Examples", "locker", "RRF Demo Jobs",
+    for forbidden in ("Report Examples", "locker", "TEST JOBS",
                       ".rrf-demo-baseline"):
         assert not [s for s in strings if forbidden in s], forbidden
 

@@ -123,7 +123,7 @@ def test_every_required_path_is_present(program, required):
 @pytest.mark.parametrize("excluded", [
     "app/tests", "app/web/src", "app/web/node_modules", "app/web/package.json",
     "app/web/package-lock.json", "app/server/demo.py", "brand", "docs",
-    ".git", "RRF Demo Jobs", "Report Examples", "locker", "tools",
+    ".git", "TEST JOBS", "Report Examples", "locker", "tools",
     "Start Roy R. Fisher.command", "runtime.json",
 ])
 def test_every_excluded_path_is_absent(built, excluded):
@@ -294,7 +294,7 @@ def test_the_development_demo_system_did_not_come_back(built):
     assert not (built / "app" / "server" / "demo.py").exists()
     assert not (built / ".rrf-demo.json").exists()
     assert not (built / ".rrf-demo-baseline").exists()
-    assert not (built / "RRF Demo Jobs").exists()
+    assert not (built / "TEST JOBS").exists()
 
 
 # --- what the instructions tell a tester ------------------------------------

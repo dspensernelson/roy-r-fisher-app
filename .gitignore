@@ -28,6 +28,10 @@ app/web/dist/
 # Mark's demo job folders (copied in 2026-08-12), so development and testing run
 # against real job folders instead of invented ones. They are his working files,
 # never project content, and the app treats them as read-only inputs.
+# Renamed to TEST JOBS on 2026-09-01 so the folder the app opens cannot be
+# confused with the master copy. The old name stays ignored, because a stale
+# copy under it would otherwise become project content.
+TEST JOBS/
 RRF Demo Jobs/
 
 # The demo testing tool, for this machine only. Never shipped to Mark.

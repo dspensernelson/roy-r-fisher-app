@@ -34,7 +34,7 @@ CHECKSUM_NAME = "BASELINE.sha256"
 # The configuration names its paths and they must equal these exactly.
 APPROVED = {
     "baseline": ".rrf-demo-baseline/RRF Demo Jobs",
-    "working": "RRF Demo Jobs",
+    "working": "TEST JOBS",
     "staging": ".rrf-demo-staging",
     "rollback": ".rrf-demo-rollback/RRF Demo Jobs",
 }

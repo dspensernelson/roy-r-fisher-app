@@ -35,7 +35,7 @@ def repo(tmp_path, monkeypatch):
         (baseline / name / "Photos").mkdir(parents=True)
         (baseline / name / "Photos" / "a.jpg").write_bytes(b"a photo")
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
-    shutil.copytree(baseline, tmp_path / "RRF Demo Jobs")
+    shutil.copytree(baseline, tmp_path / "TEST JOBS")
 
     (tmp_path / "app" / "server").mkdir(parents=True)
     (tmp_path / "app" / "server" / "main.py").write_text("# do not touch me")
@@ -44,21 +44,21 @@ def repo(tmp_path, monkeypatch):
 
 def write_config(repo: Path, **overrides):
     body = {"demo_mode": True, "baseline": ".rrf-demo-baseline/RRF Demo Jobs",
-            "working": "RRF Demo Jobs", "staging": ".rrf-demo-staging",
+            "working": "TEST JOBS", "staging": ".rrf-demo-staging",
             "rollback": ".rrf-demo-rollback/RRF Demo Jobs"}
     body.update(overrides)
     (repo / ".rrf-demo.json").write_text(json.dumps(body))
 
 
 def job(repo: Path, name: str) -> Path:
-    return repo / "RRF Demo Jobs" / name
+    return repo / "TEST JOBS" / name
 
 
 # --- the root is derived, never supplied ------------------------------------
 
 def test_a_valid_configuration_derives_the_exact_approved_root(repo):
     write_config(repo)
-    assert aipolicy.validated_demo_root() == (repo / "RRF Demo Jobs").resolve()
+    assert aipolicy.validated_demo_root() == (repo / "TEST JOBS").resolve()
 
 
 def test_there_is_no_way_to_supply_a_root_by_hand(repo):
@@ -86,8 +86,8 @@ def test_an_invalid_configuration_yields_local_only(repo):
 @pytest.mark.parametrize("broken", [
     {"demo_mode": False},
     {"working": "somewhere else"},
-    {"working": "/absolute/RRF Demo Jobs"},
-    {"baseline": "RRF Demo Jobs"},
+    {"working": "/absolute/TEST JOBS"},
+    {"baseline": "TEST JOBS"},
 ])
 def test_every_broken_configuration_refuses(repo, broken):
     write_config(repo, **broken)
@@ -122,7 +122,7 @@ def test_only_an_allowlisted_job_becomes_ai_safe(repo):
 def test_a_renamed_job_falls_back_to_local_only(repo):
     write_config(repo)
     aipolicy.mark_ai_safe("A job")
-    (repo / "RRF Demo Jobs" / "A job").rename(repo / "RRF Demo Jobs" / "A job renamed")
+    (repo / "TEST JOBS" / "A job").rename(repo / "TEST JOBS" / "A job renamed")
     assert aipolicy.may_send_to_ai(job(repo, "A job renamed")) is False
     assert aipolicy.classify_job(job(repo, "A job renamed")) == aipolicy.LOCAL_ONLY
 
@@ -130,7 +130,7 @@ def test_a_renamed_job_falls_back_to_local_only(repo):
 def test_a_new_job_is_local_only(repo):
     write_config(repo)
     aipolicy.mark_ai_safe("A job")
-    (repo / "RRF Demo Jobs" / "C job added later").mkdir()
+    (repo / "TEST JOBS" / "C job added later").mkdir()
     assert aipolicy.may_send_to_ai(job(repo, "C job added later")) is False
 
 
@@ -139,7 +139,7 @@ def test_a_moved_job_is_no_longer_ai_safe(repo):
     aipolicy.mark_ai_safe("A job")
     moved = repo / "somewhere else" / "A job"
     moved.parent.mkdir()
-    shutil.move(str(repo / "RRF Demo Jobs" / "A job"), str(moved))
+    shutil.move(str(repo / "TEST JOBS" / "A job"), str(moved))
     assert aipolicy.may_send_to_ai(moved) is False
 
 

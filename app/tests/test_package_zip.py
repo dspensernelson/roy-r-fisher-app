@@ -255,7 +255,7 @@ def test_no_source_demo_evidence_key_or_home_state_is_archived(fake):
         blob = b" ".join(archive.read(n) for n in archive.namelist())
 
     for forbidden in ("app/tests", "app/web/src", "node_modules", "package.json",
-                      "demo.py", "RRF Demo Jobs", "Report Examples", "locker",
+                      "demo.py", "TEST JOBS", "Report Examples", "locker",
                       "brand/", "docs/", ".git/", ".rrf-app.json",
                       ".rrf-app.env", ".rrf-classifications.json", ".env"):
         assert forbidden not in names, forbidden
@@ -277,7 +277,7 @@ def test_the_real_archive_has_one_folder_and_no_unsafe_paths():
 @needs_real
 @pytest.mark.parametrize("excluded", [
     "app/tests", "app/web/src", "app/web/node_modules", "app/server/demo.py",
-    "tools", "brand", "docs", "RRF Demo Jobs", "Report Examples", "locker",
+    "tools", "brand", "docs", "TEST JOBS", "Report Examples", "locker",
     "Start Roy R. Fisher.command", "runtime.json",
 ])
 def test_the_real_archive_excludes_everything_it_must(excluded):

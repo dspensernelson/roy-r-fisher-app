@@ -75,12 +75,12 @@ def demo_repo(tmp_path, monkeypatch, fake_source, small_plan):
     Image.new("RGB", (1200, 900), (12, 34, 56)).save(real)
 
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
-    shutil.copytree(baseline, tmp_path / "RRF Demo Jobs")
+    shutil.copytree(baseline, tmp_path / "TEST JOBS")
     (tmp_path / "app" / "server").mkdir(parents=True)
     (tmp_path / "app" / "server" / "main.py").write_text("# do not touch me")
     (tmp_path / ".rrf-demo.json").write_text(json.dumps(
         {"demo_mode": True, "baseline": ".rrf-demo-baseline/RRF Demo Jobs",
-         "working": "RRF Demo Jobs", "staging": ".rrf-demo-staging",
+         "working": "TEST JOBS", "staging": ".rrf-demo-staging",
          "rollback": ".rrf-demo-rollback/RRF Demo Jobs"}))
     return tmp_path
 
@@ -234,7 +234,7 @@ def test_it_only_ever_adds_and_never_replaces(demo_repo):
 
 def test_reset_demo_restores_the_photographs_rather_than_deleting_them(demo_repo):
     baseline = demo_repo / ".rrf-demo-baseline" / "RRF Demo Jobs"
-    working = demo_repo / "RRF Demo Jobs"
+    working = demo_repo / "TEST JOBS"
 
     hydrate_demo.hydrate(baseline)
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
@@ -411,7 +411,7 @@ def test_the_hydrated_material_is_local_only_and_never_ai_safe(demo_repo):
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
     demo.reset()
 
-    working = demo_repo / "RRF Demo Jobs"
+    working = demo_repo / "TEST JOBS"
     for job in sorted(p for p in working.iterdir() if p.is_dir()):
         assert aipolicy.classify_job(job) == aipolicy.LOCAL_ONLY, job.name
         assert aipolicy.may_send_to_ai(job) is False, job.name
@@ -441,6 +441,6 @@ def test_the_packaged_practice_job_is_a_different_thing_entirely():
     # it is not the development demo system, and matching the file text would
     # find that sentence and call it a violation.
     assert demo_job.DEMO_PARENT == "Demo Jobs"
-    assert not [s for s in code_strings(demo_job) if "RRF Demo Jobs" in s]
+    assert not [s for s in code_strings(demo_job) if "TEST JOBS" in s]
     assert [s for s in code_strings(hydrate_demo) if "DAVENPORT" in s]
     assert "demo_job" not in code_strings(hydrate_demo)

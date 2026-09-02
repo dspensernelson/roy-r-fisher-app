@@ -35,7 +35,7 @@ def repo(tmp_path, monkeypatch):
     (baseline / "B job" / "notes.txt").write_text("a source document")
     demo.write_checksums(baseline, baseline.parent / demo.CHECKSUM_NAME)
 
-    working = tmp_path / "RRF Demo Jobs"
+    working = tmp_path / "TEST JOBS"
     shutil.copytree(baseline, working)
 
     (tmp_path / "app").mkdir()
@@ -46,7 +46,7 @@ def repo(tmp_path, monkeypatch):
 
 def write_config(repo: Path, **overrides):
     body = {"demo_mode": True, "baseline": ".rrf-demo-baseline/RRF Demo Jobs",
-            "working": "RRF Demo Jobs", "staging": ".rrf-demo-staging",
+            "working": "TEST JOBS", "staging": ".rrf-demo-staging",
             "rollback": ".rrf-demo-rollback/RRF Demo Jobs"}
     body.update(overrides)
     (repo / ".rrf-demo.json").write_text(json.dumps(body))
@@ -54,7 +54,7 @@ def write_config(repo: Path, **overrides):
 
 def dirty_it(repo: Path):
     """Make the working copy look like a test run just happened in it."""
-    w = repo / "RRF Demo Jobs"
+    w = repo / "TEST JOBS"
     m = w / "A job" / "Photos" / "photo-manifest.json"
     data = json.loads(m.read_text())
     data["photos"][0]["caption"] = "View east from Brady Street"
@@ -84,9 +84,9 @@ def test_demo_mode_must_be_explicitly_true(repo):
     ("working", "app/server"),
     ("working", "."),
     ("working", ".rrf-demo-baseline/RRF Demo Jobs"),
-    ("baseline", "RRF Demo Jobs"),
+    ("baseline", "TEST JOBS"),
     ("staging", "app"),
-    ("rollback", "RRF Demo Jobs"),
+    ("rollback", "TEST JOBS"),
 ])
 def test_an_inside_the_repo_but_wrong_path_is_refused(repo, role, bad):
     """Being in the project is not enough. It must be the exact place."""
@@ -108,20 +108,20 @@ def test_configuring_app_as_the_working_folder_does_not_touch_app(repo):
 
 
 def test_an_absolute_path_is_refused(repo, tmp_path):
-    write_config(repo, working=str(tmp_path / "RRF Demo Jobs"))
+    write_config(repo, working=str(tmp_path / "TEST JOBS"))
     assert demo.enabled() is False
 
 
 def test_a_symlink_pointing_at_the_approved_place_is_refused(repo):
     """Resolving both sides would make these look identical. They are not."""
     link = repo / "sneaky"
-    link.symlink_to(repo / "RRF Demo Jobs")
+    link.symlink_to(repo / "TEST JOBS")
     write_config(repo, working="sneaky")
     assert demo.enabled() is False
 
 
 def test_paths_must_be_distinct(repo):
-    write_config(repo, staging="RRF Demo Jobs")
+    write_config(repo, staging="TEST JOBS")
     assert demo.enabled() is False
 
 
@@ -135,11 +135,11 @@ def test_a_tampered_baseline_is_refused_and_nothing_moves(repo):
     write_config(repo)
     (repo / ".rrf-demo-baseline" / "RRF Demo Jobs" / "B job" / "notes.txt").write_text("changed")
     dirty_it(repo)
-    before = demo.fingerprint(repo / "RRF Demo Jobs")
+    before = demo.fingerprint(repo / "TEST JOBS")
     with pytest.raises(demo.DemoError) as caught:
         demo.reset()
     assert "baseline does not match" in caught.value.message
-    assert demo.fingerprint(repo / "RRF Demo Jobs") == before
+    assert demo.fingerprint(repo / "TEST JOBS") == before
     assert caught.value.report["working_in_place"] is True
 
 
@@ -155,12 +155,12 @@ def test_a_leftover_rollback_blocks_a_new_reset(repo):
 def test_a_reset_puts_the_working_copy_back_exactly(repo):
     write_config(repo)
     dirty_it(repo)
-    assert demo.fingerprint(repo / "RRF Demo Jobs") != demo.fingerprint(
+    assert demo.fingerprint(repo / "TEST JOBS") != demo.fingerprint(
         repo / ".rrf-demo-baseline" / "RRF Demo Jobs")
 
     report = demo.reset()
 
-    assert demo.fingerprint(repo / "RRF Demo Jobs") == demo.fingerprint(
+    assert demo.fingerprint(repo / "TEST JOBS") == demo.fingerprint(
         repo / ".rrf-demo-baseline" / "RRF Demo Jobs")
     assert report["files"] == 4
 
@@ -169,7 +169,7 @@ def test_everything_a_test_run_left_behind_is_gone(repo):
     write_config(repo)
     dirty_it(repo)
     demo.reset()
-    w = repo / "RRF Demo Jobs"
+    w = repo / "TEST JOBS"
 
     manifest = json.loads((w / "A job" / "Photos" / "photo-manifest.json").read_text())
     assert all(not p["caption"] for p in manifest["photos"])
@@ -199,28 +199,28 @@ def test_the_restored_folder_can_be_written_to(repo):
         p.chmod(0o444 if p.is_file() else 0o555)
     write_config(repo)
     demo.reset()
-    m = repo / "RRF Demo Jobs" / "A job" / "Photos" / "photo-manifest.json"
+    m = repo / "TEST JOBS" / "A job" / "Photos" / "photo-manifest.json"
     m.write_text(m.read_text())          # would raise if it came back read-only
-    (repo / "RRF Demo Jobs" / "A job" / "Photos" / "new.jpg").write_bytes(b"x")
+    (repo / "TEST JOBS" / "A job" / "Photos" / "new.jpg").write_bytes(b"x")
 
 
 def test_it_clears_the_two_settings_and_removes_an_empty_file(repo):
     write_config(repo)
-    workspace.save_folder(str(repo / "RRF Demo Jobs"))
-    workspace.save_active_jobs(repo / "RRF Demo Jobs", ["A job"])
+    workspace.save_folder(str(repo / "TEST JOBS"))
+    workspace.save_active_jobs(repo / "TEST JOBS", ["A job"])
     assert Path(workspace.settings_file()).is_file()
 
     demo.reset()
 
     assert workspace.saved_folder() == ""
-    assert workspace.active_jobs(repo / "RRF Demo Jobs") == []
+    assert workspace.active_jobs(repo / "TEST JOBS") == []
     assert not Path(workspace.settings_file()).exists()
 
 
 def test_other_settings_survive_and_the_file_stays(repo):
     write_config(repo)
     Path(workspace.settings_file()).write_text(json.dumps(
-        {"jobs_folder": str(repo / "RRF Demo Jobs"), "something_else": "keep me"}),
+        {"jobs_folder": str(repo / "TEST JOBS"), "something_else": "keep me"}),
         encoding="utf-8")
     demo.reset()
     left = json.loads(Path(workspace.settings_file()).read_text(encoding="utf-8"))
@@ -253,7 +253,7 @@ def test_it_restores_the_baseline_inclusion_state(repo):
     """Photos cut during a test run come back included, because inclusion
     lives in the manifest and the manifest comes from the baseline."""
     write_config(repo)
-    m = repo / "RRF Demo Jobs" / "A job" / "Photos" / "photo-manifest.json"
+    m = repo / "TEST JOBS" / "A job" / "Photos" / "photo-manifest.json"
     data = json.loads(m.read_text())
     data["photos"][0]["cut"] = True
     m.write_text(json.dumps(data, indent=2))
@@ -269,7 +269,7 @@ def test_two_runs_start_from_the_same_place(repo):
     write_config(repo)
     dirty_it(repo)
     demo.reset()
-    first = demo.fingerprint(repo / "RRF Demo Jobs")
+    first = demo.fingerprint(repo / "TEST JOBS")
     dirty_it(repo)
     demo.reset()
-    assert demo.fingerprint(repo / "RRF Demo Jobs") == first
+    assert demo.fingerprint(repo / "TEST JOBS") == first

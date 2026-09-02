@@ -346,7 +346,7 @@ def add_demo_job(out: Path) -> Path:
     """The practice job, generated fresh into the package.
 
     Generated rather than copied, so nothing from `Report Examples/`,
-    `locker/`, the development `RRF Demo Jobs/` or any client folder can reach
+    `locker/`, the development `TEST JOBS/` or any client folder can reach
     it even by accident. It is not the development demo system: `demo.py`,
     `/api/demo` and Reset Demo are still excluded, and this job is not marked
     AI safe.

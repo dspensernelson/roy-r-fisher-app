@@ -171,6 +171,25 @@ def announced() -> dict:
     return read_latest(fetch_text(file_url(LATEST_NAME), MAX_LATEST_BYTES))
 
 
+def showing_in_a_checkout() -> bool:
+    """Whether to offer updates from a development checkout. Off unless asked.
+
+    Spenser's testing switch, added 2026-09-01. Without it he cannot see the
+    update screens at all: his Mac runs the source rather than a package, so
+    `available` answers "no update" and the button never renders.
+
+    It only makes the button appear. It changes nothing else. The download, the
+    hash check, the manifest check and the refusal to run anything unchecked
+    all behave exactly as they do on Mark's machine, because none of them ask
+    whether this is a checkout.
+
+    It is an environment variable and never a setting, so it cannot travel in a
+    package, and it is a no-op there anyway: a package is not a checkout, so
+    the branch it changes is never reached.
+    """
+    return os.environ.get("RRF_UPDATE_IN_CHECKOUT", "") not in ("", "0")
+
+
 def available(root) -> dict:
     """An update Mark could take, or {}.
 
@@ -184,7 +203,7 @@ def available(root) -> dict:
     `packaging.is_checkout` reuses the same marker the launcher already trusts
     to tell a package from a development tree.
     """
-    if packaging.is_checkout(root):
+    if packaging.is_checkout(root) and not showing_in_a_checkout():
         return {}
     running = packaging.version_of(root)
     offered = announced()

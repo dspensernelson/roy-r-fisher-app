@@ -328,7 +328,8 @@ Not built. Nothing in the bucket yet.
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not
-done.
+done. They are also ticked in `docs/PUNCHLIST.md`, which is the running work
+list. The reasoning stays here; the list of what is left lives there.
 
 - **Suggesting a classification from the filename, for him to confirm.**
   Currently forbidden: nothing infers a label from a name, a rule set in Phase
@@ -436,6 +437,58 @@ not a measurement, which is a rule this file already carried.
 - The layout rests on three documents, one of which is not delivered work.
   Further apartment or mixed-use reports from Mark are worth more than any
   additional work against this corpus.
+
+## The punch list, highest first
+
+Work Spenser has approved and parked. Not a plan: a plan is a work list with a
+death date, and this outlives any one session. Highest priority at the top.
+
+### 1. The photo screen looks broken on Mark's PC, 2026-09-02
+
+**Approved 2026-09-02. Build this next, after the repository cleanup.**
+
+Mark clicks Subject Photographs and the screen sits on loading. He cannot tell
+whether it is working or dead, and neither can Spenser.
+
+Measured from the code, not from his machine. His jobs sit on a network drive,
+which is what makes each of these slow rather than merely wasteful:
+
+- The screen shows nothing until `GET /api/jobs/{name}/manifest` returns.
+  Every other call on that screen fails quietly, so that one call is the whole
+  wait.
+- `load_manifest` calls `exif_order` on every photograph it has not seen
+  before. `exif_order` opens each image file to read its capture date. One job
+  of Mark's holds 131 files.
+- That route never saves what it worked out. So the dates are read again on
+  every open of the job, not once.
+- The black window prints nothing. `app/run_app.py` sets `log_level="warning"`
+  and `access_log=False`, which is right for Mark and leaves Spenser with no
+  evidence when something hangs on a machine he cannot see.
+
+Three changes, in this order. The first one removes most of the wait.
+
+1. **Save the manifest after the first read**, so the dates are read once. This
+   removes the file opening. It does not remove the folder listing, which
+   still runs on every open and is far cheaper.
+2. **Say what is happening while it reads.** Approved: a sentence and a count,
+   "Read 40 of 131", not a bare spinner. Spenser chose the count over a plain
+   sentence on 2026-09-02.
+3. **Write a log file on Mark's machine**, so he can send one instead of
+   reading a window that says nothing.
+
+**This is a rule already on record, applied to the second place it was always
+needed.** The decision of 2026-08-28 says a progress bar that says nothing
+looks like a hang, because his jobs are on a network drive. That was written
+about the update download. The photo screen never got it.
+
+**Open question, and it changes how bad this is.** Nobody has confirmed
+whether Mark's jobs are on a network drive or on the PC's own disk. The
+roadmap says network drive. It is the difference between a minute and ten.
+
+**It can ship by the update button.** 0.6.0 carries the button, so 0.6.1 is
+the first version Mark can take without a manual install. That makes it the
+first real test of the button, which has never run on Windows. The zip and
+`Install or update Roy R. Fisher.bat` remain the fallback.
 
 ## The working rhythm (stops are scheduled, not hoped for)
 

@@ -350,3 +350,84 @@ def test_nothing_in_the_corpus_is_written_to():
     jobs.count_photos(job)
     after = {p: p.stat().st_mtime for p in (job / "Photos").rglob("*")}
     assert before == after
+
+
+# --- what the caption panel says about them -------------------------------
+# Spenser, 2026-09-02, on a real job of 38 photographs in a subfolder: he
+# cleared one caption and the screen answered "Every photo in the report
+# already has a caption", with Generate captions greyed out. Both are the
+# same defect and it is not in the clearing, which had already written the
+# blank to disk.
+#
+# `jobs.photo_path` says of itself that it is "the one place that turns an
+# entry back into a path, so the screen, the thumbnail and the built document
+# can never disagree about it". The caption estimate was the one place that
+# did not call it. It rebuilt the path as `Photos / entry["file"]`, dropping
+# the entry's `folder`, so every photograph in a subfolder failed its
+# is_file() check and fell out of the waiting list. An empty waiting list is
+# reported as "nothing_to_do", which is the sentence he read.
+#
+# The failure is silent by construction: the same code path answers "no work
+# to do" for "there is no work" and for "I could not find any of it".
+class _CaptionPanel:
+    """The estimate the photo screen reads, for a job laid out as given."""
+
+    def __init__(self, tmp_path, monkeypatch, *relative_paths):
+        from fastapi.testclient import TestClient
+        from main import create_app
+
+        place = tmp_path / "jobs"
+        place.mkdir()
+        monkeypatch.setenv("RRF_JOBS_HOME", str(place))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-not-a-real-key")
+        self.job = place / "DAVENPORT_1 Test Street"
+        for rel in relative_paths:
+            a_photo(self.job / "Photos" / rel)
+        self.client = TestClient(create_app(), raise_server_exceptions=False)
+        self.name = self.job.name
+
+    def manifest(self):
+        return self.client.get("/api/jobs/%s/manifest" % self.name).json()
+
+    def estimate(self):
+        return self.client.get("/api/jobs/%s/caption-estimate" % self.name).json()
+
+    def caption_them_all(self):
+        """Write a caption against every entry, the way a finished run leaves it."""
+        body = self.manifest()
+        for entry in body["photos"]:
+            entry["caption"] = "A caption"
+        self.client.put("/api/jobs/%s/manifest" % self.name, json=body)
+
+    def clear(self):
+        return self.client.post("/api/jobs/%s/captions/clear" % self.name).json()
+
+
+def test_photographs_in_a_subfolder_are_counted_as_waiting_for_words(
+        tmp_path, monkeypatch):
+    """The plain case, before any clearing is involved."""
+    panel = _CaptionPanel(tmp_path, monkeypatch,
+                          "Raw pics_Somewhere/a.jpg", "Raw pics_Somewhere/b.jpg")
+    panel.manifest()
+
+    found = panel.estimate()
+    assert found["photos_to_send"] == 2
+    assert found["blocked_because"] == ""
+
+
+def test_clearing_captions_puts_the_photographs_back_in_the_queue(
+        tmp_path, monkeypatch):
+    """Spenser's job, in three steps: caption them, clear them, look."""
+    panel = _CaptionPanel(tmp_path, monkeypatch,
+                          "Raw pics_Somewhere/a.jpg", "Raw pics_Somewhere/b.jpg")
+    panel.caption_them_all()
+    assert panel.estimate()["blocked_because"] == "nothing_to_do"
+
+    cleared = panel.clear()
+    assert cleared["cleared"] == 2
+    assert [e["caption"] for e in cleared["photos"]] == ["", ""]
+
+    found = panel.estimate()
+    assert found["photos_to_send"] == 2, \
+        "a cleared photograph in a subfolder is waiting for words again"
+    assert found["blocked_because"] == ""

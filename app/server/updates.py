@@ -43,6 +43,7 @@ Standard library only, like `packaging.py` and `startup.py` beside it.
 """
 import json
 import os
+import ssl
 import threading
 import urllib.error
 import urllib.parse
@@ -91,6 +92,50 @@ def file_url(name: str) -> str:
     spaces and a full stop in it.
     """
     return "%s/%s" % (bucket_url(), urllib.parse.quote(name))
+
+
+# ------------------------------------------------ who we are willing to trust --
+def _bundle_path() -> str:
+    """Where the certificates we trust live. Its own function so a test can
+    take it away and prove the fallback below."""
+    import certifi
+    return certifi.where()
+
+
+def ssl_context():
+    """The certificates to trust when talking to the bucket, or None.
+
+    Found on Spenser's Windows virtual machine on 2026-09-02, the first time
+    anybody pressed the update button on Windows. `latest.json` was live and
+    public, the VM's own browser loaded it, and the app still said "You are on
+    the newest version". Its Python said:
+
+        certificate verify failed: unable to get local issuer certificate
+
+    The embedded Python inside the package has no usable set of root
+    certificates on Windows. A browser on the same machine carries its own,
+    which is why typing the address in by hand worked and the app did not.
+    Every call in this module swallows network failures on purpose, so this
+    reported as "nothing is being offered", which is exactly what a healthy
+    check finding nothing reports. It was silent by construction, and it had
+    almost certainly never worked on Windows in any version.
+
+    The package already ships `certifi`, whose only job is to be that set.
+    Nothing pointed at it. This does.
+
+    **Verification stays on.** The tempting wrong fix is an unverified
+    context, which would make the symptom go away by trusting anybody at all.
+    A test asserts `CERT_REQUIRED` and `check_hostname` precisely so that
+    cannot be done quietly later.
+
+    Returns None when the bundle cannot be found, which leaves urlopen on its
+    own default behaviour rather than raising. Nothing in this module may ever
+    raise at a caller, and that includes this.
+    """
+    try:
+        return ssl.create_default_context(cafile=_bundle_path())
+    except Exception:
+        return None
 
 
 # ------------------------------------------------------- what is out there --
@@ -154,7 +199,8 @@ def fetch_text(url: str, limit: int, timeout: float = FETCH_TIMEOUT) -> str:
     silently truncated into something that might still parse.
     """
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(url, timeout=timeout,
+                                    context=ssl_context()) as response:
             body = response.read(limit + 1)
     except (urllib.error.URLError, OSError, ValueError):
         return ""
@@ -390,7 +436,8 @@ def fetch_to_file(url: str, target, size: int, on_progress=None,
     ceiling = size + CHUNK
     done = 0
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(url, timeout=timeout,
+                                    context=ssl_context()) as response:
             with open(str(target), "wb") as handle:
                 while True:
                     if cancelled is not None and cancelled():

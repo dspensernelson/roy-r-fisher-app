@@ -108,14 +108,14 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 4, the screen says what it is doing, and never lies about it
 
-- [ ] Add the second keyspace to `app/server/progress.py`
-- [ ] Report from `load_manifest`, and add `GET /api/jobs/{name}/reading`
-- [ ] Poll from mount and show the count in place of `Loading...`
-- [ ] **B6: show the error instead of `Loading...` for ever.** The screen
+- [x] Add the second keyspace to `app/server/progress.py`
+- [x] Report from `load_manifest`, and add `GET /api/jobs/{name}/reading`
+- [x] Poll from mount and show the count in place of `Loading...`
+- [x] **B6: show the error instead of `Loading...` for ever.** The screen
       already catches the failure and stores it, then returns `Loading...` at
       `PhotosScreen.jsx:216`, above every line that could display it. Colleen
       sat in front of that on 2026-09-03 with the answer in the app's pocket.
-- [ ] Add the cases to `app/web/src/screens/PhotosScreen.test.jsx`, including
+- [x] Add the cases to `app/web/src/screens/PhotosScreen.test.jsx`, including
       a manifest read that fails
 - [ ] The whole suite passes and nothing skips
 - [ ] Commit on `say-what-it-is-doing`, and Spenser says yes

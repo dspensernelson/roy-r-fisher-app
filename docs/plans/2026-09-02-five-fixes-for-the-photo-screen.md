@@ -62,10 +62,10 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 1, the captions cannot be lost
 
-- [ ] Write `app/tests/test_captions_are_never_lost.py` and watch it fail
-- [ ] Add `app/server/captionbackup.py`
-- [ ] Keep the previous version, then write through `state.write_text`, in `save_manifest`
-- [ ] The whole suite passes and nothing skips
+- [x] Write `app/tests/test_captions_are_never_lost.py` and watch it fail
+- [x] Add `app/server/captionbackup.py`
+- [x] Keep the previous version, then write through `state.write_text`, in `save_manifest`
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `captions-cannot-be-lost`, and Spenser says yes
 
 ### Slice 2, the app writes a log

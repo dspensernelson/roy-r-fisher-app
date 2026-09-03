@@ -136,11 +136,16 @@ class FakeBucket:
         import threading
         from http.server import BaseHTTPRequestHandler, HTTPServer
         self.files = {}
+        # Every request's headers, in order. A bucket that refuses the app for
+        # what it calls itself is a real failure mode: Cloudflare answers 403
+        # to the default Python-urllib name, measured 2026-09-02.
+        self.seen = []
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 from urllib.parse import unquote
+                outer.seen.append(dict(self.headers))
                 body = outer.files.get(unquote(self.path.lstrip("/")))
                 if body is None:
                     self.send_response(404)

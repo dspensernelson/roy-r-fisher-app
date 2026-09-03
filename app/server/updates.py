@@ -94,6 +94,29 @@ def file_url(name: str) -> str:
     return "%s/%s" % (bucket_url(), urllib.parse.quote(name))
 
 
+# ------------------------------------------------------ who we say we are --
+# Cloudflare refuses `Python-urllib/3.x` with a 403, which is the name
+# urllib.request gives itself when nobody sets one. Measured against the real
+# bucket on 2026-09-02, from Windows and from the Mac: the default name is
+# refused and any other name is served.
+#
+# This was never a Windows fault. It failed the same way everywhere, and
+# between it and the certificate fault above, the update check had never once
+# succeeded on any machine. Both were invisible for the same reason: every
+# failure here is swallowed and reported as "nothing is being offered".
+#
+# An honest name rather than a pretend browser. It identifies this app in
+# Cloudflare's own logs, which is worth having, and a request that lies about
+# what it is would be a strange thing to ship to Mark.
+USER_AGENT = "RoyRFisherApp/1.0"
+
+
+def _request(url: str):
+    """One request, carrying our name. Every call to the bucket goes through
+    this, so the name cannot be set in one place and forgotten in another."""
+    return urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+
+
 # ------------------------------------------------ who we are willing to trust --
 def _bundle_path() -> str:
     """Where the certificates we trust live. Its own function so a test can
@@ -199,7 +222,7 @@ def fetch_text(url: str, limit: int, timeout: float = FETCH_TIMEOUT) -> str:
     silently truncated into something that might still parse.
     """
     try:
-        with urllib.request.urlopen(url, timeout=timeout,
+        with urllib.request.urlopen(_request(url), timeout=timeout,
                                     context=ssl_context()) as response:
             body = response.read(limit + 1)
     except (urllib.error.URLError, OSError, ValueError):
@@ -236,7 +259,7 @@ def showing_in_a_checkout() -> bool:
     return os.environ.get("RRF_UPDATE_IN_CHECKOUT", "") not in ("", "0")
 
 
-def available(root) -> dict:
+def available(root, offered=None) -> dict:
     """An update Mark could take, or {}.
 
     Empty in three different situations, which the caller does not need to tell
@@ -252,7 +275,8 @@ def available(root) -> dict:
     if packaging.is_checkout(root) and not showing_in_a_checkout():
         return {}
     running = packaging.version_of(root)
-    offered = announced()
+    if offered is None:
+        offered = announced()
     if not offered:
         return {}
     if not packaging.newer(offered["version"], running):
@@ -302,17 +326,49 @@ def forget() -> None:
         _looked = False
 
 
+def _note(message, **fields) -> None:
+    """Write one line to the app's log, and never fail doing it. Imported
+    here rather than at the top so this module still loads on the launcher
+    path with nothing but the standard library available."""
+    try:
+        import applog
+        applog.note(message, **fields)
+    except Exception:
+        pass
+
+
 def look(root) -> dict:
     """Check the bucket and remember the answer. Never raises.
 
     This is what the background thread on startup calls, and what `Check now`
     on Settings calls. It swallows everything, because a bucket that is down
     must not be able to take the app down with it.
+
+    **It writes down what it saw.** Swallowing the failure is right for Mark
+    and it cost two whole evenings: a certificate fault and a refused name
+    both reported as "nothing is being offered", which is exactly what a
+    healthy check finding nothing reports. On screen those must stay
+    indistinguishable. In the log they must not.
     """
     try:
-        found = available(root)
-    except Exception:
+        quiet = packaging.is_checkout(root) and not showing_in_a_checkout()
+        raw = {} if quiet else announced()
+        found = available(root, offered=raw)
+    except Exception as exc:
         found = {}
+        _note("update check failed", error=str(exc))
+    else:
+        if quiet:
+            pass                      # a development checkout, nothing to say
+        elif not raw:
+            _note("update check reached nothing",
+                  bucket=bucket_url(), running=packaging.version_of(root))
+        elif found:
+            _note("update check found a newer version",
+                  offered=raw.get("version"), running=packaging.version_of(root))
+        else:
+            _note("update check found nothing newer",
+                  offered=raw.get("version"), running=packaging.version_of(root))
     remember(found)
     return found
 
@@ -436,7 +492,7 @@ def fetch_to_file(url: str, target, size: int, on_progress=None,
     ceiling = size + CHUNK
     done = 0
     try:
-        with urllib.request.urlopen(url, timeout=timeout,
+        with urllib.request.urlopen(_request(url), timeout=timeout,
                                     context=ssl_context()) as response:
             with open(str(target), "wb") as handle:
                 while True:

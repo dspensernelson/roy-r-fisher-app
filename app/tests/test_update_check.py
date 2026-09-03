@@ -231,7 +231,15 @@ def test_it_only_ever_fetches_and_never_sends(fake_bucket, installed):
 
     assert seen, "it did not ask the bucket anything"
     for asked in seen:
-        # A plain string URL. A urllib Request object is how a body gets
-        # attached, so anything that is not a string is worth failing on.
-        assert isinstance(asked, str), "the update path built a request with a body"
-        assert asked.startswith(fake_bucket.url)
+        # Checked on the property that actually matters rather than on the
+        # type. A Request object is not itself a problem: the app builds one
+        # to carry its own name, because Cloudflare refuses the default
+        # Python-urllib name with a 403 (measured 2026-09-02). What must never
+        # appear is a body or a method other than GET.
+        if isinstance(asked, str):
+            url, body, method = asked, None, "GET"
+        else:
+            url, body, method = asked.full_url, asked.data, asked.get_method()
+        assert body is None, "the update path attached a body to a request"
+        assert method == "GET", "the update path used %s, not GET" % method
+        assert url.startswith(fake_bucket.url)

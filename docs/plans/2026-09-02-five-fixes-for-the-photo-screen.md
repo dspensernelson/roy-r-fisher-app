@@ -95,11 +95,15 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 3, each capture date is read once
 
-- [ ] Write `app/tests/test_capture_dates_are_read_once.py` and watch it fail
-- [ ] Add `app/server/capturedates.py`
-- [ ] Give `exif_order` its optional `stamp_for`, leaving the default as today
-- [ ] Pass the cached reader from `load_manifest` and `upload_photos`
-- [ ] The whole suite passes and nothing skips
+- [x] Write `app/tests/test_capture_dates_are_read_once.py` and watch it fail
+- [x] Add `app/server/capturedates.py`
+- [x] Give `exif_order` its optional `stamp_for`, leaving the default as today
+- [x] Pass the cached reader from `load_manifest` and `upload_photos`
+- [x] **Not in the plan and worse than what was: `caption-estimate` re-encoded
+      every waiting photograph on every click.** That is what Colleen's
+      eleven-second waits actually were. `plan_tranches` now takes the same
+      kind of reader.
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `read-each-date-once`, and Spenser says yes
 
 ### Slice 4, the screen says what it is doing, and never lies about it

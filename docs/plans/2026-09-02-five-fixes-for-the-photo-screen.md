@@ -66,7 +66,7 @@ fails until it is deleted. That is deliberate.
 - [x] Add `app/server/captionbackup.py`
 - [x] Keep the previous version, then write through `state.write_text`, in `save_manifest`
 - [x] The whole suite passes and nothing skips
-- [ ] Commit on `captions-cannot-be-lost`, and Spenser says yes
+- [x] Commit on `captions-cannot-be-lost`, and Spenser says yes
 
 ### Slice 2, the app writes a log
 
@@ -77,14 +77,21 @@ fails until it is deleted. That is deliberate.
 - [x] Record the four places that currently swallow an error in silence
 - [x] Add `Show the log` to the Settings screen
 - [x] The whole suite passes and nothing skips
-- [ ] Commit on `the-app-writes-a-log`, and Spenser says yes
+- [x] Commit on `the-app-writes-a-log`, and Spenser says yes
 
-### Ship 0.6.1
+### Ship 0.6.1, and what actually happened
 
-- [ ] Build the interface, set `VERSION` to 0.6.1, run the suite green
-- [ ] Cut the package and upload the three files, `latest.json` last
-- [ ] Spenser presses the update button on his Windows virtual machine and it works
-- [ ] The assistant takes 0.6.1
+- [x] Build the interface, set `VERSION` to 0.6.1, run the suite green
+- [x] Cut the package and upload the three files, `latest.json` last
+- [x] Spenser presses the update button on his Windows virtual machine
+- [x] **It failed, and finding out why took the rest of the night.** Two faults
+      were stacked in front of the bucket, neither of them in this plan:
+      certificates the embedded Python would not trust, shipped as 0.6.2, and a
+      name Cloudflare refuses, shipped as 0.6.3. **The update check had never
+      once worked, on any machine, in any version.**
+- [x] 0.6.3 installed by hand on the virtual machine and running
+- [ ] The office takes it. **Superseded: 0.6.4 goes instead, carrying the rest
+      of this plan.**
 
 ### Slice 3, each capture date is read once
 
@@ -95,29 +102,52 @@ fails until it is deleted. That is deliberate.
 - [ ] The whole suite passes and nothing skips
 - [ ] Commit on `read-each-date-once`, and Spenser says yes
 
-### Slice 4, the screen says what it is doing
+### Slice 4, the screen says what it is doing, and never lies about it
 
 - [ ] Add the second keyspace to `app/server/progress.py`
 - [ ] Report from `load_manifest`, and add `GET /api/jobs/{name}/reading`
 - [ ] Poll from mount and show the count in place of `Loading...`
-- [ ] Add the cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [ ] **B6: show the error instead of `Loading...` for ever.** The screen
+      already catches the failure and stores it, then returns `Loading...` at
+      `PhotosScreen.jsx:216`, above every line that could display it. Colleen
+      sat in front of that on 2026-09-03 with the answer in the app's pocket.
+- [ ] Add the cases to `app/web/src/screens/PhotosScreen.test.jsx`, including
+      a manifest read that fails
 - [ ] The whole suite passes and nothing skips
 - [ ] Commit on `say-what-it-is-doing`, and Spenser says yes
 
-### Ship 0.6.2
+### Slice 5, the folder the report uses is the folder photographs go into
 
-- [ ] Cut, upload, prove on the virtual machine, then the assistant takes it
-
-### Slice 5, the folder can be changed after it is picked
+**This is four bugs with one cause.** `store_upload` always writes to the top
+of `Photos`; `_report_set` only keeps what is in the chosen folder. So the app
+puts a photograph where the report cannot see it, and everything afterwards
+treats it as an outsider. Spenser worked that out from the behaviour alone on
+2026-09-03.
 
 - [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
 - [ ] Test for absence rather than emptiness, in both places
+- [ ] **B1, B2, B3, B5: `Add a photo` writes into the folder the report is
+      pointed at**, not the top of `Photos`
+- [ ] A server test proving an added photograph survives a caption run, a
+      take-out of a different photograph, and a build
+- [ ] A server test proving taking one out leaves no second copy anywhere
+- [ ] **B4: a door out of the blocked build.** Name the photograph that cannot
+      be found and offer to take it out and carry on, rather than refusing with
+      nothing to do. `Clear captions` must stop being blocked by the same
+      check, because being unable to start over is worse than the first fault.
 - [ ] The whole suite passes and nothing skips
 - [ ] Commit on `unstick-the-photo-folder`, and Spenser says yes
 
-### Ship 0.6.3
+### Ship 0.6.4, carrying slices 3, 4 and 5 together
 
-- [ ] Cut, upload, prove on the virtual machine, then the assistant takes it
+Spenser's call, 2026-09-03: finish the plan, ship it as one version, then
+start again from the new lists.
+
+- [ ] Build the interface, run the suite green
+- [ ] Cut the package and upload the three files, `latest.json` last
+- [ ] **Run `docs/CHECKS.md` on the virtual machine.** Checks 1 to 7 are the
+      bugs this version claims to fix.
+- [ ] Only then does the office take it
 
 ### Closing this plan out
 

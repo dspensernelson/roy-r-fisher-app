@@ -2,6 +2,7 @@ import datetime
 import io
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -9,6 +10,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
 from PIL import Image
 
+import applog
 import brief
 import busy
 import captionbackup
@@ -320,7 +322,18 @@ def load_manifest(job: Path) -> dict:
 
     known = {entry["file"] for entry in kept}
     new_files = [f for f in on_disk if f.name not in known]
-    for f in exif_order(new_files):
+    if new_files:
+        # The expensive step: one open per file, to read its capture date.
+        # Logged by name, because this is the number that settles whether a
+        # slow open is this or something else on his network drive.
+        started = time.monotonic()
+        ordered = exif_order(new_files)
+        elapsed_ms = round((time.monotonic() - started) * 1000)
+        applog.note("reading capture dates", job=job.name,
+                    files=len(new_files), ms=elapsed_ms)
+    else:
+        ordered = []
+    for f in ordered:
         entry = {"file": f.name, "caption": ""}
         folder = jobs.photo_folder(job, f)
         if folder:

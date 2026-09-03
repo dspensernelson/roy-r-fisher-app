@@ -99,6 +99,10 @@ def never_touch_the_real_home(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("RRF_USAGE_FILE", str(box / ".rrf-ai-usage.json"))
     monkeypatch.setenv("RRF_AI_POLICY_FILE", str(box / ".rrf-demo-ai-policy.json"))
     monkeypatch.setenv("RRF_JOBFACTS_FILE", str(box / ".rrf-job-facts.json"))
+    # The app's own log, added 2026-09-02. The same reasoning as every entry
+    # above it: a test that logs without this set would otherwise write into
+    # Spenser's real ~/.rrf-app.log.
+    monkeypatch.setenv("RRF_LOG_FILE", str(box / ".rrf-app.log"))
     # The thumbnail cache, added 2026-08-22 when thumbnails moved out of
     # Mark's Photos folder. Missing it did exactly what the comment above
     # predicts: every suite run left a fresh folder of thumbnails in the

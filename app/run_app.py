@@ -56,10 +56,14 @@ def _record_last_good(version: str) -> None:
 
         import appversion
         appversion.record(version, datetime.datetime.now().isoformat(timespec="seconds"))
-    except Exception:
+    except Exception as exc:
         # Diagnostic bookkeeping must never take the app down. If it cannot be
         # written, the app still works and Spenser reads one fewer thing.
-        pass
+        try:
+            import applog
+            applog.note("last-good record failed", version=version, error=str(exc))
+        except Exception:
+            pass
 
 
 def main() -> int:
@@ -125,10 +129,14 @@ def main() -> int:
         try:
             import thumbcache
             thumbcache.prune()
-        except Exception:
+        except Exception as exc:
             # Housekeeping must never take the app down or say anything about
-            # itself. Nothing depends on it having run.
-            pass
+            # itself on screen. Nothing depends on it having run.
+            try:
+                import applog
+                applog.note("cache tidy failed", error=str(exc))
+            except Exception:
+                pass
 
     # Look once for a newer version, off the startup path and silently.
     #
@@ -144,10 +152,14 @@ def main() -> int:
         try:
             import updates
             updates.look(ROOT)
-        except Exception:
+        except Exception as exc:
             # Same rule as the cache tidy above. Nothing depends on this having
             # run, and it may never take the app down.
-            pass
+            try:
+                import applog
+                applog.note("update check failed", error=str(exc))
+            except Exception:
+                pass
 
     threading.Thread(target=tidy_cache, daemon=True).start()
     threading.Thread(target=look_for_an_update, daemon=True).start()

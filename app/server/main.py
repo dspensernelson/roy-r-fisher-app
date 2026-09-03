@@ -15,6 +15,7 @@ import browse
 import busy
 import captions
 import aipolicy
+import applog
 import classify
 import cost
 import inventory
@@ -136,6 +137,19 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Roy R. Fisher App")
 
     from fastapi.responses import JSONResponse
+
+    @app.middleware("http")
+    async def write_the_log(request, call_next):
+        """One line per request: the method, the path, the status, how long
+        it took. `run_app.py` keeps uvicorn's own console quiet on purpose;
+        this is a separate, written record, so a screen that sits leaves
+        something to look at afterward."""
+        started = time.monotonic()
+        response = await call_next(request)
+        elapsed_ms = round((time.monotonic() - started) * 1000)
+        applog.note("%s %s" % (request.method, request.url.path),
+                    status=response.status_code, ms=elapsed_ms)
+        return response
 
     @app.exception_handler(busy.Busy)
     def busy_handler(_request, exc: busy.Busy):
@@ -554,6 +568,23 @@ def create_app() -> FastAPI:
         return {**settings.status(),
                 "message": "Removed. You can still type captions in yourself."}
 
+    @app.post("/api/log/show")
+    def show_the_log():
+        """Open the folder holding the app's written record of what it did.
+
+        One click, so he never has to type or hunt a path. The log itself is
+        outside every job folder, in the app's own home-folder files, so this
+        is its own route rather than a reuse of the job-scoped reveal one.
+        """
+        path = applog.log_file()
+        if not path.is_file():
+            raise HTTPException(404, "Nothing has been written to the log yet.")
+        try:
+            reveal.show_in_folder(path)
+        except reveal.RevealFailed as exc:
+            raise HTTPException(409, exc.message)
+        return {"opened": True}
+
     @app.get("/api/caption-styles")
     def caption_styles():
         # The screen draws its samples from here rather than restating them,
@@ -857,9 +888,9 @@ def create_app() -> FastAPI:
                 "learned_rate": round(cost.rate_including(
                     _bucket(), measured["calculated_cost"], done), 6),
             })
-        except Exception:
+        except Exception as exc:
             # Bookkeeping must never take the run down or lose paid captions.
-            pass
+            applog.note("usage bookkeeping failed", job=name, error=str(exc))
 
         fresh_manifest = photos_routes.load_manifest(job)
         answer = {**fresh_manifest, "ai_available": True,

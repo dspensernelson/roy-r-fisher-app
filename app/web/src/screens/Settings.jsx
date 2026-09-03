@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog } from "../api.js";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged }) {
   const [state, setState] = useState(null);
@@ -13,6 +13,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   // answers either way, because he did.
   const [looking, setLooking] = useState(false);
   const [looked, setLooked] = useState(null);
+  const [logNote, setLogNote] = useState(null);
 
   useEffect(() => {
     getSettings().then(setState)
@@ -185,6 +186,24 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           Your key is kept in a file in your own user folder, outside this program, and it is
           never shown on screen again or written into any job.
         </p>
+      </div>
+
+      <div className="setting">
+        <div className="setting-head"><h2>What the app has done</h2></div>
+        <p className="setting-body">
+          The app writes down what it does, in a file on this computer. If a screen ever
+          sits without answering, this is what Spenser needs to see.
+        </p>
+        <div className="setting-actions">
+          <button className="button" onClick={async () => {
+            setLogNote(null);
+            try { await showTheLog(); }
+            catch (e) { setLogNote(e.message); }
+          }}>
+            Show the log
+          </button>
+        </div>
+        {logNote && <p className="setting-fine">{logNote}</p>}
       </div>
     </>
   );

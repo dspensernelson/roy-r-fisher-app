@@ -11,10 +11,12 @@ from PIL import Image
 
 import brief
 import busy
+import captionbackup
 import captions
 import classify
 import jobfacts
 import jobs
+import state
 import thumbcache
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
@@ -360,16 +362,25 @@ def save_manifest(job: Path, manifest: dict):
     coming = [e for e in out.get("photos", []) if isinstance(e, dict)]
     known = {e.get("file") for e in coming}
     kept_back = []
+    existing_text = None
     if path.is_file():
+        existing_text = path.read_text()
         try:
-            existing = json.loads(path.read_text())
+            existing = json.loads(existing_text)
         except ValueError:
             existing = {}
         if isinstance(existing, dict):
             kept_back = [e for e in existing.get("photos", []) or []
                          if isinstance(e, dict) and e.get("file") not in known]
     out["photos"] = coming + kept_back
-    path.write_text(json.dumps(out, indent=2))
+
+    # The version from just before this write, kept outside the job folder.
+    # Nothing here can stop the save that follows: keeping the spare must
+    # never be the reason a caption fails to save.
+    if existing_text is not None:
+        captionbackup.keep(jobs.photos_dir(job), existing_text)
+
+    state.write_text(path, json.dumps(out, indent=2))
 
 
 def _resolve_confined(path: Path, base: Path) -> Optional[Path]:

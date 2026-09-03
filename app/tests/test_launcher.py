@@ -324,4 +324,13 @@ def test_both_launchers_are_thin_shims():
         assert "8000" not in shim
         assert "curl" not in shim
     assert "run_app.py" in bat and "run_app.py" in command
-    assert "pause" in bat.lower()                     # the window stays open
+
+    # No console, changed 2026-09-03. `pythonw.exe` is the same Python beside
+    # `python.exe`, built to run without one. The black window was the first
+    # thing anybody saw every time they started the app.
+    assert "pythonw.exe" in bat
+    # And therefore no pause: there is no window to hold open, and nothing is
+    # printed to read. A failure arrives as a message box instead, through
+    # `app/server/tell.py`, which is the piece that had to exist before the
+    # window could go.
+    assert "pause" not in bat.lower()

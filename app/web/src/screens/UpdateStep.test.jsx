@@ -118,7 +118,13 @@ describe("how it ends", () => {
       progress({ running: false, stage: "Closing" }));
     open();
     await userEvent.click(screen.getByRole("button", { name: "Update now" }));
-    await waitFor(() => expect(screen.getByText("Closing now.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Installing the new version.")).toBeInTheDocument());
+    // It says the app closed itself on purpose, rather than leaving a person
+    // to guess why the screen stopped answering.
+    expect(screen.getByText(/The app has closed itself/)).toBeInTheDocument();
+    // And that this tab is finished with, which is the thing that was missing:
+    // it used to sit for ever over a job list that still looked usable.
+    expect(screen.getByText(/You can close this tab/)).toBeInTheDocument();
     expect(screen.getByText(/Roy R\. Fisher icon on your Desktop/))
       .toBeInTheDocument();
   });
@@ -153,7 +159,7 @@ describe("how it ends", () => {
       .mockRejectedValue(new Error("Failed to fetch"));
     open();
     await userEvent.click(screen.getByRole("button", { name: "Update now" }));
-    await waitFor(() => screen.getByText("Closing now."));
+    await waitFor(() => screen.getByText("Installing the new version."));
     expect(screen.queryByText(/Failed to fetch/)).toBeNull();
   });
 });

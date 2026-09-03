@@ -706,3 +706,16 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .update-bar { width: 100%; max-width: 320px; }
 .update-bar span { width: 0; transition: width .25s linear; animation: none; }
 .update-step { max-width: 560px; }
+
+/* The update's last screen. It covers everything, because behind it the app
+   has stopped answering and a job list that cannot be opened is worse than a
+   blank page. Added 2026-09-03 after Spenser watched a finished update leave
+   a dead tab that still looked alive. */
+.closing-over-everything { position: fixed; inset: 0; z-index: 50;
+  background: var(--ground); display: flex; align-items: center;
+  justify-content: center; padding: 24px; }
+.closing-card { background: #FFFFFF; border: 1px solid var(--line);
+  border-left: 3px solid var(--brand); border-radius: 4px; padding: 28px 32px;
+  max-width: 520px; }
+.closing-title { margin: 0 0 16px; font-weight: 700; font-size: 18px; }
+

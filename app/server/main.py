@@ -569,6 +569,27 @@ def create_app() -> FastAPI:
         return {**settings.status(),
                 "message": "Removed. You can still type captions in yourself."}
 
+    @app.post("/api/close")
+    def close_the_app():
+        """Stop the app, because there is no longer a window to close.
+
+        Until 2026-09-03 the way to stop it was closing the black console
+        window, which is what `startup.STOP_INSTRUCTION` says. That window is
+        gone, on purpose, and taking it away without putting this here would
+        have left an app that cannot be quit at all.
+
+        The same ending the update already uses: let anything mid-write finish,
+        let the screen show what is happening, then go. Nothing of Mark's is
+        touched, and the app is started again the same way it always is.
+        """
+        def run():
+            busy.wait_until_idle()
+            time.sleep(CLOSING_PAUSE)
+            updates.close_the_app(HOME)
+
+        threading.Thread(target=run, daemon=True).start()
+        return {"closing": True}
+
     @app.post("/api/log/show")
     def show_the_log():
         """Open the folder holding the app's written record of what it did.

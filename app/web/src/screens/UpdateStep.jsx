@@ -81,13 +81,32 @@ export default function UpdateStep({ version, available, size, onClose }) {
   }
 
   if (closing) {
+    // Over everything, not laid on top of a job list that still looks usable.
+    //
+    // Found on Spenser's virtual machine, 2026-09-03. This used to be a small
+    // panel above the jobs, and the moment the server stopped, the browser
+    // simply kept showing whatever it had last drawn: this sentence, sitting
+    // on a screen full of jobs that could no longer be opened. The last thing
+    // the app did before handing over was look broken.
+    //
+    // Nothing here can poll for the new version. It arrives on a port the
+    // operating system picks, in a tab of its own, and this page has no
+    // server left to ask. So it says what will happen and what to do if it
+    // does not, and it stops pretending anything behind it still works.
     return (
-      <div className="confirm update-step">
-        <p style={{ margin: "0 0 10px" }}><strong>Closing now.</strong></p>
-        <p className="setting-fine" style={{ margin: 0 }}>
-          The new version will open in a few seconds. If it does not, use the
-          Roy R. Fisher icon on your Desktop.
-        </p>
+      <div className="closing-over-everything">
+        <div className="closing-card">
+          <p className="closing-title">Installing the new version.</p>
+          <span className="loading-bar"><span /></span>
+          <p className="setting-fine" style={{ margin: "14px 0 0" }}>
+            The app has closed itself so its files can be replaced. The new
+            version opens in a new tab in a few seconds.
+          </p>
+          <p className="setting-fine" style={{ margin: "10px 0 0" }}>
+            <strong>You can close this tab.</strong> If nothing opens, use the
+            Roy R. Fisher icon on your Desktop.
+          </p>
+        </div>
       </div>
     );
   }

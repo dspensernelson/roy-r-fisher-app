@@ -30,7 +30,11 @@ PACKAGER = (ROOT / "tools" / "package_windows.py").read_text()
 
 # --- one instruction ------------------------------------------------------
 def test_there_is_one_sentence_about_stopping():
-    assert startup.STOP_INSTRUCTION == "Close this window to stop the Roy R. Fisher app."
+    assert startup.STOP_INSTRUCTION == (
+        "To stop the Roy R. Fisher app, open Settings and choose Close the app.")
+    # It must not send anybody to a window. There is not one any more, and
+    # an instruction that cannot be followed is worse than none.
+    assert "window" not in startup.STOP_INSTRUCTION.lower()
 
 
 def test_the_window_prints_that_sentence_rather_than_its_own():
@@ -49,9 +53,16 @@ def printed_lines(source: str) -> str:
     A comment explaining why Control-C behaves differently from closing the
     window is not something Mark reads, and scanning the whole file made the
     two indistinguishable.
+
+    Reads `tell.say` and `tell.problem` as well as `print`, since 2026-09-03.
+    The app runs with no console on Windows now, so everything it says goes
+    through `app/server/tell.py`: printed where there is somewhere to print,
+    and shown as a dialog where there is not.
     """
+    wanted = ("print(", "tell.say(", "tell.problem(")
     return "\n".join(line for line in source.splitlines()
-                     if "print(" in line and not line.strip().startswith("#"))
+                     if any(w in line for w in wanted)
+                     and not line.strip().startswith("#"))
 
 
 def test_control_c_is_gone_from_what_he_reads():
@@ -73,8 +84,14 @@ def test_routine_server_chatter_is_off():
     assert "access_log=False" in RUN_APP
 
 
-def test_the_plain_messages_are_still_printed():
-    assert 'print("Starting Roy R. Fisher %s." % version)' in RUN_APP
+def test_the_plain_messages_are_still_shown():
+    """Through `tell`, since 2026-09-03. `say` is for the ordinary lines and
+    is silent where nobody could read them; `problem` is always shown, as a
+    dialog box when there is no console. The failure report is the reason that
+    distinction has to exist: taking the black window away without it would
+    have made a package that will not start fail in total silence."""
+    assert 'tell.say("Starting Roy R. Fisher %s." % version)' in RUN_APP
+    assert "tell.problem(startup.failure_report" in RUN_APP
     assert "startup.failure_report" in RUN_APP
 
 

@@ -240,23 +240,38 @@ def _write_rollback(home: Path, previous: str) -> Path:
 
 
 def _make_shortcut(target_launcher: Path, desktop: Path) -> str:
-    """One icon on the Desktop pointing at the newest version's launcher.
+    """One icon on the Desktop that starts the newest version, with no window.
 
     A real .lnk when PowerShell will make one, because that is what an icon on
     a Windows Desktop looks like. A .bat when it will not: some machines have
     PowerShell locked down by policy, and an icon that works and looks plain is
     better than no icon at all.
 
+    **It points at `pythonw.exe`, not at the .bat.** Changed 2026-09-03. A .bat
+    always opens a console, even one that closes again straight away, and that
+    black window was the first thing anybody saw every single time they started
+    the app. `pythonw.exe` is the same Python sitting beside `python.exe` in the
+    package, built to run without one. Going straight to it means there is no
+    window at any point, not even a flash.
+
+    Nothing is lost by it. `app/server/tell.py` puts a failure in a message box
+    when there is no console to print to, and in the log either way, which is
+    the piece that had to exist before this was safe to do.
+
     Returns what was written, for the message at the end.
     """
     desktop.mkdir(parents=True, exist_ok=True)
     link = desktop / SHORTCUT_NAME
+    version_folder = target_launcher.parent
+    pythonw = version_folder / "program" / "python" / "pythonw.exe"
+    entry = version_folder / "program" / "app" / "run_app.py"
     script = (
         "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('%s');"
         "$s.TargetPath = '%s';"
+        "$s.Arguments = '\"%s\"';"
         "$s.WorkingDirectory = '%s';"
         "$s.Description = 'Roy R. Fisher';"
-        "$s.Save()" % (link, target_launcher, target_launcher.parent))
+        "$s.Save()" % (link, pythonw, entry, version_folder))
     try:
         done = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive",

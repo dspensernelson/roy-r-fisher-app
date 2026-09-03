@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog, closeTheApp } from "../api.js";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
   const [state, setState] = useState(null);
@@ -14,6 +14,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   const [looking, setLooking] = useState(false);
   const [looked, setLooked] = useState(null);
   const [logNote, setLogNote] = useState(null);
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     getSettings().then(setState)
@@ -208,6 +209,31 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           </button>
         </div>
         {logNote && <p className="setting-fine">{logNote}</p>}
+      </div>
+
+      <div className="setting">
+        <div className="setting-head"><h2>Closing the app</h2></div>
+        {closing ? (
+          <p className="setting-body">
+            <strong>Closing now.</strong> You can close this tab. Start the app
+            again with the Roy R. Fisher icon on your Desktop.
+          </p>
+        ) : (
+          <>
+            <p className="setting-body">
+              The app keeps running after you close the browser tab. Use this
+              when you have finished for the day.
+            </p>
+            <div className="setting-actions">
+              <button className="button" onClick={async () => {
+                setClosing(true);
+                try { await closeTheApp(); } catch { /* it is going away */ }
+              }}>
+                Close the app
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

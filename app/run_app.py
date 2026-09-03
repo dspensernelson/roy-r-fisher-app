@@ -21,6 +21,7 @@ sys.path.insert(0, str(SERVER))
 
 import packaging  # noqa: E402  standard library only
 import startup  # noqa: E402  standard library only
+import tell  # noqa: E402  standard library only
 
 # Two folders, and they are the same one in a development checkout.
 #
@@ -79,25 +80,25 @@ def main() -> int:
     #    anything shaped like a package. Mark's copy has no app/tests, so his
     #    still fails closed.
     if packaging.is_checkout(ROOT):
-        print("Development checkout: skipping the package check.")
+        tell.say("Development checkout: skipping the package check.")
     else:
         try:
             packaging.verify(ROOT)
         except packaging.PackageDamaged as exc:
-            print(exc.message)
+            tell.problem(exc.message)
             return 2
 
     # 2. Is a different version already running beside this one?
     try:
         startup.refuse_if_another_version_runs(HOME)
     except startup.StartupRefused as exc:
-        print(exc.message)
+        tell.problem(exc.message)
         return 3
 
     # 3. Is this same version already running? Then just show it.
     existing = startup.already_running_here(HOME, version)
     if existing:
-        print("Roy R. Fisher %s is already running. Opening it." % version)
+        tell.say("Roy R. Fisher %s is already running. Opening it." % version)
         webbrowser.open("http://%s:%d" % (startup.HOST, existing))
         return 0
 
@@ -105,10 +106,10 @@ def main() -> int:
     port = startup.free_port()
     startup.write_runtime(HOME, port, version)
 
-    print("Starting Roy R. Fisher %s." % version)
-    print("Leave this window open while you work.")
-    print(startup.STOP_INSTRUCTION)
-    print()
+    tell.say("Starting Roy R. Fisher %s." % version)
+    tell.say("Leave this window open while you work.")
+    tell.say(startup.STOP_INSTRUCTION)
+    tell.say("")
 
     # 5. Open the browser only once the app has really answered, and answered
     #    as this version. 6. Then start the clock on the last-good record.
@@ -120,7 +121,7 @@ def main() -> int:
             # 7. Plain words, not a traceback. The server thread is still up,
             #    so this cannot exit the process itself; it says what it knows
             #    and closing the window ends it.
-            print(startup.failure_report(HOME, port, version))
+            tell.problem(startup.failure_report(HOME, port, version))
 
     # Tidy the app's own thumbnail cache, off the startup path. Bounded, and
     # it only ever deletes inside the cache the app writes: a legacy

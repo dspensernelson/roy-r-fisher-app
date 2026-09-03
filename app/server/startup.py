@@ -42,7 +42,12 @@ HOST = "127.0.0.1"
 # packaged README cannot drift apart. They used to disagree: the window said to
 # press Control and C and the README said to close the window, which is two
 # instructions for one action in the two places a first-time user reads.
-STOP_INSTRUCTION = "Close this window to stop the Roy R. Fisher app."
+STOP_INSTRUCTION = ("To stop the Roy R. Fisher app, open Settings and "
+                    "choose Close the app.")
+# Changed 2026-09-03, when the black console window went. It used to say
+# "Close this window", which was the only way to stop the app and is now
+# not true: on Windows there is no window at all. One sentence, read by the
+# packaged readme and by the console on the Mac, so the two cannot drift.
 
 # Loopback only, never 0.0.0.0. Windows Defender Firewall generally does not
 # prompt for a loopback-only bind, and an unsigned launcher opening a listening

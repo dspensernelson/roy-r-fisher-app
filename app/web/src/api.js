@@ -76,6 +76,8 @@ export const saveKey = (key) =>
   fetch("/api/settings/key", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }).then(j);
 export const removeKey = () => fetch("/api/settings/key", { method: "DELETE" }).then(j);
 export const showTheLog = () => fetch("/api/log/show", { method: "POST" }).then(j);
+export const readingProgress = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/reading`).then(j);
 export const getSections = (name) => fetch(`/api/jobs/${encodeURIComponent(name)}/sections`).then(j);
 export const putSections = (name, list) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/sections`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sections: list }) }).then(j);

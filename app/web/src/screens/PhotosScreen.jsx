@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, captionProgress, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal,
-         photoGroups, putPhotoGroup } from "../api.js";
+         photoGroups, putPhotoGroup, readingProgress } from "../api.js";
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -11,6 +11,10 @@ export default function PhotosScreen({ job }) {
   const [busy, setBusy] = useState("");
   const [done, setDone] = useState(null);
   const [error, setError] = useState(null);
+  // How far the photo list has got, while we wait for it. A wait that says
+  // nothing looks exactly like a dead screen, and on a network drive this
+  // wait is the whole of the screen's first paint.
+  const [reading, setReading] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [clearing, setClearing] = useState(false);  // the clear-captions step
   const [showCut, setShowCut] = useState(false);    // the Cut photos section
@@ -27,7 +31,20 @@ export default function PhotosScreen({ job }) {
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
-  useEffect(() => { getManifest(job).then(setManifest).catch((e) => setError(e.message)); }, [job]);
+  useEffect(() => {
+    setManifest(null); setError(null); setReading(null);
+    // Polls alongside the call rather than after it. Nothing was watching at
+    // mount, which is exactly when the waiting happens.
+    let alive = true;
+    const watching = setInterval(() => {
+      readingProgress(job).then((at) => { if (alive && at.reading) setReading(at); }).catch(() => {});
+    }, 700);
+    getManifest(job)
+      .then((m) => { if (alive) setManifest(m); })
+      .catch((e) => { if (alive) setError(e.message); })
+      .finally(() => { alive = false; clearInterval(watching); setReading(null); });
+    return () => { alive = false; clearInterval(watching); };
+  }, [job]);
   useEffect(() => { jobFacts(job).then(setFacts).catch(() => {}); }, [job]);
   // Where this job keeps its photographs. His office stores every shoot twice,
   // full size and shrunk by hand, under a folder name that changes job to job,
@@ -213,7 +230,27 @@ export default function PhotosScreen({ job }) {
     save(next);
   }
 
-  if (!manifest) return <p className="sub">Loading...</p>;
+  // The error comes first, and that ordering is the whole fix. It used to sit
+  // below this line, so a photo list that could not be read was caught,
+  // stored, and never shown: the screen sat on `Loading...` holding the
+  // explanation. Colleen lost a morning to that on 2026-09-03 and the only
+  // way out was deleting photo-manifest.json by hand.
+  if (!manifest && error) return (
+    <>
+      <h1>Photos</h1>
+      <div className="error">{error}</div>
+      <p className="sub">
+        Nothing has been changed. Send this to Spenser with the log from Settings.
+      </p>
+    </>
+  );
+  if (!manifest) return (
+    <p className="sub">
+      {reading && reading.total
+        ? `Reading photograph ${reading.done} of ${reading.total}...`
+        : "Loading..."}
+    </p>
+  );
 
   // The question, asked once, when this job keeps its photographs in more than
   // one place and he has not said which is the report. It is here rather than

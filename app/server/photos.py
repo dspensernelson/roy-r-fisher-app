@@ -19,6 +19,7 @@ import capturedates
 import classify
 import jobfacts
 import jobs
+import progress
 import state
 import thumbcache
 
@@ -327,11 +328,32 @@ def load_manifest(job: Path) -> dict:
         # The expensive step: one open per file, to read its capture date.
         # Logged by name, because this is the number that settles whether a
         # slow open is this or something else on his network drive.
+        #
+        # It also reports its position as it goes, so the screen can say
+        # "Reading photograph 40 of 131" instead of "Loading...". On a network
+        # drive this is the whole wait, and a wait that says nothing is
+        # indistinguishable from a dead screen.
         started = time.monotonic()
-        ordered = exif_order(new_files, stamp_for=capturedates.stamp_for(job))
+        total = len(new_files)
+        progress.read_start(job.name, total)
+        try:
+            read_stamp = capturedates.stamp_for(job)
+            seen = [0]
+
+            def counting(path):
+                seen[0] += 1
+                progress.read_advance(job.name, seen[0], total)
+                return read_stamp(path)
+            counting.flush = read_stamp.flush
+
+            ordered = exif_order(new_files, stamp_for=counting)
+        finally:
+            # However this ends, including badly. A light left on leaves the
+            # screen polling for ever.
+            progress.read_finish(job.name)
         elapsed_ms = round((time.monotonic() - started) * 1000)
         applog.note("reading capture dates", job=job.name,
-                    files=len(new_files), ms=elapsed_ms)
+                    files=total, ms=elapsed_ms)
     else:
         ordered = []
     for f in ordered:

@@ -58,3 +58,58 @@ def read(job: str) -> dict:
             return {"running": False, "request": 0, "requests": 0,
                     "captioned": 0, "total": 0}
         return dict(found)
+
+
+# ------------------------------------------------- how far a read has got --
+# A second keyspace, not a second meaning for the first.
+#
+# `_runs` holds one entry per job and `start` replaces it, so a photo-list read
+# beginning during a caption run would wipe that run's position. The caption
+# poller refetches the manifest while a run is going
+# (`PhotosScreen.jsx:111`), so the two really do overlap and this is not a
+# theoretical collision.
+#
+# Its field names are caption vocabulary too. `requests` and `captioned` mean
+# nothing to a read, and reusing them would make the payload lie.
+#
+# `updates.py` set the precedent on 2026-08-28: it copied this module's shape
+# for a second concern rather than overloading the one dictionary. Same choice
+# here, same reason.
+_reads = {}
+
+
+def read_start(job: str, total: int) -> None:
+    """A read of this job's photographs is beginning."""
+    with _lock:
+        _reads[str(job)] = {"reading": True, "done": 0, "total": int(total)}
+
+
+def read_advance(job: str, done: int, total: int) -> None:
+    """How far it has got. A no-op for a job that is not reading, so a late
+    tick after the end cannot bring the light back on."""
+    with _lock:
+        found = _reads.get(str(job))
+        if found is None:
+            return
+        found["done"] = int(done)
+        found["total"] = int(total)
+
+
+def read_finish(job: str) -> None:
+    """However the read ended, including badly. A light left on leaves the
+    screen polling for ever."""
+    with _lock:
+        _reads.pop(str(job), None)
+
+
+def read_state(job: str) -> dict:
+    """What the screen shows while it waits, or all zeroes.
+
+    A copy, so a caller cannot reach in and change what the reader is
+    reporting about itself.
+    """
+    with _lock:
+        found = _reads.get(str(job))
+        if found is None:
+            return {"reading": False, "done": 0, "total": 0}
+        return dict(found)

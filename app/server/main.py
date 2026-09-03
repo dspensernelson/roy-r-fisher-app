@@ -931,6 +931,17 @@ def create_app() -> FastAPI:
             answer["partial"] = done > 0
         return answer
 
+    @app.get("/api/jobs/{name}/reading")
+    def reading_progress(name: str):
+        """How far the photo list has got, while the screen waits for it.
+
+        Polled every second while another call is already doing the slow work,
+        so it must stay cheap: it reads a dictionary and nothing else. It must
+        never call `load_manifest`, which is the very thing it is reporting on.
+        """
+        photos_routes._job_or_404(name)
+        return progress.read_state(name)
+
     @app.get("/api/jobs/{name}/caption-progress")
     def caption_progress(name: str):
         """How far a running caption run has got. Asked on a timer.

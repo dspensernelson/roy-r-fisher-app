@@ -57,6 +57,8 @@ beforeEach(() => {
     groups: [{ folder: "", count: 3, sample: "photo-01.jpg" }],
     chosen: null, chosen_missing: false, needs_choice: false });
   vi.spyOn(api, "putPhotoGroup").mockResolvedValue({ chosen: "" });
+  vi.spyOn(api, "readingProgress").mockResolvedValue(
+    { reading: false, done: 0, total: 0 });
 });
 
 const TWO_PLACES = {
@@ -377,5 +379,60 @@ describe("the words on the screen", () => {
     }));
     await show();
     expect(await screen.findByRole("button", { name: /Taken out \(1\)/ })).toBeInTheDocument();
+  });
+});
+
+
+// --- what the screen says while it waits, and when it cannot ---------------
+// Two faults, one screen. It said nothing while it worked, and it hid the
+// reason when it failed. The second one cost Colleen a morning on 2026-09-03:
+// the photo list could not be read, the error was caught and stored, and the
+// screen returned `Loading...` above every line that could have shown it.
+
+describe("while it is waiting for the photo list", () => {
+  it("says which photograph it has got to, not just Loading", async () => {
+    let release;
+    api.getManifest.mockReturnValue(new Promise((r) => { release = r; }));
+    api.readingProgress.mockResolvedValue({ reading: true, done: 40, total: 131 });
+
+    render(<PhotosScreen job={JOB} />);
+    expect(await screen.findByText(/Reading photograph 40 of 131/)).toBeInTheDocument();
+
+    release(manifest());
+    await screen.findByRole("heading", { name: "Photos" });
+  });
+
+  it("falls back to Loading before any count is known", async () => {
+    let release;
+    api.getManifest.mockReturnValue(new Promise((r) => { release = r; }));
+    render(<PhotosScreen job={JOB} />);
+    expect(await screen.findByText("Loading...")).toBeInTheDocument();
+    release(manifest());
+    await screen.findByRole("heading", { name: "Photos" });
+  });
+
+  it("stops asking once the list arrives", async () => {
+    await show();
+    const asked = api.readingProgress.mock.calls.length;
+    await new Promise((r) => setTimeout(r, 900));
+    expect(api.readingProgress.mock.calls.length).toBe(asked);
+  });
+});
+
+describe("when the photo list cannot be read", () => {
+  it("shows the reason instead of sitting on Loading for ever", async () => {
+    api.getManifest.mockRejectedValue(
+      new Error("photo-manifest.json is not valid JSON. Fix the file or delete it and try again."));
+
+    render(<PhotosScreen job={JOB} />);
+    expect(await screen.findByText(/photo-manifest.json is not valid JSON/))
+      .toBeInTheDocument();
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+  });
+
+  it("says nothing has been changed, and where to send it", async () => {
+    api.getManifest.mockRejectedValue(new Error("Something went wrong."));
+    render(<PhotosScreen job={JOB} />);
+    expect(await screen.findByText(/Nothing has been changed/)).toBeInTheDocument();
   });
 });

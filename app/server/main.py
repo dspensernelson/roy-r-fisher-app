@@ -1035,10 +1035,21 @@ def create_app() -> FastAPI:
                         continue
                     where = jobs.photo_path(job, entry)
                     if not where.is_file():
+                        # A dead end used to stop here, with nothing on the
+                        # screen a person could act on. Colleen met it on
+                        # 2026-09-03 and the only way past it was editing the
+                        # file by hand, which risked every caption in the job.
+                        #
+                        # The refusal stays, because building a report that
+                        # quietly leaves a photograph out is worse. What is new
+                        # is that it says which one and what to do about it,
+                        # and `Take out` on that photograph now works even
+                        # though the file has gone, so the door is real.
                         raise HTTPException(
-                            500, "Build failed: %s is named in "
-                                 "photo-manifest.json but is not in the Photos "
-                                 "folder." % named)
+                            400, "%s is in this job's photo list but the file "
+                                 "is not there any more. Take that photograph "
+                                 "out, then build again. Nothing else has "
+                                 "been changed." % named)
 
         # Every included caption has to have been looked at. This is the gate,
         # and it is here rather than only on the screen because the manifest is

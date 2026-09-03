@@ -86,8 +86,16 @@ def test_build_error_surfaces_real_message(client, tmp_path):
         ]}), encoding="utf-8")
 
     r = c.post("/api/jobs/JOB1/build")
-    assert r.status_code == 500
-    assert "missing.jpg" in r.json()["detail"]
+    # 400 rather than 500, changed 2026-09-03. Nothing crashed: the job is in a
+    # state the person in front of it can fix, and saying "server error" to
+    # Colleen for something she can undo herself is a lie about whose problem
+    # it is.
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert "missing.jpg" in detail
+    # The refusal has to carry a way through it. This is the dead end she met
+    # on 2026-09-03, where the only escape was editing the file by hand.
+    assert "Take that photograph out" in detail
     assert not list(photos.glob("*.docx")), "a failed build leaves no document"
 
 

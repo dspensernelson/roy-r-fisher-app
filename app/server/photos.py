@@ -478,9 +478,49 @@ def _confine_write_target(target: Path, photos: Path) -> None:
         raise HTTPException(400, "Upload target escaped the Photos folder.")
 
 
-def store_upload(job: Path, upload: UploadFile) -> str:
+def upload_target_dir(job: Path) -> Path:
+    """The folder a newly added photograph goes into: the one the report is
+    pointed at.
+
+    **This is four of Colleen's bugs, and they were all one fault.** Every
+    upload used to land at the top of `Photos`, while `_report_set` keeps only
+    what is inside the chosen folder. So the app put the photograph somewhere
+    the report could not see it, the screen hid it a moment later, and every
+    reconciliation afterwards treated it as an outsider. She added the same
+    road sign three times trying to make it stick, which is where
+    `Mallard Pointe road sign 2 (3).png` came from.
+
+    A job with no folder chosen, which is every job the app makes itself, goes
+    on using the top of `Photos` exactly as it always has.
+
+    The recorded folder is the app's own note rather than anything typed, and
+    it is still resolved and confined here, because a note that has been
+    hand-edited is untrusted like anything else.
+    """
     photos = jobs.photos_dir(job)
-    photos.mkdir(parents=True, exist_ok=True)
+    chosen = jobfacts.photo_folder(job)
+    if not chosen:
+        return photos
+    target = _resolve_confined(photos / chosen, photos)
+    if target is None or not target.is_dir():
+        # The office renamed the folder underneath us. The top of Photos is
+        # somewhere real, and the screen already says the chosen folder has
+        # gone; losing the file is not an acceptable alternative.
+        return photos
+    return target
+
+
+def store_upload(job: Path, upload: UploadFile) -> tuple:
+    """Save one uploaded photograph. Returns (bare name, folder under Photos).
+
+    The folder comes back with the name because the caller has to record it on
+    the entry: an entry with no folder means the top of `Photos`, and writing
+    that for a file that went into a subfolder is how a photograph becomes
+    "named in photo-manifest.json but is not in the Photos folder".
+    """
+    photos = jobs.photos_dir(job)
+    into = upload_target_dir(job)
+    into.mkdir(parents=True, exist_ok=True)
     taken = {p.name.lower() for p in jobs.photo_files(job)}
     raw = upload.file.read()
     # .name confines an untrusted filename (which may carry ../, an absolute
@@ -490,14 +530,14 @@ def store_upload(job: Path, upload: UploadFile) -> str:
     if name.lower().endswith(".heic"):
         img = Image.open(io.BytesIO(raw)).convert("RGB")
         name = Path(name).with_suffix(".jpg").name
-        target = photos / free_name(photos, name, taken)
+        target = into / free_name(into, name, taken)
         _confine_write_target(target, photos)
         img.save(target, format="JPEG", quality=92)
     else:
-        target = photos / free_name(photos, name, taken)
+        target = into / free_name(into, name, taken)
         _confine_write_target(target, photos)
         target.write_bytes(raw)
-    return target.name
+    return target.name, jobs.photo_folder(job, target)
 
 
 def _job_or_404(name: str) -> Path:
@@ -562,10 +602,22 @@ def upload_photos(name: str, files: list[UploadFile]):
         manifest = load_manifest(job)
         known = {p["file"] for p in manifest["photos"]}
         stored = [store_upload(job, f) for f in files]
-        fresh = [n for n in stored if n not in known]
-        ordered = exif_order([jobs.photos_dir(job) / n for n in fresh],
-                             stamp_for=capturedates.stamp_for(job))
-        manifest["photos"].extend({"file": p.name, "caption": ""} for p in ordered)
+        # The folder each one actually went into, so the entry records where
+        # the file is rather than where the top of Photos would have been. An
+        # entry whose folder is wrong is exactly how a photograph becomes
+        # "named in photo-manifest.json but is not in the Photos folder".
+        where = {name: folder for name, folder in stored}
+        fresh = [n for n, _ in stored if n not in known]
+        photos_dir = jobs.photos_dir(job)
+        ordered = exif_order(
+            [photos_dir / (where[n] or "") / n for n in fresh],
+            stamp_for=capturedates.stamp_for(job))
+        for p in ordered:
+            entry = {"file": p.name, "caption": ""}
+            folder = where.get(p.name) or ""
+            if folder:
+                entry["folder"] = folder
+            manifest["photos"].append(entry)
         save_manifest(job, manifest)
     return manifest
 

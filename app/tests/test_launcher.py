@@ -334,3 +334,37 @@ def test_both_launchers_are_thin_shims():
     # `app/server/tell.py`, which is the piece that had to exist before the
     # window could go.
     assert "pause" not in bat.lower()
+
+
+# --- one icon, and it is the firm's ---------------------------------------
+# Spenser ended up with two icons on his Desktop on 2026-09-03, one of them
+# dead, and the live one wearing Python's logo. Both were consequences of
+# pointing the shortcut straight at pythonw.exe to get rid of the black window.
+
+def test_the_icon_file_ships_with_the_app():
+    """Windows reads it off disk when the shortcut is made, so it has to be
+    inside the package rather than beside it in the repository."""
+    icon = Path(__file__).resolve().parents[2] / "app" / "data" / "rrf.ico"
+    assert icon.is_file()
+    assert icon.stat().st_size > 1000
+
+    from PIL import Image
+    with Image.open(icon) as im:
+        sizes = sorted(im.info.get("sizes", []))
+    # Windows picks a size per place it draws it. Without a small one it
+    # shrinks the big one and the bars turn to mush in the taskbar.
+    assert (16, 16) in sizes and (256, 256) in sizes
+
+
+def test_the_shortcut_names_that_icon():
+    source = (Path(__file__).resolve().parents[2] / "app" / "install_windows.py").read_text()
+    assert "IconLocation" in source
+    assert "rrf.ico" in source
+
+
+def test_installing_clears_the_other_icon_away():
+    """The fallback .bat already removes a stale .lnk when it takes over. This
+    is the other half. Without it a Desktop collects one of each, and the .bat
+    points at a single version folder that the installer will later prune."""
+    source = (Path(__file__).resolve().parents[2] / "app" / "install_windows.py").read_text()
+    assert "_remove_stale(desktop / FALLBACK_NAME)" in source

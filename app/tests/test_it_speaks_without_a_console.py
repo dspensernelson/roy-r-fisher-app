@@ -22,20 +22,34 @@ import tell  # noqa: E402
 
 
 class NoConsole:
-    """What `pythonw.exe` looks like from inside Python: nowhere to write."""
+    """What `pythonw.exe` looks like from inside Python: nowhere to write.
+
+    Sets the snapshot rather than `sys.stdout`, because that is what the real
+    thing is by the time anybody asks. `tell` decides once, at import, before
+    it points the streams somewhere safe; a later look at `sys.stdout` would
+    answer for the stand-in it installed, not for the machine.
+    """
 
     def __enter__(self):
-        self.was = sys.stdout
-        sys.stdout = None
+        self.was = tell._HAS_CONSOLE
+        tell._HAS_CONSOLE = False
         return self
 
     def __exit__(self, *a):
-        sys.stdout = self.was
+        tell._HAS_CONSOLE = self.was
         return False
 
 
 def test_a_console_is_noticed_when_there_is_one():
     assert tell.has_a_console() is True
+
+
+def test_the_streams_are_never_left_as_none():
+    """The reason the app died silently on Spenser's machine on 2026-09-03.
+    Our own messages check first; uvicorn, every third-party library, and
+    Python's own traceback printer do not."""
+    assert sys.stdout is not None
+    assert sys.stderr is not None
 
 
 def test_a_console_is_noticed_when_there_is_not():
@@ -95,3 +109,34 @@ def test_nothing_here_ever_raises(monkeypatch):
     monkeypatch.undo()
     with NoConsole():
         tell.problem("This must not raise.")
+
+
+def test_the_web_server_can_start_with_no_console():
+    """The regression Spenser hit on 2026-09-03, an hour after the black
+    window was taken away.
+
+    `uvicorn.run` configures its own logging before it serves anything, and
+    that configuration reads `ext://sys.stdout`. Under `pythonw.exe` that is
+    None, so it raised `ValueError: Unable to configure formatter 'default'`
+    and the app died instantly, with no console for the error to appear in.
+    Every launch, silently.
+
+    Run in a separate process, because logging configuration is global and a
+    test that broke it here would break the suite around it.
+    """
+    import subprocess
+    import textwrap
+    code = textwrap.dedent("""
+        import sys, os, logging.config
+        sys.stdout = None
+        sys.stderr = None
+        sys.path.insert(0, %r)
+        import tell                      # repairs the streams on import
+        from uvicorn.config import LOGGING_CONFIG
+        logging.config.dictConfig(LOGGING_CONFIG)
+        assert tell.has_a_console() is False, "it thinks it can be seen"
+        raise SystemExit(0)
+    """) % str(Path(__file__).resolve().parents[1] / "server")
+    done = subprocess.run([sys.executable, "-c", code],
+                          capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr

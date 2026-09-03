@@ -186,3 +186,23 @@ dialog box and a line in the log.
 **How bad.** Medium in effect. High in what it says. It is the first thing
 anybody sees, every time.
 
+## B12. The update box sits narrow on the left instead of spanning the screen
+
+**What happens.** The "Update to version 0.6.5?" box stops at 720px and leaves
+open space to its right instead of filling the width Settings gives it.
+
+**Why, proven in the code.** `app/web/src/brand.css:137-138`, the `.confirm`
+class: `max-width: 720px`. `UpdateStep.jsx` uses that class for this box.
+
+**Check across all boxes of this kind before fixing.** `.confirm` is not this
+screen's own class. It is shared by six other boxes: one in `App.jsx:157`
+and three in `PhotosScreen.jsx` (284, 484, 807), each rendered at different
+points in the photo workflow. Widening `.confirm` itself changes all of them
+at once. Whoever fixes this has to look at each one and decide whether 720px
+was deliberate there too, not just widen the class and assume the rest follow.
+
+**Who it hits.** Spenser, seen 2026-09-03. Anybody who opens Settings once an
+update is available.
+
+**How bad.** Medium. Nothing is broken, it just looks unfinished.
+

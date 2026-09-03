@@ -239,6 +239,16 @@ def _write_rollback(home: Path, previous: str) -> Path:
     return script
 
 
+def _remove_stale(path: Path) -> None:
+    """Take away one of our own leftovers. Never raises: a Desktop that will
+    not let go of a file is not a reason to fail an install."""
+    try:
+        if path.exists():
+            path.unlink()
+    except OSError:
+        pass
+
+
 def _make_shortcut(target_launcher: Path, desktop: Path) -> str:
     """One icon on the Desktop that starts the newest version, with no window.
 
@@ -265,19 +275,32 @@ def _make_shortcut(target_launcher: Path, desktop: Path) -> str:
     version_folder = target_launcher.parent
     pythonw = version_folder / "program" / "python" / "pythonw.exe"
     entry = version_folder / "program" / "app" / "run_app.py"
+    # Windows takes an icon from whatever the shortcut points at, and what it
+    # points at is now Python, so without this the firm gets Python's logo on
+    # its Desktop. The .ico is the app's own three bars, the same shape the
+    # masthead draws, and it ships inside the package.
+    icon = version_folder / "program" / "app" / "data" / "rrf.ico"
     script = (
         "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('%s');"
         "$s.TargetPath = '%s';"
         "$s.Arguments = '\"%s\"';"
         "$s.WorkingDirectory = '%s';"
+        "$s.IconLocation = '%s';"
         "$s.Description = 'Roy R. Fisher';"
-        "$s.Save()" % (link, pythonw, entry, version_folder))
+        "$s.Save()" % (link, pythonw, entry, version_folder, icon))
     try:
         done = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive",
              "-ExecutionPolicy", "Bypass", "-Command", script],
             capture_output=True, timeout=60)
         if done.returncode == 0 and link.exists():
+            # One icon, not two. The fallback below already removes a stale
+            # .lnk when it takes over; this is the other half of that, and its
+            # absence is why Spenser ended up with two on 2026-09-03. A
+            # leftover .bat points at one version folder, and the installer
+            # keeps only the newest few, so it dies the moment that version is
+            # pruned and leaves an icon that does nothing.
+            _remove_stale(desktop / FALLBACK_NAME)
             return str(link)
     except (OSError, subprocess.SubprocessError):
         pass

@@ -23,9 +23,34 @@ Standard library only, like `packaging.py` and `startup.py` beside it. This
 runs before any third-party import, because the failures it exists to report
 include a package whose wheels never arrived.
 """
+import os
 import sys
 
 TITLE = "Roy R. Fisher"
+
+# Whether anybody could read a printed line, decided once, here, before the
+# lines below change anything. It has to be a snapshot: the moment stdout is
+# pointed somewhere safe, asking the question again gives the wrong answer,
+# and every failure would be printed into a void instead of shown.
+_HAS_CONSOLE = sys.stdout is not None and sys.stderr is not None
+
+# `pythonw.exe` hands this process None for both streams. Our own messages come
+# through this module and check first. Everything else does not: uvicorn logs
+# its warnings, third-party code assumes it can print, and Python prints a
+# traceback to stderr. Every one of those raises against None, in a place
+# nobody can see, and the app dies without a word.
+#
+# So they are pointed at nowhere rather than left as None. This module is
+# imported before uvicorn, on purpose, so it is done before anything can try.
+if not _HAS_CONSOLE:
+    try:
+        _nowhere = open(os.devnull, "w")
+        if sys.stdout is None:
+            sys.stdout = _nowhere
+        if sys.stderr is None:
+            sys.stderr = _nowhere
+    except OSError:
+        pass
 
 # What MessageBoxW wants: OK button, and an icon. 0x10 is the red cross, 0x40
 # is the blue "i". Named here rather than left as numbers at the call site.
@@ -35,8 +60,14 @@ _INFO = 0x40
 
 
 def has_a_console() -> bool:
-    """Whether anything printed here would actually be seen."""
-    return sys.stdout is not None
+    """Whether anything printed here would actually be seen.
+
+    The snapshot taken at import, never a fresh look at `sys.stdout`. By the
+    time anybody asks, `sys.stdout` has been pointed at nowhere so the rest of
+    the program can write to it safely, and a fresh look would answer yes for
+    a window that does not exist.
+    """
+    return _HAS_CONSOLE
 
 
 def _dialog(message: str, icon: int) -> bool:

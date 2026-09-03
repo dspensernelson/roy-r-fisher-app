@@ -79,23 +79,45 @@ def _by_name(name: str):
             for part in parts]
 
 
-def exif_order(paths):
+def exif_order(paths, stamp_for=None):
     """Default ordering: EXIF capture time, falling back to filename.
 
     The fallback reads numbers in the name as numbers. A photograph that still
     carries a capture time is ordered by that time exactly as it always was: a
     number typed on the front never overrules what the camera recorded.
+
+    `stamp_for` is how the server hands in a reader that remembers what it has
+    already seen, so a photograph is opened once rather than on every click
+    (`app/server/capturedates.py`). Left out, this reads the file itself, which
+    is what it has always done. The engine keeps no knowledge of any cache:
+    it asks for a capture time and does not care where the answer came from.
     """
+    read = stamp_for if stamp_for is not None else _stamp_of
+
     def key(p: Path):
-        try:
-            exif = Image.open(p).getexif()
-            stamp = exif.get(_DATETIME_TAG) or exif.get(306)  # 306 = DateTime
-            if stamp:
-                return (0, str(stamp), _by_name(p.name))
-        except Exception:
-            pass
+        stamp = read(p)
+        if stamp:
+            return (0, str(stamp), _by_name(p.name))
         return (1, "", _by_name(p.name))
-    return sorted(paths, key=key)
+
+    ordered = sorted(paths, key=key)
+    # One write at the end of the pass rather than one per photograph, when
+    # the reader keeps something worth writing.
+    flush = getattr(read, "flush", None)
+    if flush is not None:
+        flush()
+    return ordered
+
+
+def _stamp_of(p: Path) -> str:
+    """The capture time in this file, or empty. Empty covers a photograph with
+    none, one this machine cannot decode, and one that is not an image."""
+    try:
+        exif = Image.open(p).getexif()
+        stamp = exif.get(_DATETIME_TAG) or exif.get(306)  # 306 = DateTime
+        return str(stamp) if stamp else ""
+    except Exception:
+        return ""
 
 
 DEFAULT_OUTPUT_BASE = "Photo (RRF App)"

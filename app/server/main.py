@@ -14,6 +14,7 @@ import brief
 import browse
 import busy
 import captions
+import capturedates
 import aipolicy
 import applog
 import classify
@@ -762,7 +763,8 @@ def create_app() -> FastAPI:
         manifest = photos_routes.load_manifest(job)
         waiting = _uncaptioned(job, manifest)
         allowed = aipolicy.classify_job(job)
-        tranches = captions.plan_tranches(waiting) if waiting else []
+        tranches = (captions.plan_tranches(
+            waiting, size_for=capturedates.size_for(job)) if waiting else [])
         blocked = (aipolicy.LOCAL_ONLY if allowed == aipolicy.LOCAL_ONLY
                    else "no_key" if not captions.ai_available()
                    else "nothing_to_do" if not waiting

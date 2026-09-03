@@ -198,7 +198,7 @@ class CaptionError(Exception):
         self.kind = kind
 
 
-def plan_tranches(photo_paths: list, encoded: dict = None) -> list:
+def plan_tranches(photo_paths: list, encoded: dict = None, size_for=None) -> list:
     """Divide the run into requests: at most sixty each, smaller if size forces it.
 
     Two limits, and they are different kinds of thing. Sixty is the provider's
@@ -208,10 +208,18 @@ def plan_tranches(photo_paths: list, encoded: dict = None) -> list:
 
     The whole run always goes somewhere: 61 becomes 60 + 1, 100 becomes
     60 + 40, 121 becomes 60 + 60 + 1. Nothing is refused for being large.
+
+    `size_for` is how the price estimate hands in a reader that remembers what
+    it has already measured. Working out a size means decoding, resizing and
+    re-encoding the photograph, and the estimate runs after every click on the
+    screen, so on a job of forty photographs on a network drive this was
+    eleven seconds of work repeated for no reason. Left out, this measures
+    each file itself, which is what it has always done.
     """
+    measure = size_for if size_for is not None else _encoded_size
     tranches, current, running = [], [], 0
     for path in photo_paths:
-        size = len((encoded or {}).get(str(path), "")) or _encoded_size(path)
+        size = len((encoded or {}).get(str(path), "")) or measure(path)
         too_many = len(current) >= MAX_PER_TRANCHE
         too_big = current and running + size > MAX_REQUEST_BYTES
         if too_many or too_big:
@@ -221,6 +229,11 @@ def plan_tranches(photo_paths: list, encoded: dict = None) -> list:
         running += size
     if current:
         tranches.append(current)
+    # One write at the end of the pass, when the reader kept something worth
+    # writing. Same shape as `exif_order`, and for the same reason.
+    flush = getattr(measure, "flush", None)
+    if flush is not None:
+        flush()
     return tranches
 
 

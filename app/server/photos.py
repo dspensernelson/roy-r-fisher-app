@@ -15,6 +15,7 @@ import brief
 import busy
 import captionbackup
 import captions
+import capturedates
 import classify
 import jobfacts
 import jobs
@@ -327,7 +328,7 @@ def load_manifest(job: Path) -> dict:
         # Logged by name, because this is the number that settles whether a
         # slow open is this or something else on his network drive.
         started = time.monotonic()
-        ordered = exif_order(new_files)
+        ordered = exif_order(new_files, stamp_for=capturedates.stamp_for(job))
         elapsed_ms = round((time.monotonic() - started) * 1000)
         applog.note("reading capture dates", job=job.name,
                     files=len(new_files), ms=elapsed_ms)
@@ -540,7 +541,8 @@ def upload_photos(name: str, files: list[UploadFile]):
         known = {p["file"] for p in manifest["photos"]}
         stored = [store_upload(job, f) for f in files]
         fresh = [n for n in stored if n not in known]
-        ordered = exif_order([jobs.photos_dir(job) / n for n in fresh])
+        ordered = exif_order([jobs.photos_dir(job) / n for n in fresh],
+                             stamp_for=capturedates.stamp_for(job))
         manifest["photos"].extend({"file": p.name, "caption": ""} for p in ordered)
         save_manifest(job, manifest)
     return manifest

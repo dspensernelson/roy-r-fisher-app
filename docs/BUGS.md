@@ -206,3 +206,25 @@ update is available.
 
 **How bad.** Medium. Nothing is broken, it just looks unfinished.
 
+## B12. Nothing happens for a few seconds after you click the icon
+
+**What happens.** Double-click `Roy R. Fisher`. Nothing. No window, no
+hourglass, no sign the click landed. Some seconds later the browser opens.
+
+Spenser, 2026-09-03: *"the app opened once but I can't get it to open again"*,
+and then, a moment later: *"wait, it worked."*
+
+**Why.** Taking the black window away took the only proof the click had done
+anything. The app checks the package, picks a port, starts the server, waits
+for it to really answer, and only then opens the browser. All of that used to
+happen with a window in front of you saying "Starting Roy R. Fisher". Now it
+happens in silence.
+
+**Not the same as B11 and not a reason to bring the window back.** The window
+was the wrong answer to a real need. Clicking again is harmless, because the
+second copy finds the first and just opens the browser at it, but a person who
+sees nothing has no way to know that.
+
+**How bad.** Medium. It is the first thing that happens every time anybody
+uses the app, and it currently looks like a click that failed.
+

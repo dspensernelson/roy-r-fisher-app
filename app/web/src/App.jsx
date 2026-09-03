@@ -92,8 +92,17 @@ export default function App() {
     // The masthead is on every screen, so the notice is too. A bucket that is
     // down, no internet, or a development checkout all answer the same way and
     // nothing renders.
-    updateStatus().then(setUpdate).catch(() => {});
+    refreshUpdate();
   }, []);
+
+  // Asked again whenever something might have changed the answer, not only at
+  // load. `Check now` on Settings updates what the server remembers, and until
+  // 2026-09-03 nothing told the masthead to look again: the notice still held
+  // the answer from before the newer version existed, so it told Spenser to
+  // press a button that was not on the screen.
+  function refreshUpdate() {
+    return updateStatus().then(setUpdate).catch(() => {});
+  }
 
   async function runReset() {
     setAsking(false); setResetting("Putting the demo jobs back..."); setResetError("");
@@ -251,7 +260,8 @@ export default function App() {
         {view.screen === "settings" && (
           <Settings workspace={ws} version={version}
                     onChangeFolder={() => setView({ screen: "choose", job: null })}
-                    onWorkspaceChanged={(saved) => { setWs(saved); toJobs(); }} />
+                    onWorkspaceChanged={(saved) => { setWs(saved); toJobs(); }}
+                    onUpdateChecked={refreshUpdate} />
         )}
       </div>
     </>

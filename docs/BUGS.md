@@ -131,3 +131,58 @@ words on 2026-09-03: *"I just want the app to open like an app."*
 thing anyone sees.
 
 **How bad.** Medium in effect, high in what it says about the product.
+
+---
+
+# Found on 2026-09-03, testing the update on Spenser's virtual machine
+
+**The update button itself worked, for the first time ever.** It found 0.6.4,
+downloaded it, checked it, installed it and closed the app. Everything below is
+about how that felt, not whether it worked.
+
+## B9. `Check now` points at a button that is not on the screen
+
+**What happens.** Settings says "Version 0.6.4 is available. Use the Update
+available button at the top of the screen." There is no such button.
+
+**Why.** The masthead asks the server about updates once, when the page loads,
+and nothing tells it to ask again. `Check now` updates what the server
+remembers; the notice at the top is still holding the answer from before the
+newer version existed.
+
+**The way past it today.** Press `Check now`, then reload the page. The button
+appears.
+
+**How bad.** High. The app tells you to do something you cannot do.
+
+**Fixed on branch `the-update-button-appears`, 2026-09-03. Not yet shipped:
+0.6.3 and 0.6.4 both have it.**
+
+## B10. The screen never closes after an update
+
+**What happens.** The app says "Closing now", the server stops, and the tab
+sits there for ever showing that sentence on top of a job list that looks
+usable and is not. Nothing tells you the new version has started.
+
+**Why.** The panel is a notice laid over a live screen, so when the server dies
+the last render just stays there. There is nothing to replace it, because there
+is no longer an app to replace it.
+
+**How bad.** High. The last thing the app does before handing over is look
+broken.
+
+## B11. The black window
+
+**What happens.** A console window opens in front of the app, empty, and stays
+there the whole time it runs.
+
+**Spenser, 2026-09-03:** *"I just want the app to open like an app."*
+
+**What it needs.** `pythonw.exe` ships inside the package and runs with no
+console at all. The catch is that it also has nowhere to print, so a startup
+failure would be silent, which is worse. The failure has to become a real
+dialog box and a line in the log.
+
+**How bad.** Medium in effect. High in what it says. It is the first thing
+anybody sees, every time.
+

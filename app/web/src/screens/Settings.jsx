@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog } from "../api.js";
 
-export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged }) {
+export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
   const [state, setState] = useState(null);
   const [typed, setTyped] = useState("");
   const [replacing, setReplacing] = useState(false);
@@ -58,6 +58,10 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
             setLooking(true); setLooked(null);
             try {
               const found = await checkForUpdate();
+              // The masthead holds its own copy of this answer and only ever
+              // asked once, at load. Without this it goes on saying nothing
+              // while this screen says a newer version is there.
+              if (onUpdateChecked) await onUpdateChecked();
               setLooked(found.available
                 ? `Version ${found.available} is available. Use the Update available button at the top of the screen.`
                 : "You are on the newest version.");

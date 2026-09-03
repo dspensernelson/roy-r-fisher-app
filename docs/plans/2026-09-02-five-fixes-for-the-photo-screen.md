@@ -128,18 +128,18 @@ puts a photograph where the report cannot see it, and everything afterwards
 treats it as an outsider. Spenser worked that out from the behaviour alone on
 2026-09-03.
 
-- [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
-- [ ] Test for absence rather than emptiness, in both places
-- [ ] **B1, B2, B3, B5: `Add a photo` writes into the folder the report is
+- [x] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [x] Test for absence rather than emptiness, in both places
+- [x] **B1, B2, B3, B5: `Add a photo` writes into the folder the report is
       pointed at**, not the top of `Photos`
-- [ ] A server test proving an added photograph survives a caption run, a
+- [x] A server test proving an added photograph survives a caption run, a
       take-out of a different photograph, and a build
-- [ ] A server test proving taking one out leaves no second copy anywhere
-- [ ] **B4: a door out of the blocked build.** Name the photograph that cannot
+- [x] A server test proving taking one out leaves no second copy anywhere
+- [x] **B4: a door out of the blocked build.** Name the photograph that cannot
       be found and offer to take it out and carry on, rather than refusing with
       nothing to do. `Clear captions` must stop being blocked by the same
       check, because being unable to start over is worse than the first fault.
-- [ ] The whole suite passes and nothing skips
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `unstick-the-photo-folder`, and Spenser says yes
 
 ### Ship 0.6.4, carrying slices 3, 4 and 5 together

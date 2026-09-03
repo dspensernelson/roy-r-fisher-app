@@ -70,13 +70,13 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 2, the app writes a log
 
-- [ ] Write `app/tests/test_the_log.py` and watch it fail
-- [ ] Add `app/server/applog.py`, with rotation and the key guard
-- [ ] Add `RRF_LOG_FILE` to `never_touch_the_real_home` in `app/tests/conftest.py`
-- [ ] Record every request, and the cost of the manifest read by name
-- [ ] Record the four places that currently swallow an error in silence
-- [ ] Add `Show the log` to the Settings screen
-- [ ] The whole suite passes and nothing skips
+- [x] Write `app/tests/test_the_log.py` and watch it fail
+- [x] Add `app/server/applog.py`, with rotation and the key guard
+- [x] Add `RRF_LOG_FILE` to `never_touch_the_real_home` in `app/tests/conftest.py`
+- [x] Record every request, and the cost of the manifest read by name
+- [x] Record the four places that currently swallow an error in silence
+- [x] Add `Show the log` to the Settings screen
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `the-app-writes-a-log`, and Spenser says yes
 
 ### Ship 0.6.1

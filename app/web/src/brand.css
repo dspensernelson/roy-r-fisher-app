@@ -39,6 +39,12 @@
   --has-ink: #1E7A3C;         /* the pale green reads on charcoal only */
   --needs-ink: #8A5200;       /* amber, not red: nothing is wrong yet */
   --shadow-raised: 0 1px 3px rgba(35,31,32,0.12);
+
+  /* A folder holding something stays dark, and is one step lighter than the
+     nav bar so it reads as a filled thing rather than as more chrome.
+     Spenser, 2026-09-04: he wants what is in a folder to stay highlighted.
+     Everything else on this screen went to paper and this did not. */
+  --folder-fill: #3E3F43;
 }
 * { box-sizing: border-box; }
 /* The firm's letterhead carries a red band across the very top of every printed
@@ -308,16 +314,16 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .linky { background: none; border: none; color: var(--link); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; margin-left: auto; }
 .linky:hover { text-decoration: underline; }
 
-.folder { background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 11px 14px; margin-bottom: 6px; }
+.folder { background: var(--folder-fill); border-radius: 5px; padding: 11px 14px; margin-bottom: 6px; }
 .folder .top { display: flex; align-items: baseline; gap: 10px; }
-.folder .name { font-size: 14px; font-weight: 700; color: var(--ink); }
-.folder .count { font-size: 12px; color: var(--ink-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.folder .name { font-size: 14px; font-weight: 700; color: var(--box-ink); }
+.folder .count { font-size: 12px; color: var(--box-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 .folder .line { font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
-/* The pale green and amber were readable on charcoal and are not on paper.
-   These are the same two states, measured against white. */
-.folder .has { color: var(--has-ink); }
-.folder .needs { color: var(--needs-ink); }
-.folder .quiet { color: var(--ink-muted); font-style: italic; }
+/* The pale pair, because this row is dark again. The darker green and amber
+   are for paper and are unreadable here. */
+.folder .has { color: #7FCF9B; }
+.folder .needs { color: #F0B95E; }
+.folder .quiet { color: var(--box-muted); font-style: italic; }
 /* Empty folders keep their name and their count and give up their weight.
    Nothing is hidden: the row is still there, still readable, still says what
    is in it. */
@@ -520,21 +526,21 @@ input::placeholder, textarea::placeholder {
    what Mark himself confirmed. Nothing is inferred from a filename. */
 .band-head.sub-head { margin-top: 16px; }
 .folder-open { background: none; border: 0; padding: 0; cursor: pointer; display: flex; align-items: baseline; gap: 7px; font: inherit; color: inherit; }
-.folder-open .caret { font-size: 10px; color: var(--ink-muted); }
-.file { border-top: 1px solid var(--line); padding: 7px 0 5px 17px; }
+.folder-open .caret { font-size: 10px; color: var(--box-muted); }
+.file { border-top: 1px solid rgba(255, 255, 255, 0.07); padding: 7px 0 5px 17px; }
 .file:first-of-type { margin-top: 7px; }
 .file-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-.file-name { font-size: 13px; color: var(--ink); }
-.file-name.gone { text-decoration: line-through; color: var(--ink-muted); }
-.file-where { font-size: 11.5px; color: var(--ink-muted); }
-.file-said { font-size: 12px; color: var(--has-ink); }
+.file-name { font-size: 13px; color: var(--box-ink); }
+.file-name.gone { text-decoration: line-through; color: var(--box-muted); }
+.file-where { font-size: 11.5px; color: var(--box-muted); }
+.file-said { font-size: 12px; color: #7FCF9B; }
 .file-acts { margin-left: auto; display: flex; gap: 12px; }
 /* Named for what it is rather than `.picker`, which the folder-browsing
    screen already owns and paints white. Light text on white is unreadable,
    and the clash was invisible until the menu was opened on a real job. */
 .say-what { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 3px 0; }
-.say-what button { font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; color: var(--link); cursor: pointer; }
-.say-what button:hover { border-color: var(--link); background: var(--quiet-bg); }
+.say-what button { font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.30); background: transparent; color: var(--box-ink); cursor: pointer; }
+.say-what button:hover { border-color: rgba(255, 255, 255, 0.60); background: rgba(255, 255, 255, 0.08); }
 
 /* ---- Task 5: version, review, cost, planned workflows -------------------- */
 
@@ -609,7 +615,7 @@ input::placeholder, textarea::placeholder {
   cursor: default;
 }
 .planned-row .name { font-weight: 600; color: #6a6a6a; }
-.planned-state { font-size: 13px; color: #8a8a8a; white-space: nowrap; }
+.planned-state { font-size: 13px; color: var(--ink-muted); white-space: nowrap; }
 
 @media (max-width: 700px) {
   .planned-row { flex-direction: column; align-items: flex-start; gap: 4px; }

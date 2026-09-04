@@ -664,3 +664,64 @@ def test_the_mac_side_also_says_when_office_goes_quiet(monkeypatch):
         office_mac._osascript("x", 330)
     assert "did not answer" in caught.value.message
     assert "waiting for you" in caught.value.message
+
+
+# ------------------------------------------ what the built package carries ---
+# The riskiest thing in the Windows half is not the Office calls. It is whether
+# pywin32 can import at all, because the package installs libraries with pip's
+# --target, which copies files and runs no setup steps. So `pywin32.pth`, the
+# file that would wire this up, is copied in and never read.
+#
+# These run against a real built package, which is the only place the question
+# can be asked from a Mac. Whether the wiring then works is Check 13, on the
+# virtual machine.
+import packaging as apppackaging  # noqa: E402
+
+PACKAGES = Path(__file__).resolve().parents[2] / "build" / "packages"
+BUILT = PACKAGES / ("Roy R. Fisher v%s"
+                    % (apppackaging.version_of(Path(__file__).resolve().parents[2])
+                       or "0.0.0"))
+LIBRARIES = BUILT / "program" / "python" / "site-packages"
+
+needs_a_built_package = pytest.mark.skipif(
+    not LIBRARIES.is_dir(),
+    reason="no package is built; run: python3 tools/package_windows.py")
+
+
+@needs_a_built_package
+@pytest.mark.parametrize("part", [
+    "openpyxl",
+    "win32com",
+    "win32/lib",
+    "pywin32_system32/pythoncom314.dll",
+    "pywin32_system32/pywintypes314.dll",
+])
+def test_the_package_carries_what_the_bridge_imports(part):
+    """Named one at a time so a missing one says which."""
+    assert (LIBRARIES / part).exists(), "%s is not in the package" % part
+
+
+@needs_a_built_package
+def test_the_bootstrap_finds_the_folders_in_a_real_package(monkeypatch):
+    """The path work, proven against a real package rather than a guess.
+
+    What this cannot prove is that Windows then loads the two system files.
+    That is Check 13 and it needs the virtual machine.
+    """
+    monkeypatch.setattr(office_win, "_library_home", lambda: LIBRARIES)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    before = list(sys.path)
+    office_win._wake_pywin32()
+    added = [one for one in sys.path if one not in before]
+    assert str(LIBRARIES / "win32") in added
+    assert str(LIBRARIES / "win32" / "lib") in added, "pythoncom lives here"
+
+
+@needs_a_built_package
+def test_the_check_tool_ships():
+    """It is the only way anybody finds out whether Office works on a given
+    computer, and it is useless if it is not in the package."""
+    engine = BUILT / "program" / "app" / "engine"
+    for one in ("office.py", "office_win.py", "office_mac.py",
+                "gridextract.py", "office_check.py"):
+        assert (engine / one).is_file(), "%s is not in the package" % one

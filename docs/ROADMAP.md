@@ -442,6 +442,50 @@ that the whole thing works end to end on his machine. Gate D still stands:
 Spenser runs the exact package himself before Mark sees it.
 
 
+### The delivery fail-safe, 2026-09-03
+
+**A version that installs and then will not start is a failed update.** Decided
+by Spenser on 2026-09-03, after 0.6.5 did exactly that.
+
+**What went wrong.** 0.6.5 installed cleanly, reported that the update had
+worked, and could not start. `uvicorn` reads its logging settings from the
+console, `pythonw.exe` gives it none, and the app raised before it ever served.
+Nothing checked. `update_apply.py` said in its own docstring that failing to
+start was not a failed update, because the Desktop icon already pointed at the
+new version. That held until a version could not run at all.
+
+**Three layers. The third is the one that would have stopped it.**
+
+1. **The update watches the new version answer.** `update_apply.apply` waits up
+   to 120 seconds for `install_windows.something_running` to report the version
+   it just installed. Not something answering, that version answering: the old
+   one coming back up answers too, and that is not this one starting. If it
+   never does, the update reports a failure and holds the window open.
+
+2. **The way back goes on the Desktop, and only while it is needed.**
+   `Start previous version.bat` has been written into
+   `%LOCALAPPDATA%\Roy R. Fisher\` by every install since the installer
+   existed, and on 2026-09-03 nobody knew. It stays where it is. What is new is
+   `install_windows.put_way_back_on_desktop`, which puts a
+   `Go back to the last version.bat` on the Desktop at the one moment it is
+   worth something, and `take_way_back_off_desktop`, which takes it away as
+   soon as a version does start. Deliberately not permanent: Spenser asked on
+   2026-09-03 for one icon that starts the app, and a second icon sitting there
+   in normal use is that same confusion again.
+
+3. **The bucket is only updated after the virtual machine has run that
+   version.** A rule, not code. 0.6.5 was published to Cloudflare having never
+   started on any Windows machine, so the first person to run it was the person
+   it stranded. The local server at `http://192.168.64.1:8088/` exists so a
+   version can reach the virtual machine without reaching the bucket, and it
+   was not used. Nothing enforces this and nothing can. It is written here so
+   it does not live in one person's memory.
+
+**What layer 1 cannot see.** It knows the app answered `/api/version` as the
+right version. It knows nothing about whether the photo screen works. That is
+what `docs/CHECKS.md` is for. The two do different jobs and neither replaces
+the other.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not
@@ -459,13 +503,11 @@ done.
   stated facts. Not approved, not designed, and it needs its own measurement
   pass over how often a prefix would be wrong before anyone builds it.
 
-- **Putting the way back somewhere Mark can find it.**
-  `install_windows.py` writes `Start previous version.bat` into
-  `%LOCALAPPDATA%\Roy R. Fisher\`, which is a folder he will never navigate
-  to on his own. The rollback mechanism works; reaching it does not. Noticed
-  2026-08-28 while building the update button, and deliberately not fixed
-  there, because the moment he needs it is the moment a new version is not
-  working and reading is the last thing he wants to do.
+- **Putting the way back somewhere Mark can find it. Done 2026-09-03**, and
+  written up above under the delivery fail-safe. Noticed 2026-08-28 while
+  building the update button and left alone then. It cost Spenser an evening on
+  2026-09-03, when the way back was on his own machine the whole time and
+  neither of us thought of it.
 
 - **A layout pass over the job screen and the photo screen.** Spenser's words
   on 2026-08-25: it is all a little confusing. Not specified yet.

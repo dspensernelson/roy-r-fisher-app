@@ -25,6 +25,12 @@ installed and the icon still points at it. Every failure message here says so,
 because Mark is remote, he will not debug anything, and the one thing he can
 always do is double-click that icon.
 
+**A version that installs and then will not start is a failed update.** Added
+2026-09-03, after 0.6.5 installed perfectly on Spenser's machine and could not
+start, and this said the update had worked. So it now waits for the new version
+to answer on its own port before it says anything of the kind. When it does not
+answer, this puts the way back on the Desktop and names it.
+
 Standard library only, like `install_windows.py` and `startup.py` beside it.
 """
 import subprocess
@@ -44,6 +50,14 @@ import install_windows as installer  # noqa: E402  standard library only
 # a genuinely stuck one is reported while Mark is still watching.
 WAIT_SECONDS = 90.0
 POLL_SECONDS = 1.0
+
+# How long the newly installed version gets to answer before this calls it a
+# failure. It has a whole package to hash and a web server to start, so it is
+# not quick even when it is working, and calling a slow machine a broken one
+# would send Mark back a version for no reason. Measured start on the Windows
+# VM is a few seconds, so this is a large multiple of it and still short enough
+# that somebody watching a window is not left guessing.
+NEW_VERSION_SECONDS = 120.0
 
 # Said after every failure, because it is the only sentence that matters.
 # What it can actually see: the previous version's folder was never touched,
@@ -74,13 +88,67 @@ def wait_for_the_app_to_close(home, seconds=WAIT_SECONDS, sleep=time.sleep,
         sleep(POLL_SECONDS)
 
 
+def wait_for_the_new_version(home, version, seconds=NEW_VERSION_SECONDS,
+                             sleep=time.sleep, now=time.monotonic) -> bool:
+    """Wait until the version just installed is really answering. True if it is.
+
+    Asks `install_windows.something_running`, the same question the wait above
+    asks and the same one the install refuses on, and then insists on the
+    version string matching. Something answering is not enough: the old version
+    coming back up would answer too, and that is not this version starting.
+    """
+    deadline = now() + seconds
+    while True:
+        if installer.something_running(home) == version:
+            return True
+        if now() >= deadline:
+            return False
+        sleep(POLL_SECONDS)
+
+
+def did_not_start(home, version, previous, out) -> int:
+    """The new version installed and then would not run. Say so, and show the
+    way back.
+
+    The way back has existed since the installer was written and lives in
+    %LOCALAPPDATA%, where Mark will never look. This is the moment it is worth
+    something, so it goes on his Desktop here and is named here.
+    """
+    out("")
+    out("Roy R. Fisher %s was installed, but it did not start." % version)
+    out("")
+    out("  It had %d seconds to answer and it did not." % NEW_VERSION_SECONDS)
+    out("")
+    if previous:
+        out("The version you had, %s, is still installed and was not "
+            "changed." % previous)
+        out("")
+        icon = installer.put_way_back_on_desktop(home, previous)
+        if icon:
+            out("There is now an icon on your Desktop called:")
+            out("    %s" % installer.WAY_BACK_NAME)
+            out("Double-click it to start %s again." % previous)
+        else:
+            out("To go back to it, run:")
+            out("    %s" % (Path(home) / installer.ROLLBACK_NAME))
+    else:
+        out("This is the only version installed, so there is nothing to go "
+            "back to.")
+        out("Try the Roy R. Fisher icon on your Desktop once more.")
+    out("")
+    out("Then send Spenser this window.")
+    return 1
+
+
 def start_new_version(launcher, spawn=None) -> bool:
     """Open the version that was just installed.
 
     A `.bat` cannot be handed straight to CreateProcess on Windows, so it goes
-    through `cmd.exe`, in its own console, the same way the Desktop icon opens
-    it. Failing to start it is not a failed update: the update worked, and the
-    icon on his Desktop already points at the new version.
+    through `cmd.exe`, the same way the Desktop icon opens it.
+
+    True here means it was started, and nothing more. Whether it then works is
+    what `wait_for_the_new_version` is for. This used to say that failing to
+    start it was not a failed update, which was the belief 0.6.5 disproved.
     """
     launcher = Path(launcher)
     if spawn is None:
@@ -168,10 +236,25 @@ def apply(home=None, source=None, out=print, sleep=time.sleep,
     out("Opening Roy R. Fisher %s..." % done["version"])
     launcher = Path(done["installed_to"]) / installer.LAUNCHER_NAME
     if not start_new_version(launcher, spawn=spawn):
+        # Never started, so nothing was proved either way. The icon on his
+        # Desktop points at the new version and double-clicking it is a
+        # perfectly good way to find out.
         out("")
         out("It could not be opened from here, which does not undo the "
             "update.")
         out("Start it from the Roy R. Fisher icon on your Desktop.")
+        return 0
+
+    out("Waiting for it to answer...")
+    previous = done["previous"][0] if done["previous"] else ""
+    if not wait_for_the_new_version(home, done["version"], sleep=sleep, now=now):
+        return did_not_start(home, done["version"], previous, out)
+
+    # It answered as itself. Any way back left on the Desktop by an earlier
+    # failure is now describing a version he has moved past.
+    installer.take_way_back_off_desktop()
+    out("")
+    out("Roy R. Fisher %s is open. You can close this window." % done["version"])
     return 0
 
 

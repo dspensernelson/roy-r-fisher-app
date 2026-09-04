@@ -59,6 +59,23 @@ def lines(collected):
     return "\n".join(collected)
 
 
+def once_installed(home, version):
+    """`something_running` as it behaves during an update that works.
+
+    Nothing answers while the old app is closing and the copying is going on,
+    and the new version answers once it is there. Real enough for the two waits
+    either side of the install, and it does not need a web server.
+    """
+    def answering(_home):
+        return version if (Path(home) / version).is_dir() else ""
+    return answering
+
+
+def never_answers(_home):
+    """The 0.6.5 case: it installs, it is started, and it never comes up."""
+    return ""
+
+
 # --- waiting for the app to go ---------------------------------------------
 def test_it_waits_while_a_version_is_still_answering(place, monkeypatch):
     _, home, _ = place
@@ -104,8 +121,9 @@ def test_it_refuses_plainly_when_the_app_never_closes(place, tmp_path, monkeypat
 
 
 # --- the ordinary case ------------------------------------------------------
-def test_it_installs_once_nothing_is_answering(place, tmp_path):
+def test_it_installs_once_nothing_is_answering(place, tmp_path, monkeypatch):
     _, home, desktop = place
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
     package = make_package(tmp_path / "unzipped", "0.5.4")
     started = []
     said = []
@@ -117,8 +135,22 @@ def test_it_installs_once_nothing_is_answering(place, tmp_path):
     assert desktop.exists()
 
 
-def test_it_opens_the_version_it_just_installed(place, tmp_path):
+def test_it_says_the_new_version_is_open_only_once_it_has_answered(place, tmp_path,
+                                                                   monkeypatch):
+    """Not when it was started. Started and running are two different things,
+    and 0.6.5 was the difference."""
     _, home, _ = place
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
+    said = []
+    code = update_apply.apply(home=home, source=make_package(tmp_path / "u", "0.5.4"),
+                              out=said.append, spawn=lambda cmd, **kw: None)
+    assert code == 0
+    assert "0.5.4 is open" in lines(said)
+
+
+def test_it_opens_the_version_it_just_installed(place, tmp_path, monkeypatch):
+    _, home, _ = place
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
     package = make_package(tmp_path / "unzipped", "0.5.4")
     started = []
     update_apply.apply(home=home, source=package, out=lambda _s: None,
@@ -127,10 +159,11 @@ def test_it_opens_the_version_it_just_installed(place, tmp_path):
     assert str(home / "0.5.4" / installer.LAUNCHER_NAME) in started[0]
 
 
-def test_the_previous_version_is_left_where_it_was(place, tmp_path):
+def test_the_previous_version_is_left_where_it_was(place, tmp_path, monkeypatch):
     """The whole rollback mechanism is that the old folder is still there."""
     _, home, _ = place
     installer.install(make_package(tmp_path / "old", "0.5.3"))
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
     package = make_package(tmp_path / "new", "0.5.4")
     update_apply.apply(home=home, source=package, out=lambda _s: None,
                        spawn=lambda cmd, **kw: None)
@@ -139,12 +172,164 @@ def test_the_previous_version_is_left_where_it_was(place, tmp_path):
     assert (home / installer.ROLLBACK_NAME).is_file()
 
 
-def test_the_rollback_file_points_at_the_version_he_had(place, tmp_path):
+def test_the_rollback_file_points_at_the_version_he_had(place, tmp_path, monkeypatch):
     _, home, _ = place
     installer.install(make_package(tmp_path / "old", "0.5.3"))
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
     update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
                        out=lambda _s: None, spawn=lambda cmd, **kw: None)
     assert "0.5.3" in (home / installer.ROLLBACK_NAME).read_text()
+
+
+# --- a version that installs and then will not start ------------------------
+# All of this exists because 0.6.5 did exactly that on 2026-09-03. It installed
+# without a complaint, the update said it had worked, and the app could not
+# start. Nothing anywhere noticed.
+def test_a_version_that_never_answers_is_a_failed_update(place, tmp_path,
+                                                         monkeypatch):
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    monkeypatch.setattr(installer, "something_running", never_answers)
+    clock = Clock()
+    said = []
+    code = update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                              out=said.append, spawn=lambda cmd, **kw: None,
+                              sleep=clock.sleep, now=clock.now)
+    assert code == 1, "it called a version that will not start a good update"
+    assert "did not start" in lines(said)
+
+
+def test_it_waits_the_whole_bound_before_calling_it_a_failure(place, tmp_path,
+                                                              monkeypatch):
+    """A slow machine is not a broken version. Sending Mark back a version
+    because his laptop took its time would be a fault of its own."""
+    _, home, _ = place
+    monkeypatch.setattr(installer, "something_running", never_answers)
+    clock = Clock()
+    update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                       out=lambda _s: None, spawn=lambda cmd, **kw: None,
+                       sleep=clock.sleep, now=clock.now)
+    assert sum(clock.slept) >= update_apply.NEW_VERSION_SECONDS - update_apply.POLL_SECONDS
+
+
+def test_something_else_answering_does_not_count_as_this_version_starting(place,
+                                                                          tmp_path,
+                                                                          monkeypatch):
+    """The old version coming back up answers too, and that is not this one
+    starting."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    # Nothing answers until 0.5.4 is on disk, because the install refuses on
+    # this same question. Then the old version is what answers, not the new one.
+    monkeypatch.setattr(installer, "something_running",
+                        lambda _h: "0.5.3" if (home / "0.5.4").is_dir() else "")
+    clock = Clock()
+    said = []
+    code = update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                              out=said.append, spawn=lambda cmd, **kw: None,
+                              sleep=clock.sleep, now=clock.now)
+    assert code == 1
+    assert "did not start" in lines(said)
+
+
+def test_the_way_back_goes_on_the_desktop_when_a_version_will_not_start(place,
+                                                                        tmp_path,
+                                                                        monkeypatch):
+    """It has always been in %LOCALAPPDATA%, which he will never open. This is
+    the one moment it is worth something, so this is where it appears."""
+    _, home, desktop = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    monkeypatch.setattr(installer, "something_running", never_answers)
+    clock = Clock()
+    said = []
+    update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                       out=said.append, spawn=lambda cmd, **kw: None,
+                       sleep=clock.sleep, now=clock.now)
+    icon = desktop / installer.WAY_BACK_NAME
+    assert icon.is_file(), "he was told to go back with nothing to click"
+    assert installer.WAY_BACK_NAME in lines(said), "the icon was not named"
+    assert "0.5.3" in lines(said), "it did not say which version he goes back to"
+
+
+def test_the_desktop_way_back_runs_the_rollback_script_in_the_home_folder(place,
+                                                                          tmp_path):
+    """One way back, in one place, reached from two. A second copy of the
+    logic would be a second thing to get wrong."""
+    _, home, desktop = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    installer.install(make_package(tmp_path / "new", "0.5.4"))
+    written = installer.put_way_back_on_desktop(home, "0.5.3")
+    assert written
+    body = Path(written).read_text()
+    assert str(home) in body
+    assert installer.ROLLBACK_NAME in body
+    assert "0.5.3" in body
+
+
+def test_nothing_is_put_on_the_desktop_when_there_is_nothing_to_go_back_to(place,
+                                                                           tmp_path):
+    _, home, desktop = place
+    assert installer.put_way_back_on_desktop(home, "") == ""
+    assert not (desktop / installer.WAY_BACK_NAME).exists()
+
+
+def test_the_way_back_comes_off_the_desktop_once_a_version_answers(place, tmp_path,
+                                                                   monkeypatch):
+    """Otherwise a bad update leaves an icon offering for ever to undo a
+    version that works, which is Spenser's two-icons complaint again."""
+    _, home, desktop = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    (desktop / installer.WAY_BACK_NAME).write_text("left over", encoding="utf-8")
+    monkeypatch.setattr(installer, "something_running", once_installed(home, "0.5.4"))
+    update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                       out=lambda _s: None, spawn=lambda cmd, **kw: None)
+    assert not (desktop / installer.WAY_BACK_NAME).exists()
+
+
+def test_showing_the_way_back_never_raises(place, tmp_path, monkeypatch):
+    """It is called on the failure path. A failure path that can itself fail
+    is not a failure path."""
+    _, home, _ = place
+
+    def no_desktop():
+        raise OSError("this machine has no Desktop")
+
+    monkeypatch.setattr(installer, "desktop_folder", no_desktop)
+    assert installer.put_way_back_on_desktop(home, "0.5.3") == ""
+    installer.take_way_back_off_desktop()
+
+
+def test_the_failure_names_the_rollback_script_when_no_icon_can_be_written(place,
+                                                                           tmp_path,
+                                                                           monkeypatch):
+    """No Desktop is not no way back. It falls back to naming the path."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "old", "0.5.3"))
+    monkeypatch.setattr(installer, "something_running", never_answers)
+    monkeypatch.setattr(installer, "put_way_back_on_desktop", lambda _h, _p: "")
+    clock = Clock()
+    said = []
+    update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                       out=said.append, spawn=lambda cmd, **kw: None,
+                       sleep=clock.sleep, now=clock.now)
+    assert installer.ROLLBACK_NAME in lines(said)
+
+
+def test_a_first_install_that_will_not_start_says_there_is_no_way_back(place,
+                                                                       tmp_path,
+                                                                       monkeypatch):
+    """Honest rather than helpful. Offering a way back that is not there would
+    be worse than saying so."""
+    _, home, desktop = place
+    monkeypatch.setattr(installer, "something_running", never_answers)
+    clock = Clock()
+    said = []
+    code = update_apply.apply(home=home, source=make_package(tmp_path / "new", "0.5.4"),
+                              out=said.append, spawn=lambda cmd, **kw: None,
+                              sleep=clock.sleep, now=clock.now)
+    assert code == 1
+    assert "nothing to go back to" in lines(said)
+    assert not (desktop / installer.WAY_BACK_NAME).exists()
 
 
 # --- when the install itself goes wrong -------------------------------------

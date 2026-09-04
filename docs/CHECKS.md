@@ -85,3 +85,10 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > **Should:** the app restarts on the new version, and the job folders are
 > untouched.
 > **Wrong if:** anything about the jobs changed, or the app does not come back.
+
+> ### Check 12. The update waits to see the new version really start
+> Take the update, and watch the window it opens all the way to the last line.
+> **Should:** it says `Waiting for it to answer...` and then names the version
+> as open. If the new version never starts, it says so instead and puts
+> `Go back to the last version` on the Desktop.
+> **Wrong if:** it says the update worked while the app is not running.

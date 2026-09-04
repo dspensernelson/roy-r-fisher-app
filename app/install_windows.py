@@ -51,6 +51,11 @@ FALLBACK_NAME = "Roy R. Fisher.bat"
 LAUNCHER_NAME = "Start Roy R. Fisher.bat"
 ROLLBACK_NAME = "Start previous version.bat"
 
+# The same way back, put where he will actually see it, and only while he
+# needs it. See `put_way_back_on_desktop` below for why it is not always
+# there.
+WAY_BACK_NAME = "Go back to the last version.bat"
+
 
 class InstallRefused(Exception):
     """A reason not to install, already worded the way Mark should read it."""
@@ -246,6 +251,61 @@ def _remove_stale(path: Path) -> None:
         if path.exists():
             path.unlink()
     except OSError:
+        pass
+
+
+def put_way_back_on_desktop(home: Path, previous: str) -> str:
+    """Show the way back on the Desktop, and only while it is needed.
+
+    `ROLLBACK_NAME` has been written into the home folder by every install
+    since it existed, and on 2026-09-03 a version that could not start proved
+    nobody knew that. It is in %LOCALAPPDATA%, which Mark will never open. A
+    file he cannot find is not a way back.
+
+    So this is the same script, reachable. It is put on the Desktop at the one
+    moment it is wanted, which is when a new version has just failed to start,
+    and `take_way_back_off_desktop` takes it away again the moment a version
+    does start. Not permanent, because Spenser asked for one icon that starts
+    the app and a second icon sitting there in normal use is exactly the
+    confusion he asked to be rid of.
+
+    Never raises. It is called on the failure path, and a failure path that can
+    itself fail is not a failure path.
+    """
+    if not previous:
+        return ""
+    try:
+        desktop = desktop_folder()
+        desktop.mkdir(parents=True, exist_ok=True)
+        path = desktop / WAY_BACK_NAME
+        # Joined rather than formatted, like the rollback script: this is batch
+        # and batch is full of per-cent signs.
+        path.write_text("\r\n".join([
+            "@echo off",
+            "REM This is here because a new version of Roy R. Fisher did not",
+            "REM start. It starts version " + previous + ", which is the one",
+            "REM you had before. Nothing is uninstalled and nothing of yours",
+            "REM moves: your key, your jobs folder, your settings and your",
+            "REM documents are not kept in here.",
+            'cd /d "' + str(home) + '"',
+            'call "' + ROLLBACK_NAME + '"',
+            "",
+        ]), encoding="utf-8")
+        return str(path)
+    except (OSError, ValueError, RuntimeError):
+        return ""
+
+
+def take_way_back_off_desktop() -> None:
+    """Take it away once a version has actually started.
+
+    Called on the success path, so an icon left over from a bad update does not
+    sit on his Desktop for ever afterwards offering to undo a version that is
+    working. Never raises, for the same reason nothing else here does.
+    """
+    try:
+        _remove_stale(desktop_folder() / WAY_BACK_NAME)
+    except (OSError, ValueError, RuntimeError):
         pass
 
 

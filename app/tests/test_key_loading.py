@@ -221,8 +221,12 @@ def test_the_unavailable_control_does_not_look_like_a_live_button():
     css = CSS.read_text()
     block = css[css.index(".button.is-off"):]
     block = block[:block.index("}")]
-    assert "background: #EDEAE3" in block, "grey, not the live blue"
-    assert "var(--ink-muted)" in block
+    # Written against the token rather than the hex it happens to hold. The
+    # literal value was asserted here and broke on 2026-09-04 when the tint
+    # moved to the measured pair, while the thing this test is about, that the
+    # button reads as grey and not as a live control, never changed.
+    assert "var(--quiet-bg)" in block, "grey, not the live blue"
+    assert "var(--ink-on-quiet)" in block, "the ink measured against that tint"
 
 
 def test_the_screen_says_captions_can_still_be_typed():

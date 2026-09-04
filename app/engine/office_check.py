@@ -64,6 +64,12 @@ def a_practice_workbook(into: Path) -> Path:
     Built rather than carried as a file so there is nothing to keep in step
     with anything. It has a merged heading, a filled header row, borders and
     numbers, which are the four things that go wrong when a grid renders badly.
+
+    **The headings wrap, because Mark's do.** Measured 2026-09-04 against the
+    Utica Ridge assessment grid. Without wrap a long heading overflows its cell
+    and is cut at the edge of the copied range, which reads as a fault in the
+    app and is a fault in this workbook. A practice grid that does not look
+    like his material tests the wrong thing.
     """
     import openpyxl
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -86,6 +92,7 @@ def a_practice_workbook(into: Path) -> Path:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(patternType="solid", fgColor="FFD9D9D9")
         cell.border = box
+        cell.alignment = Alignment(horizontal="center", wrap_text=True)
 
     rows = (("Y0917-12J", 2025, 1021630, 4773560),
             ("Y0917-12J", 2024, 1021630, 4528110),

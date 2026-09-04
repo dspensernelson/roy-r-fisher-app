@@ -63,6 +63,10 @@ COLD_APPLICATION = (
     "into it, close the dialog, and open and close one document. Do not quit "
     "it.")
 
+STUCK = (
+    "\n\nLook at Excel and Word on this computer. One of them may be showing "
+    "a box that is waiting for you.")
+
 
 def available() -> bool:
     return EXCEL_APP.is_dir() and WORD_APP.is_dir()
@@ -82,8 +86,20 @@ def _quoted(path) -> str:
 
 
 def _osascript(script: str, timeout: int):
-    return subprocess.run(["osascript", "-e", script],
-                          capture_output=True, text=True, timeout=timeout)
+    """Run one script, and turn silence into a sentence.
+
+    Office asks a person questions and cannot tell us it is asking. On
+    2026-09-04 Word sat on a Grant access box for seven minutes and said
+    nothing at all, which from here looks exactly like a machine that has
+    stopped. A wait with no message is the fault this app keeps fixing, so it
+    is not left as a raised timeout for somebody else to catch.
+    """
+    try:
+        return subprocess.run(["osascript", "-e", script],
+                              capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise office.OfficeRefused(
+            "Office did not answer within %d minutes.%s" % (timeout // 60, STUCK))
 
 
 # ----------------------------------------------------------- the picture ---

@@ -14,6 +14,11 @@ pypdf==6.14.2
 # Reads one range out of Mark's workbook without starting Excel, which is
 # what keeps Office away from his files. See app/engine/gridextract.py.
 openpyxl==3.1.5
+# Lets Python drive Excel and Word on Windows. Windows only, and the
+# marker keeps it off the development Mac, where it cannot install.
+# PowerShell is the fallback when this will not load: see
+# app/engine/office_win.py.
+pywin32==312; sys_platform == "win32"
 
 # Test-only.
 pytest==8.4.2

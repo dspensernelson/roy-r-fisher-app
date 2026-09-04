@@ -496,3 +496,171 @@ def test_the_check_never_lets_a_traceback_be_the_whole_answer():
     source = Path(office_check.__file__).read_text()
     assert "useful" in source
     assert source.count("traceback.format_exc()") == 2
+
+
+# --------------------------------------------------- the Windows backend ---
+# None of this runs on Windows here. What is testable from a Mac is the text
+# handed to PowerShell, the numbers Office is given, and the decision about
+# which mechanism to use. The Office calls themselves are proven only on the
+# virtual machine, and `docs/CHECKS.md` is where that is written down.
+import office_win  # noqa: E402
+
+
+def test_the_windows_backend_imports_on_a_mac():
+    """It must, because a test file imports it and because a mistake here
+    would only show up on the machine nobody can debug."""
+    assert office_win.name()
+
+
+def test_a_mac_is_not_offered_the_windows_backend():
+    assert office_win.available() is False
+
+
+def test_the_numbers_office_is_given_are_the_documented_ones():
+    """Excel's own values for "draw it the way it would print" and "as a
+    picture". Wrong numbers give a bitmap or a screen rendering, and both look
+    worse than his paste. They cannot be read off Excel before Excel is
+    talking, so they are written down and checked here."""
+    assert office_win.XL_PRINTER == 2
+    assert office_win.XL_PICTURE == -4147
+    assert office_win.WD_PDF == 17
+
+
+def test_a_quote_in_a_path_is_doubled_for_powershell():
+    """The only escape a single-quoted PowerShell string has."""
+    assert office_win._ps_text("/jobs/o'brien/x.docx") == "/jobs/o''brien/x.docx"
+
+
+def test_a_path_reaches_powershell_escaped(monkeypatch, tmp_path):
+    scripts = []
+
+    def watch(script, work, what):
+        scripts.append(script)
+
+    monkeypatch.setattr(office_win, "_run_powershell", watch)
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    office_win.docx_to_pdf(tmp_path / "o'brien.docx", tmp_path / "out.pdf")
+    assert "o''brien.docx" in scripts[0]
+
+
+def test_powershell_always_quits_office_even_when_a_step_fails(monkeypatch, tmp_path):
+    """An Excel left running holds the file open and the next attempt fails
+    for a reason that has nothing to do with the next attempt."""
+    scripts = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: scripts.append(script))
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    office_win.docx_to_pdf(tmp_path / "one.docx", tmp_path / "out.pdf")
+    assert "finally" in scripts[0]
+    assert "$word.Quit()" in scripts[0]
+
+
+def test_excel_is_opened_read_only_and_a_new_copy(monkeypatch, tmp_path):
+    """Mark may have a workbook open while the app runs. A new hidden copy
+    cannot see his windows and cannot disturb them."""
+    scripts = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: scripts.append(script))
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    a_workbook(tmp_path / "grid.xlsx")
+    office_win.render_grid(tmp_path / "grid.xlsx", tmp_path / "out.png")
+    written = scripts[0]
+    assert "New-Object -ComObject Excel.Application" in written
+    assert "$excel.Visible = $false" in written
+    assert "$book = $excel.Workbooks.Open('%s', $false, $true)" \
+        % office_win._ps_text(tmp_path / "grid.xlsx") in written, \
+        "the workbook was not opened read only"
+
+
+def test_powershell_is_used_when_the_library_will_not_load(monkeypatch, tmp_path):
+    """The whole reason both exist. The package installs libraries in a way
+    that never runs their setup steps, so pywin32 may not import at all."""
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    used = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: used.append(what))
+    office_win.docx_to_pdf(tmp_path / "one.docx", tmp_path / "out.pdf")
+    assert used == ["making the PDF"]
+
+
+def test_the_library_failing_falls_through_to_powershell(monkeypatch, tmp_path):
+    """Loading the library and Office answering it are two different things,
+    and only the second one matters."""
+    class Broken:
+        def DispatchEx(self, _what):
+            raise OSError("Excel is not answering")
+
+    monkeypatch.setattr(office_win, "_com", lambda: Broken())
+    monkeypatch.setattr(office_win, "_note", lambda what, exc: None)
+    used = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: used.append(what))
+    office_win.docx_to_pdf(tmp_path / "one.docx", tmp_path / "out.pdf")
+    assert used == ["making the PDF"], "it stopped instead of falling back"
+
+
+def test_the_fallback_does_not_hide_that_the_library_failed(monkeypatch, tmp_path):
+    """A machine where pywin32 never works would otherwise look normal and
+    quietly cost seconds on every grid."""
+    class Broken:
+        def DispatchEx(self, _what):
+            raise OSError("Excel is not answering")
+
+    written = []
+    monkeypatch.setattr(office_win, "_com", lambda: Broken())
+    monkeypatch.setattr(office_win, "_note",
+                        lambda what, exc: written.append((what, str(exc))))
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: None)
+    office_win.docx_to_pdf(tmp_path / "one.docx", tmp_path / "out.pdf")
+    assert written and "Excel is not answering" in written[0][1]
+
+
+def test_waking_the_library_never_raises(monkeypatch):
+    """It runs before anything works. A failure here means the fallback is
+    used, not that the app stops."""
+    def no_libraries():
+        raise RuntimeError("nothing is installed")
+
+    monkeypatch.setattr(office_win, "_library_home", no_libraries)
+    office_win._wake_pywin32()
+
+
+def test_no_powershell_at_all_is_a_sentence(monkeypatch, tmp_path):
+    monkeypatch.setattr(office_win, "_powershell", lambda: "")
+    with pytest.raises(office.OfficeRefused) as caught:
+        office_win._run_powershell("x", tmp_path, "making the PDF")
+    assert "no PowerShell" in caught.value.message
+
+
+def test_office_going_quiet_says_to_look_at_office(monkeypatch, tmp_path):
+    """Office asks a person questions and cannot tell us it is asking. On
+    2026-09-04 Word sat waiting on a Grant access box for seven minutes and
+    said nothing. A wait that never ends is the fault we keep fixing."""
+    import subprocess as sub
+
+    def times_out(*_a, **_k):
+        raise sub.TimeoutExpired("powershell", 600)
+
+    monkeypatch.setattr(office_win, "_powershell", lambda: "/bin/echo")
+    monkeypatch.setattr(office_win.subprocess, "run", times_out)
+    with pytest.raises(office.OfficeRefused) as caught:
+        office_win._run_powershell("x", tmp_path, "making the PDF")
+    said = caught.value.message
+    assert "did not answer" in said
+    assert "waiting for you" in said
+
+
+def test_the_mac_side_also_says_when_office_goes_quiet(monkeypatch):
+    """Same fault, same answer, both platforms. Word going silent on a Grant
+    access box is what made this necessary."""
+    import subprocess as sub
+
+    def times_out(*_a, **_k):
+        raise sub.TimeoutExpired("osascript", 330)
+
+    monkeypatch.setattr(office_mac.subprocess, "run", times_out)
+    with pytest.raises(office.OfficeRefused) as caught:
+        office_mac._osascript("x", 330)
+    assert "did not answer" in caught.value.message
+    assert "waiting for you" in caught.value.message

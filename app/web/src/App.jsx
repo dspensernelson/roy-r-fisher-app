@@ -121,12 +121,24 @@ export default function App() {
                 onClose={() => setUpdating(false)} />
   );
 
+  // The band and the mark travel together, inside one constant, because the
+  // masthead is rendered from five places below and a band added at each of
+  // them is a band that will one day be missing from one of them.
   const masthead = (
+    <>
+    <div className="topline" />
     <header className="masthead">
-      <svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true">
-        <rect x="2" y="12" width="6" height="28" fill="#782028" />
-        <rect x="10" y="2" width="7" height="38" fill="#782028" />
-        <rect x="19" y="8" width="6" height="32" fill="#343538" />
+      {/* The firm's mark: three columns with an angled cut on the taller
+          centre one. These points are traced from the logo files by measuring
+          the raster's own pixel edges, and the colours are written out rather
+          than taken from the tokens, so that changing a token can never
+          redraw the mark. The three plain bars this replaces were drawn from
+          memory, in a red the firm does not use, with no cut at all. */}
+      <svg width="15" height="40" viewBox="0 0 80 215" role="img"
+           aria-label="Roy R. Fisher">
+        <polygon fill="#231F20" points="21,55 21,195 1,195 1,77" />
+        <polygon fill="#8C0C04" points="54,2 54,214 26,214 26,26" />
+        <polygon fill="#231F20" points="59,55 79,76 79,195 59,195" />
       </svg>
       <div>
         <div className="wordmark">ROY R. FISHER</div>
@@ -151,6 +163,7 @@ export default function App() {
         </button>
       )}
     </header>
+    </>
   );
 
   const resetStep = asking && (

@@ -4,16 +4,33 @@
   --box-hover: #3E3F43;
   --box-ink: #FFFFFF;
   --box-muted: #B8B8BC;
-  --ink: #1D1D1F;             /* text on the ground */
+  --ink: #231F20;             /* text on the ground: the logo's warm near-black */
   --ink-muted: #6E6E73;
   --line: #E3E0D8;
-  --brand: #782028;           /* logo maroon */
-  --brand-hover: #8E2830;
-  --link: #248CC8;
+
+  /* Measured from the firm's own logo files, not guessed from the website.
+     #782028 was the guess and it was wrong in every asset. #7A222E and
+     #702930 are the degraded website variants and are wrong too. */
+  --brand: #8C0C04;
+  --brand-hover: #B30F05;     /* lighter on hover, not darker. 7.03:1 on white */
+  --brand-press: #6E0903;
+
+  /* The old #248CC8 was chosen against the charcoal bar, where it reads
+     4.60:1. On paper the same blue is 3.5:1, under the AA floor, and almost
+     every link in the app is on paper. So the working blue is darkened and
+     the original survives only for dark grounds. */
+  --link: #1B6C99;            /* 5.02:1 on white, 4.83:1 on eggshell */
+  --link-hover: #14536F;      /* 7.35:1 on white */
+  --link-on-dark: #248CC8;    /* only on the charcoal bar */
   --ok-bg: #E8F5EC;
   --ok-ink: #1E7A3C;
 }
 * { box-sizing: border-box; }
+/* The firm's letterhead carries a red band across the very top of every printed
+   page. This is the same band, and it is the app's only decoration. It was
+   chosen over serif titles and over repeating the mark, because three brand
+   signatures on one screen is how "bespoke" turns into overdone. */
+.topline { height: 3px; background: var(--brand); }
 body {
   margin: 0; background: var(--ground); color: var(--ink);
   font: 16px/1.55 "Helvetica Neue", Helvetica, Arial, -apple-system, "Segoe UI", sans-serif;
@@ -195,6 +212,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   font: 700 16px/1 inherit; padding: 15px 28px; cursor: pointer;
 }
 .button:hover { background: var(--brand-hover); }
+.button:active { background: var(--brand-press); transform: translateY(1px); }
 .button[disabled] { opacity: 0.5; cursor: default; }
 /* A control that cannot be used stops looking like a control that can. Half
    opacity alone still reads as a blue button he ought to be able to press. */
@@ -239,7 +257,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   background: var(--ok-bg); color: var(--ok-ink); }
 .outcome-partial { background: #FDF6E3; color: #6B5514; border: 1px solid #E8D9A8; }
 /* The same pair `.error` uses, so a failed run and an error look alike. */
-.outcome-failed { background: #FBEAEA; color: #8E2830; border: 1px solid #EBD2D2; }
+.outcome-failed { background: #FBEAEA; color: var(--brand); border: 1px solid #EBD2D2; }
 .outcome-unknown { background: #F4F3F1; color: var(--ink); border: 1px solid var(--line); }
 .outcome-said { margin: 0 0 8px; font-weight: 700; }
 
@@ -252,7 +270,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .run-said strong { display: block; font-size: 15px; color: var(--ink); }
 .run-counts { display: block; margin: 3px 0 10px; font-size: 13px; color: var(--ink-muted);
   font-variant-numeric: tabular-nums; }
-.error { margin-top: 18px; background: #FBEAEA; color: #8E2830; border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
+.error { margin-top: 18px; background: #FBEAEA; color: var(--brand); border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
 
 /* The job screen: what has arrived on the left, the report on the right.
    Side by side because the screen exists to be compared, not scrolled. */
@@ -326,7 +344,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }
 .button.secondary { background: var(--link); }
-.button.secondary:hover { background: #1F7AB0; }
+.button.secondary:hover { background: var(--link-hover); }
 
 /* Something moves while the model is looking at the photos. */
 .working { display: flex; align-items: center; gap: 10px; }
@@ -583,7 +601,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   font-size: 34px;
   font-weight: 700;
   letter-spacing: -.01em;
-  color: #782028;
+  color: var(--brand);
   white-space: nowrap;
 }
 .spend-warning {

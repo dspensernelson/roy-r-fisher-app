@@ -53,6 +53,19 @@ XL_PICTURE = -4147
 # Word's number for "make a PDF".
 WD_PDF = 17
 
+# How sharp the grid picture is. Measured 2026-09-04 on the virtual machine:
+# without this the picture came out 320 pixels wide where the Mac made 750, and
+# it looked soft.
+#
+# Excel exports a chart at its own size in points, turned into pixels at 96 to
+# the inch. So the only way to ask for a sharper picture is to make the chart
+# bigger and stretch the copied picture to fill it. That costs nothing, because
+# `CopyPicture` with XL_PICTURE gives a drawing rather than a grid of dots, and
+# a drawing enlarges without going soft.
+GRID_DOTS_PER_INCH = 200
+SCREEN_DOTS_PER_INCH = 96.0
+GRID_SCALE = GRID_DOTS_PER_INCH / SCREEN_DOTS_PER_INCH
+
 # Long enough for a whole report, short enough that a stuck Office is reported
 # while somebody is still watching. Office asks a person questions and cannot
 # tell us it is asking, so a wait that never ends is a real risk.
@@ -208,16 +221,27 @@ def _ps_render_grid(little: Path, out_png: Path, across: str) -> None:
         "  $sheet = $book.Worksheets.Item(1)\n"
         "  $area = $sheet.Range('%s')\n"
         "  $area.CopyPicture(%d, %d)\n"
-        "  $holder = $sheet.ChartObjects().Add(0, 0, $area.Width, $area.Height)\n"
-        "  $holder.Chart.Paste()\n"
-        "  $holder.Chart.Export('%s', 'PNG') | Out-Null\n"
+        "  $wide = $area.Width * %s\n"
+        "  $tall = $area.Height * %s\n"
+        "  $holder = $sheet.ChartObjects().Add(0, 0, $wide, $tall)\n"
+        "  $chart = $holder.Chart\n"
+        "  try { $chart.ChartArea.Format.Fill.Visible = $false } catch {}\n"
+        "  try { $chart.ChartArea.Format.Line.Visible = $false } catch {}\n"
+        "  $chart.Paste()\n"
+        "  $picture = $chart.Shapes.Item(1)\n"
+        "  $picture.LockAspectRatio = $false\n"
+        "  $picture.Left = 0\n"
+        "  $picture.Top = 0\n"
+        "  $picture.Width = $wide\n"
+        "  $picture.Height = $tall\n"
+        "  $chart.Export('%s', 'PNG') | Out-Null\n"
         "  $holder.Delete()\n"
         "  $book.Close($false)\n"
         "} finally {\n"
         "  $excel.Quit()\n"
         "}\n"
         % (_ps_text(little), _ps_text(across), XL_PRINTER, XL_PICTURE,
-           _ps_text(out_png)))
+           GRID_SCALE, GRID_SCALE, _ps_text(out_png)))
     _run_powershell(script, little.parent, "drawing the grid")
 
 
@@ -250,9 +274,25 @@ def _com_render_grid(client, little: Path, out_png: Path, across: str) -> None:
             sheet = book.Worksheets(1)
             area = sheet.Range(across)
             area.CopyPicture(XL_PRINTER, XL_PICTURE)
-            holder = sheet.ChartObjects().Add(0, 0, area.Width, area.Height)
-            holder.Chart.Paste()
-            holder.Chart.Export(str(out_png), "PNG")
+            wide = area.Width * GRID_SCALE
+            tall = area.Height * GRID_SCALE
+            holder = sheet.ChartObjects().Add(0, 0, wide, tall)
+            chart = holder.Chart
+            # A chart brings its own grey panel and border. Both would frame
+            # the grid, and a pasted grid has no frame around it.
+            for hide in ("Fill", "Line"):
+                try:
+                    getattr(chart.ChartArea.Format, hide).Visible = False
+                except Exception:
+                    pass
+            chart.Paste()
+            picture = chart.Shapes(1)
+            picture.LockAspectRatio = False
+            picture.Left = 0
+            picture.Top = 0
+            picture.Width = wide
+            picture.Height = tall
+            chart.Export(str(out_png), "PNG")
             holder.Delete()
         finally:
             book.Close(False)

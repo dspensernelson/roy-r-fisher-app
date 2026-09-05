@@ -725,3 +725,36 @@ def test_the_check_tool_ships():
     for one in ("office.py", "office_win.py", "office_mac.py",
                 "gridextract.py", "office_check.py"):
         assert (engine / one).is_file(), "%s is not in the package" % one
+
+
+def test_the_windows_grid_is_enlarged_before_it_is_exported(monkeypatch, tmp_path):
+    """Measured on the virtual machine, 2026-09-04: without this the picture
+    came out 320 pixels wide where the Mac made 750, and it looked soft.
+
+    Excel exports a chart at its own size, turned into pixels at 96 to the
+    inch, and there is no way to ask it for more. So the chart is made bigger
+    and the copied picture is stretched to fill it. The copy is a drawing, not
+    a grid of dots, so enlarging it costs no sharpness."""
+    scripts = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: scripts.append(script))
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    a_workbook(tmp_path / "grid.xlsx")
+    office_win.render_grid(tmp_path / "grid.xlsx", tmp_path / "out.png")
+    written = scripts[0]
+    assert office_win.GRID_SCALE > 2, "the grid is not being enlarged enough"
+    assert "$area.Width * %s" % office_win.GRID_SCALE in written
+    assert "$picture.Width = $wide" in written, "the picture was not stretched"
+
+
+def test_the_chart_panel_and_border_are_hidden(monkeypatch, tmp_path):
+    """A chart brings a grey panel and a border. A pasted grid has neither,
+    so both are turned off or the grid arrives in a frame."""
+    scripts = []
+    monkeypatch.setattr(office_win, "_run_powershell",
+                        lambda script, work, what: scripts.append(script))
+    monkeypatch.setattr(office_win, "_com", lambda: None)
+    a_workbook(tmp_path / "grid.xlsx")
+    office_win.render_grid(tmp_path / "grid.xlsx", tmp_path / "out.png")
+    assert "$chart.ChartArea.Format.Fill.Visible = $false" in scripts[0]
+    assert "$chart.ChartArea.Format.Line.Visible = $false" in scripts[0]

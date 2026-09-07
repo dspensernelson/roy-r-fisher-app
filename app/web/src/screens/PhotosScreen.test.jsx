@@ -566,3 +566,67 @@ describe("the bands switch", () => {
     expect(captions).toHaveLength(order.length);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mark all as reviewed, behind a warning.
+//
+// Spenser's rule, 2026-09-03, in his own words: it is very important that
+// humans review everything AI does. So this is never a plain button. The
+// warning says what it removes, and he chooses.
+// ---------------------------------------------------------------------------
+
+const UNREAD = [
+  { file: "photo-01.jpg", caption: "one" },
+  { file: "photo-02.jpg", caption: "two" },
+  { file: "photo-03.jpg", caption: "three" },
+];
+
+describe("marking every caption reviewed", () => {
+  beforeEach(() => {
+    api.getManifest.mockResolvedValue(manifest({ photos: UNREAD }));
+  });
+
+  it("offers it while something is still unread", async () => {
+    await show();
+    expect(await screen.findByRole("button", { name: "Mark all as reviewed" }))
+      .toBeInTheDocument();
+  });
+
+  it("asks first, and calls nobody until he says yes", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    expect(await screen.findByText(/removes the human check/)).toBeInTheDocument();
+    expect(all).not.toHaveBeenCalled();
+  });
+
+  it("backs out without calling anybody", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(all).not.toHaveBeenCalled();
+    expect(screen.queryByText(/removes the human check/)).not.toBeInTheDocument();
+  });
+
+  it("marks them when he says yes", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue(
+      manifest({ photos: UNREAD.map((p) => ({ ...p, reviewed: true })) }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark them all" }));
+    expect(all).toHaveBeenCalledWith(JOB);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+  });
+
+  it("does not offer it once every caption is read", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: UNREAD.map((p) => ({ ...p, reviewed: true })) }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByRole("button", { name: "Mark all as reviewed" }))
+      .not.toBeInTheDocument();
+  });
+});

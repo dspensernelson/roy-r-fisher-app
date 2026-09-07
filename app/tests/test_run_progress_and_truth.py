@@ -297,8 +297,17 @@ def test_the_one_live_action_outweighs_the_empty_folder_rows():
     assert "folderNote(f)" in home
 
 
-def test_review_is_still_one_photo_at_a_time():
-    """Approved, and not something this pass was asked to soften."""
+def test_marking_them_all_is_only_ever_offered_behind_a_warning():
+    """One at a time was the rule until 2026-09-07.
+
+    Spenser changed it that day, because Colleen was clicking one tick per
+    photograph over a mapped network drive. What did not change is his reason
+    for the old rule: it is very important that humans review everything AI
+    does. So the shortcut exists and the warning in front of it is the part
+    that must never quietly disappear, which is why this test outlived the
+    rule it was written for.
+    """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
-    assert "Mark reviewed" in screen
-    assert "Mark all" not in screen and "Review all" not in screen
+    assert "Mark reviewed" in screen, "one at a time is still how it is done"
+    assert "Mark all as reviewed" in screen
+    assert "removes the human check" in screen, "the shortcut lost its warning"

@@ -51,6 +51,8 @@ export const setPhotoBand = (name, file, band) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/band`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ band }) }).then(j);
 export const putBands = (name, body) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/bands`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j);
+export const markAllReviewed = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/review-all`, { method: "POST" }).then(j);
 export const jobFacts = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/facts`).then(j);
 export const putJobFacts = (name, body) =>

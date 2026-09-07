@@ -708,6 +708,36 @@ def _job_or_404(name: str) -> Path:
     return job
 
 
+def _entry_path_error(job: Path, entry, photos_dir: Path) -> Optional[str]:
+    """The path safety of one photo entry, checkable on its own.
+
+    Pulled out of `_validate_manifest_shape` on 2026-09-07 so that a click
+    which changes no path can check the one photograph it touches instead of
+    resolving all of them. Resolving is a filesystem round trip, and on a
+    mapped network drive 124 of them is a wait a person notices.
+
+    Nothing is weakened by checking one: `_validate_manifest_shape` still
+    walks every entry before a build, which is the moment an unsafe path
+    would reach the engine.
+    """
+    if not isinstance(entry, dict):
+        return "Each entry in 'photos' must be an object."
+    name = entry.get("file")
+    if not isinstance(name, str) or not name:
+        return "Each photo entry needs a non-empty 'file' name."
+    if name != Path(name).name:
+        return f"Photo file name {name!r} must be a bare filename with no path separators."
+    folder = entry.get("folder", "")
+    if not isinstance(folder, str):
+        return "A photo's 'folder' must be text."
+    if folder and ("\\" in folder or folder.startswith("/")
+                   or ".." in folder.split("/")):
+        return f"Photo folder {folder!r} must be a plain subfolder of Photos."
+    if _resolve_confined(jobs.photo_path(job, entry), photos_dir) is None:
+        return f"Photo file name {name!r} resolves outside the Photos folder."
+    return None
+
+
 def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
     """Return a plain-English error if `manifest` isn't shaped like the
     engine's contract, or if any photo entry's `file` could make the engine
@@ -749,21 +779,10 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
         letters.add(letter)
     photos_dir = jobs.photos_dir(job)
     for entry in photos:
-        if not isinstance(entry, dict):
-            return "Each entry in 'photos' must be an object."
+        error = _entry_path_error(job, entry, photos_dir)
+        if error:
+            return error
         name = entry.get("file")
-        if not isinstance(name, str) or not name:
-            return "Each photo entry needs a non-empty 'file' name."
-        if name != Path(name).name:
-            return f"Photo file name {name!r} must be a bare filename with no path separators."
-        folder = entry.get("folder", "")
-        if not isinstance(folder, str):
-            return "A photo's 'folder' must be text."
-        if folder and ("\\" in folder or folder.startswith("/")
-                       or ".." in folder.split("/")):
-            return f"Photo folder {folder!r} must be a plain subfolder of Photos."
-        if _resolve_confined(jobs.photo_path(job, entry), photos_dir) is None:
-            return f"Photo file name {name!r} resolves outside the Photos folder."
         if REVIEWED in entry and not isinstance(entry[REVIEWED], bool):
             return "A photo's reviewed flag must be true or false."
         if "cut" in entry and not isinstance(entry["cut"], bool):
@@ -829,11 +848,42 @@ def put_manifest(name: str, manifest: dict):
 
 
 def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
-    """Tick or untick one caption. Touches that one key and nothing else."""
-    manifest = load_manifest(job)
+    """Tick or untick one caption. Touches that one key and nothing else.
+
+    **It never lists the photo folder.** A tick cannot change what is on disk,
+    so reconciling the folder against the list is work the click does not
+    need, and on Colleen's mapped network drive that work is the whole wait.
+    Reported by Spenser on 2026-09-07 and measured the same day on the
+    124-photograph Cedar Rapids job: the reconcile is 9.5 ms on a local disk
+    against 0.0 ms to read the list straight off disk, and every file
+    operation inside it is a round trip on her drive.
+
+    The answer still carries the photographs that are in the report rather
+    than every photograph on disk, so the screen never gains tiles it was not
+    shown. That narrowing reads the job's own notes and never the folder,
+    which is what makes this safe.
+    """
+    path = manifest_path(job)
+    if not path.is_file():
+        # No list on disk yet is a job just opened, the same case `_set_cut`
+        # allows for. Reconcile once, because there is nothing to read.
+        manifest = load_manifest(job)
+    else:
+        try:
+            manifest = json.loads(path.read_text())
+        except ValueError:
+            raise HTTPException(400, "This job's photo list could not be read.")
+
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("photos"), list):
+        raise HTTPException(400, "This job's photo list could not be read.")
+
     name = Path(file).name
+    photos_dir = jobs.photos_dir(job)
     for entry in manifest["photos"]:
-        if entry.get("file") == name:
+        if isinstance(entry, dict) and entry.get("file") == name:
+            error = _entry_path_error(job, entry, photos_dir)
+            if error:
+                raise HTTPException(400, error)
             if reviewed:
                 if not str(entry.get("caption", "")).strip():
                     raise HTTPException(400, "Write a caption before marking it reviewed.")
@@ -842,15 +892,77 @@ def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
                 entry.pop(REVIEWED, None)
             with busy.writing():
                 save_manifest(job, manifest)
-            return {**manifest, "review": review_progress(manifest)}
+            in_report, chosen, missing = _report_set(job, manifest["photos"])
+            view = dict(manifest, photos=in_report, photo_folder=chosen,
+                        photo_folder_missing=missing)
+            return {**view, "review": review_progress(view)}
     raise HTTPException(404, "That photo is not in this job.")
 
 
 @router.post("/api/jobs/{name}/photos/{file}/reviewed")
 def mark_reviewed(name: str, file: str):
-    """One click, one caption. Deliberately not called Approve, and there is
-    deliberately no way to do all of them at once."""
+    """One click, one caption. Deliberately not called Approve.
+
+    There was deliberately no way to do all of them at once until 2026-09-07,
+    when Spenser asked for one because Colleen was paying a round trip per
+    photograph on a network drive. It exists now, at `review-all`, and only
+    behind a warning that says what it removes. His condition did not change.
+    """
     return _set_reviewed(_job_or_404(name), file, True)
+
+
+@router.post("/api/jobs/{name}/review-all")
+def review_all(name: str):
+    """Tick every caption in the report at once.
+
+    **The warning belongs on the screen and it is not optional.** Spenser's
+    rule, in his own words on 2026-09-03: it is very important that humans
+    review everything AI does. This is a shortcut for a person who has read
+    them, not a way to skip reading them, so the screen says so plainly and
+    asks before it calls this.
+
+    Asked for again on 2026-09-07, because Colleen was paying for one round
+    trip per photograph on a mapped network drive. One request replaces fifty
+    and, like one tick, it never lists the folder.
+
+    Two photographs it will not touch, for the same reasons one tick will not.
+    A photograph with no caption has nothing to have been read. A photograph
+    taken out of the report needs no caption and no reading. So this can leave
+    a job still not ready to build, and `review` in the answer says so rather
+    than the screen having to guess.
+    """
+    job = _job_or_404(name)
+    path = manifest_path(job)
+    if not path.is_file():
+        manifest = load_manifest(job)
+    else:
+        try:
+            manifest = json.loads(path.read_text())
+        except ValueError:
+            raise HTTPException(400, "This job's photo list could not be read.")
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("photos"), list):
+        raise HTTPException(400, "This job's photo list could not be read.")
+
+    photos_dir = jobs.photos_dir(job)
+    marked = 0
+    for entry in manifest["photos"]:
+        if not isinstance(entry, dict) or is_cut(entry):
+            continue
+        if not str(entry.get("caption", "")).strip() or is_reviewed(entry):
+            continue
+        error = _entry_path_error(job, entry, photos_dir)
+        if error:
+            raise HTTPException(400, error)
+        entry[REVIEWED] = True
+        marked += 1
+
+    if marked:
+        with busy.writing():
+            save_manifest(job, manifest)
+    in_report, chosen, missing = _report_set(job, manifest["photos"])
+    view = dict(manifest, photos=in_report, photo_folder=chosen,
+                photo_folder_missing=missing)
+    return {**view, "marked": marked, "review": review_progress(view)}
 
 
 @router.post("/api/jobs/{name}/photos/{file}/unreviewed")

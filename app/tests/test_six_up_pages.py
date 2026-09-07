@@ -155,27 +155,65 @@ def caption_height(text: str) -> float:
     return max(0.46, lines * LINE_IN + 0.06)
 
 
+def furniture_inches() -> float:
+    """The empty paragraphs the template puts between one table and the next.
+
+    Read from the template rather than written down, because this is the
+    number that went wrong: three empty paragraphs at a 12pt line each is
+    0.60in of nothing on every page, and the first version of this budget did
+    not count them at all.
+
+    Measured on the second gap rather than the first. The first one is not
+    typical: it carries the paragraph that defines the section and a bookmark,
+    both of which have to stay. Every gap after it is the one that repeats.
+    """
+    kids = [c.tag.split("}")[-1]
+            for c in Document(str(SIX_UP_TEMPLATE)).element.body]
+    at = [i for i, k in enumerate(kids) if k == "tbl"]
+    return kids[at[1] + 1:at[2]].count("p") * LINE_IN
+
+
 def page_inches_used(captions) -> float:
-    """What one full six-up page occupies, heading included.
+    """What one full six-up page occupies, the empty paragraphs included.
 
     **A page has three caption rows, not six.** Each row carries two captions
     side by side and is as tall as the taller of them. Getting that wrong is
     what made the first cut of this test claim Mark's own worst page
-    overflowed by an inch when the built document fits with 0.40in to spare.
+    overflowed by an inch.
     """
     pairs = [captions[i:i + 2] for i in range(0, len(captions), 2)]
-    return 0.42 + 3 * 2.60 + sum(max(caption_height(c) for c in pair)
-                                 for pair in pairs)
+    return furniture_inches() + 3 * 2.60 + sum(max(caption_height(c) for c in pair)
+                                               for pair in pairs)
 
 
-USABLE_IN = 10.0        # 11.0 page less 0.5 top and 0.5 bottom margin
+# **A continued page does not give the table 10 inches.** The paper is 11in
+# with half-inch margins, which would be 10.0, and that is what the first cut
+# of this budget assumed. It is wrong. The continued-page header is three
+# paragraphs, a blank line then SUBJECT PHOTOGRAPHS- CONTINUED then another
+# blank line, and it begins 0.20in from the paper edge. Three 12pt lines end
+# 0.80in down, past the half-inch margin, so Word pushes the body to meet it.
+#
+# Page one escapes it, because page one's header is empty. That is exactly
+# why Colleen's document on 2026-09-07 looked right for two pages and then
+# produced a page holding a heading and nothing else.
+USABLE_IN = 11.0 - 0.80 - 0.50
 
 
 def test_a_full_page_of_ordinary_captions_fits_with_slack_to_spare():
+    """Reported by Spenser on 2026-09-07 from a real document: a page came out
+    holding the heading and nothing else, and it repeated down the file.
+
+    This test said the page fitted with 0.40in to spare while the document in
+    front of him did not. It was wrong twice over. It counted a 10in page
+    when the continued-page header leaves 9.70, and it counted no empty
+    paragraphs when the template puts three between every table.
+    """
     ordinary = ["View of the northwest corner facing southeast"] * 6
     used = page_inches_used(ordinary)
-    assert used <= USABLE_IN
-    assert round(USABLE_IN - used, 2) == 0.40
+    assert used <= USABLE_IN, (
+        "a page of ordinary captions overflows by %.2fin" % (used - USABLE_IN))
+    assert round(USABLE_IN - used, 2) >= 0.30, (
+        "a page of ordinary captions has almost no slack left")
 
 
 def test_the_page_holds_two_over_long_caption_rows_and_no_more():
@@ -193,12 +231,10 @@ def test_the_page_holds_two_over_long_caption_rows_and_no_more():
     short = "View of the west entrance"
     long = "x" * 120                       # three lines at 3.20in
 
-    # Side by side in one row: one row grows, the page is comfortable.
+    # Side by side in one row: one row grows, the page still holds.
     assert page_inches_used([long, long] + [short] * 4) <= USABLE_IN
-    # Two rows grow: exactly at the limit.
-    assert page_inches_used([long, short, long, short, short, short]) <= USABLE_IN
-    # Three rows grow: past it.
-    assert page_inches_used([long, short, long, short, long, short]) > USABLE_IN
+    # A second row grows: past it.
+    assert page_inches_used([long, short, long, short, short, short]) > USABLE_IN
 
 
 @has_template

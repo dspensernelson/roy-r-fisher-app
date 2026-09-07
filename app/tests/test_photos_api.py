@@ -320,3 +320,75 @@ def test_manifest_rejects_absolute_path_job_name(client):
     r_windows = c.get("/api/jobs/C:\\evil/manifest")
     assert r_windows.status_code == 404
     assert r_windows.json()["detail"] == "Job not found."  # our handler ran
+
+
+# --- how many photographs go on a page, 2026-09-07 ------------------------
+
+def test_a_manifest_without_the_key_is_three_per_page():
+    """Absent means three, the same answer bands_on, is_cut and is_reviewed
+    give for a missing key. Every manifest on Mark's disk therefore reads as
+    the layout he already has, with nothing to convert."""
+    import photos
+    assert photos.photos_per_page({"photos": []}) == 3
+
+
+def test_six_is_read_back_as_six():
+    import photos
+    assert photos.photos_per_page({"photos": [], "photos_per_page": 6}) == 6
+
+
+@pytest.mark.parametrize("bad", [0, 1, 2, 4, 5, 7, 12, "6", "three", True, False, None, 3.0, [6]])
+def test_only_three_or_six_may_be_written(client, bad):
+    """True is in this list on purpose. In Python `True == 1` and
+    `isinstance(True, int)` is true, so a bool slips through a type check and
+    has to be refused by the value check instead."""
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/manifest", json={"photos": [], "photos_per_page": bad})
+    assert r.status_code == 400, bad
+    assert "must be 3 or 6" in r.json()["detail"]
+
+
+@pytest.mark.parametrize("good", [3, 6])
+def test_three_and_six_are_both_accepted(client, good):
+    c, _ = client
+    r = c.put("/api/jobs/JOB1/manifest", json={"photos": [], "photos_per_page": good})
+    assert r.status_code == 200
+
+
+def test_the_manifest_route_always_answers_with_a_layout(client):
+    """Normalised on the way out so the browser never repeats the default
+    rule in JavaScript, which is how PhotosScreen.jsx came to hold its own
+    `/ 3`. Nothing is written: the file still has no key."""
+    c, job = client
+    c.put("/api/jobs/JOB1/manifest", json={"photos": []})
+    assert c.get("/api/jobs/JOB1/manifest").json()["photos_per_page"] == 3
+    on_disk = json.loads((job / "Photos" / "photo-manifest.json").read_text())
+    assert "photos_per_page" not in on_disk
+
+
+def test_choosing_six_survives_a_round_trip(client):
+    c, _ = client
+    c.put("/api/jobs/JOB1/manifest", json={"photos": [], "photos_per_page": 6})
+    assert c.get("/api/jobs/JOB1/manifest").json()["photos_per_page"] == 6
+
+
+def test_the_job_decides_the_template_and_the_layout_together():
+    """One value picks both, so a six-up layout can never be filled into a
+    three-up template."""
+    import main
+    t3, l3 = main._template_and_layout({"photos": []})
+    t6, l6 = main._template_and_layout({"photos": [], "photos_per_page": 6})
+    assert (l3.per_page, l6.per_page) == (3, 6)
+    assert t3.name == "Photo.docx" and t6.name == "Photo six-up.docx"
+    assert t3.is_file() and t6.is_file(), "both ship inside the app"
+
+
+def test_the_override_changes_the_file_but_never_the_layout(monkeypatch, tmp_path):
+    """RRF_PHOTO_TEMPLATE is how a different template is tested. It must not
+    be able to put six-up cells into whatever it points at by accident."""
+    import main
+    fake = tmp_path / "whatever.docx"
+    monkeypatch.setenv("RRF_PHOTO_TEMPLATE", str(fake))
+    template, layout = main._template_and_layout({"photos": [], "photos_per_page": 6})
+    assert template == fake
+    assert layout.per_page == 6

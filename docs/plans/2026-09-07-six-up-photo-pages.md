@@ -151,17 +151,17 @@ from the six longest captions in the corpus fits with all of it still spare.
 
 ### Slice 3, the manifest can hold the choice, and nothing behaves differently
 
-- [ ] Add the failing cases to `app/tests/test_photos_api.py` and watch them fail
-- [ ] Add `PHOTOS_PER_PAGE` and `photos_per_page(manifest)` to `app/server/photos.py`
-- [ ] Teach `_validate_manifest_shape` that it must be 3 or 6 if it is there at all
-- [ ] Prove a manifest without the key reads as three, with nothing to migrate
-- [ ] `app/server/main.py` picks the template and the layout together from that one value
-- [ ] `RRF_PHOTO_TEMPLATE` still overrides, and overriding does not change the layout
+- [x] Add the failing cases to `app/tests/test_photos_api.py` and watch them fail
+- [x] Add `PHOTOS_PER_PAGE` and `photos_per_page(manifest)` to `app/server/photos.py`
+- [x] Teach `_validate_manifest_shape` that it must be 3 or 6 if it is there at all
+- [x] Prove a manifest without the key reads as three, with nothing to migrate
+- [x] `app/server/main.py` picks the template and the layout together from that one value
+- [x] `RRF_PHOTO_TEMPLATE` still overrides, and overriding does not change the layout
 - [x] Delete the dead `photo_pages_per_table()` at `app/server/main.py:56`
-- [ ] The manifest route returns `photos_per_page` always present, without writing it to disk
-- [ ] Prove a build with the key absent produces the document it produces today
-- [ ] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
-- [ ] Commit on `the-manifest-holds-the-layout`, and Spenser says yes
+- [x] The manifest route returns `photos_per_page` always present, without writing it to disk
+- [x] Prove a build with the key absent produces the document it produces today
+- [x] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
+- [x] Commit on `the-manifest-holds-the-layout`, and Spenser says yes
 
 ### Slice 4, the toggle on the screen, and the hardcoded 3 goes away
 

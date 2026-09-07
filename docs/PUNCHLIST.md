@@ -26,6 +26,11 @@ just want the app to open like an app."* He also wants a desktop icon you
 double-click, which the installer already makes, so the work is hiding the
 console and nothing else. This is B8.
 
+**P5. Moving `Close the app` into the nav bar.** Answered. No belt and
+suspenders: it comes out of Settings entirely, moves into the nav bar next to
+`Settings`, and gets a confirm step it does not have today. Written out in full
+in `docs/FUTURES.md` under F13.
+
 ---
 
 ## Open

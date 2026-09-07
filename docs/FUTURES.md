@@ -173,7 +173,43 @@ not asserting.
 
 Not built on purpose, 2026-08-25. It waits until he has wanted it twice.
 
-## F12. Putting the way back somewhere Mark can find it
+## F12. Putting the way back somewhere Mark can find it. Built 2026-09-03
 
-A bad update is undone by running the previous version's install file. That is
-true and it is written down nowhere he would look.
+**Done. It stays here with its number so nothing below it is renumbered.**
+
+A failed update now puts `Go back to the last version` on his Desktop and names
+it, and takes it away again as soon as a version starts. Why it is only there
+while it is needed is in `docs/ROADMAP.md`, under the delivery fail-safe.
+
+## F13. `Close the app` moves to the nav bar, in a red box, behind a confirm
+
+**Answered and approved to build, Spenser, 2026-09-03.** Was P5 on
+`docs/PUNCHLIST.md`.
+
+Today `Close the app` is a plain button inside its own section on the Settings
+page (`app/web/src/screens/Settings.jsx:214-237`), reached only by opening
+Settings first, and it closes on the first click with nothing to catch a
+mis-click.
+
+**What changes.**
+
+1. **It comes out of Settings entirely.** No belt and suspenders, Spenser's
+   words. The `Closing the app` section and its button are removed from
+   `Settings.jsx`.
+2. **It moves into the dark nav bar**, `App.jsx:227-235`, where `Jobs` and
+   `Settings` already sit, positioned up on the right next to `Settings`.
+3. **It is styled as a solid red box**, not a link, so it reads differently
+   from `Jobs` and `Settings` next to it. Brand red, matching the app's
+   existing `.button` colour (`#782028`), not a new colour.
+4. **It gets a confirm step it does not have today.** Sitting in the nav bar
+   makes it one click away on every screen, which is easier to hit by
+   accident than a button buried in Settings ever was. Click asks first, the
+   same shape as `resetStep` in `App.jsx:156-169`: a `.confirm` box naming
+   what happens, `Close the app` to continue, `Cancel` to back out. This is
+   also where B12 applies: check whether the `.confirm` box this reuses is
+   the same width fix, once B12 is decided.
+
+**Not decided yet, and worth a look before building:** the "Closing now"
+state (`Settings.jsx:216-220`) that tells Mark to use the desktop icon to
+start again has to move with the button, or say the same thing from wherever
+the nav-bar version renders it.

@@ -206,7 +206,28 @@ update is available.
 
 **How bad.** Medium. Nothing is broken, it just looks unfinished.
 
-## B12. Nothing happens for a few seconds after you click the icon
+## B13. Typing a caption, then hitting `Mark reviewed` without clicking away first, throws the caption away
+
+**What happens.** Type a caption. Do not click anywhere else. Click `Mark
+reviewed` while the cursor is still in the box. The caption reverts to
+whatever it was before you started typing.
+
+**Why, proven in the code.** `PhotosScreen.jsx:687-689`. The textarea's
+`onChange` only updates the screen's own copy of the manifest, through
+`setCaption` (line 207), which never talks to the server. The caption is only
+written to disk `onBlur`. `Mark reviewed` (line 698, `onReview` at line 159)
+calls the server directly and replaces the screen's manifest with whatever it
+sends back. If the box never lost focus, the server never received the new
+caption, so it hands back the old one, and that old one overwrites what is
+still sitting, unsent, on screen.
+
+**Who it hits.** Anybody who writes a caption and reaches straight for `Mark
+reviewed` without clicking elsewhere first. Found by Spenser, 2026-09-07.
+
+**How bad.** High. It looks like the click did nothing, but it silently
+throws away what was just typed, with no warning and nothing to undo it with.
+
+## B14. Nothing happens for a few seconds after you click the icon
 
 **What happens.** Double-click `Roy R. Fisher`. Nothing. No window, no
 hourglass, no sign the click landed. Some seconds later the browser opens.

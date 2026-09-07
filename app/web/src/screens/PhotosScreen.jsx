@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
 
 // One page of the caption chooser's preview, in the shape the engine builds.
@@ -48,6 +48,7 @@ export default function PhotosScreen({ job }) {
   const [dragging, setDragging] = useState(false);
   const [clearing, setClearing] = useState(false);  // the clear-captions step
   const [showCut, setShowCut] = useState(false);    // the Cut photos section
+  const [markingAll, setMarkingAll] = useState(false);
   const [cutNote, setCutNote] = useState("");
   const [aiOn, setAiOn] = useState(true);   // until the app says otherwise
   const [quote, setQuote] = useState(null);   // what a run would send and cost
@@ -219,6 +220,15 @@ export default function PhotosScreen({ job }) {
   async function onBand(file, letter) {
     setError(null);
     try { setManifest(await setPhotoBand(job, file, letter)); }
+    catch (e) { setError(e.message); }
+  }
+
+  // One request instead of one per photograph. The warning in front of it is
+  // not decoration: it is the only thing standing between a shortcut and
+  // nobody having read what the model wrote.
+  async function onMarkAll() {
+    setMarkingAll(false); setError(null);
+    try { setManifest(await markAllReviewed(job)); }
     catch (e) { setError(e.message); }
   }
 
@@ -469,6 +479,12 @@ export default function PhotosScreen({ job }) {
           {inPhotos.length > 0 && (
             <p className={`sub review-progress${allReviewed ? " is-done" : ""}`} style={{ margin: "6px 0 0" }}>
               {reviewText}{allReviewed ? ". Ready to build." : ". Build waits until you have read them all."}
+              {!allReviewed && (
+                <button className="linky" style={{ marginLeft: 10 }} disabled={!!busy}
+                        onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
+                  Mark all as reviewed
+                </button>
+              )}
             </p>
           )}
           {/* Whenever the button is off, this says why in words. A grey
@@ -762,6 +778,22 @@ export default function PhotosScreen({ job }) {
           </div>
         </div>
       )}
+      {/* Never a plain button. Spenser, 2026-09-03: it is very important that
+          humans review everything AI does. So the words say what it removes
+          and he chooses. */}
+      {markingAll && (
+        <div className="confirm">
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>
+            Mark every caption as reviewed?
+          </p>
+          <p className="sub" style={{ margin: "0 0 12px" }}>
+            This removes the human check on what the model wrote. Only do it if
+            you have read them. Captions with nothing written stay unread.
+          </p>
+          <button className="button" onClick={onMarkAll}>Mark them all</button>
+          <button className="linky" onClick={() => setMarkingAll(false)}>Cancel</button>
+        </div>
+      )}
       {error && <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>{error}</div>}
 
       {count === 0 ? (
@@ -784,7 +816,16 @@ export default function PhotosScreen({ job }) {
               {/* Not draggable itself. The tile around it is what gets
                   dragged; leaving the image draggable makes the browser hand
                   the thumbnail over as a file on every reorder. */}
-              <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+              {/* The picture and the cross that takes it out, which sits on
+                  the picture's lower right rather than in the row below.
+                  Spenser, 2026-09-07. The tick stays in the row underneath. */}
+              <span className="photo-frame">
+                <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+                <button className="dot cut-dot" aria-label="Take out" title="Take out"
+                        onClick={() => onCut(p.file)}>
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </span>
               {/* Which folder inside Photos this one came from. Only shown
                   when it came from a subfolder, so a job whose photos sit at
                   the top of Photos gains no new furniture. It is here because
@@ -809,13 +850,13 @@ export default function PhotosScreen({ job }) {
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => save(manifest)} />
               {/* Directly under the caption, and a real target rather than a
-                  tick in a corner. It is not called Approve, and there is
-                  deliberately no way to do all of them at once: the point is
-                  that he has read each one. */}
+                  tick in a corner. It is not called Approve. Marking them all
+                  at once exists as of 2026-09-07, above, and only behind a
+                  warning: the point is still that he has read each one. */}
               {/* The tick is the first thing in the row and stays there,
                   however many bands the job grows. Spenser, 2026-09-07. It
-                  is still one photograph at a time: there is deliberately no
-                  way to tick them all. */}
+                  is one photograph at a time, with the all-at-once shortcut
+                  kept behind its warning above. */}
               <div className="review-line">
                 <button className={`dot tick-dot${p.reviewed ? " is-reviewed" : ""}`}
                         disabled={!(p.caption || "").trim()}
@@ -837,10 +878,7 @@ export default function PhotosScreen({ job }) {
                     <span aria-hidden="true">{b.letter}</span>
                   </button>
                 ))}
-                <button className="linky cut-link" style={{ marginLeft: 0 }}
-                        onClick={() => onCut(p.file)}>
-                  Take out
-                </button>
+
               </div>
             </figure>
           ))}

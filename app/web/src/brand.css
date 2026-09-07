@@ -318,11 +318,19 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 
 /* Title on the left, the things you can do on the right, one row, nothing
    below it but the work itself. */
+/* The actions stay up on the right, whatever is in them. They used to wrap
+   below the title the moment the row grew: typing one caption brings back
+   `Clear captions`, the row became too wide to sit beside the title, and the
+   whole block dropped down and to the left. Spenser saw it on 2026-09-07 and
+   the rule is that it never moves. So the head does not wrap, the title takes
+   the squeeze, and a crowded actions block grows taller rather than wider. */
 .screen-head {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 20px; flex-wrap: wrap; margin: 26px 0 20px;
+  gap: 20px; flex-wrap: nowrap; margin: 26px 0 20px;
 }
-.screen-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; padding-top: 4px; }
+.screen-head > :first-child { min-width: 0; }
+.screen-actions { display: flex; flex-direction: column; align-items: flex-end;
+                  gap: 9px; padding-top: 4px; flex: none; }
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }
 .button.secondary { background: var(--link); }
@@ -533,6 +541,9 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 /* The dot row under a photograph: the tick, then one dot per band. The tick
    is always first so it keeps one place however many bands a job grows. */
 .dot {
+  /* Never squeezed. In a row of six the browser was shrinking these to 24 by
+     26 and they read as ovals. Spenser spotted it on 2026-09-07. */
+  flex: none;
   font: inherit;
   font-size: 12px;
   line-height: 1;
@@ -547,13 +558,29 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 }
 .dot:hover { border-color: #b9b5ae; }
 .dot:disabled { opacity: .45; cursor: not-allowed; }
+/* Read means read, and it looks it. The pale green tick was too quiet to
+   pick out of a row of dots. Spenser, 2026-09-07. */
 .tick-dot.is-reviewed {
-  background: #eef5ee;
-  border-color: #b9d3b9;
-  color: #2f5d33;
+  background: #2f5d33;
+  border-color: #2f5d33;
+  color: #fff;
   font-weight: 700;
 }
 .band-dot { font-weight: 600; }
+/* The cross sits on the photograph's lower right, not in the row below,
+   because it acts on the picture. The row below is for the caption's tick
+   and the bands. */
+.photo-frame { position: relative; display: block; }
+.cut-dot {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  color: var(--brand);
+  font-size: 15px;
+  border-color: rgba(255, 255, 255, .75);
+  background: rgba(255, 255, 255, .88);
+}
+.cut-dot:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
 .band-dot.is-on {
   background: var(--brand);
   border-color: var(--brand);

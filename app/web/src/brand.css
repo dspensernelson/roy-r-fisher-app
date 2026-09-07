@@ -522,6 +522,35 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   font-weight: 600;
 }
 .review-btn:disabled { opacity: .45; cursor: not-allowed; }
+/* The dot row under a photograph: the tick, then one dot per band. The tick
+   is always first so it keeps one place however many bands a job grows. */
+.dot {
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #d7d4cf;
+  background: #fff;
+  color: #6b6b6b;
+  cursor: pointer;
+}
+.dot:hover { border-color: #b9b5ae; }
+.dot:disabled { opacity: .45; cursor: not-allowed; }
+.tick-dot.is-reviewed {
+  background: #eef5ee;
+  border-color: #b9d3b9;
+  color: #2f5d33;
+  font-weight: 700;
+}
+.band-dot { font-weight: 600; }
+.band-dot.is-on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
 .review-progress { font-size: 13px; color: #6b6b6b; }
 .review-progress.is-done { color: #2f5d33; font-weight: 600; }
 

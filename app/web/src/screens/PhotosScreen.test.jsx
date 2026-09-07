@@ -436,3 +436,85 @@ describe("when the photo list cannot be read", () => {
     expect(await screen.findByText(/Nothing has been changed/)).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Bands. One click per photograph instead of one drag per photograph.
+//
+// The tick sits at the lower left of every tile, whether bands are on or off,
+// so it keeps one place however many bands a job grows. Spenser, 2026-09-07.
+// ---------------------------------------------------------------------------
+
+const BANDS = [
+  { letter: "A", name: "A", locked: true },
+  { letter: "B", name: "B", locked: true },
+  { letter: "C", name: "C", locked: true },
+];
+
+function banded(over = {}) {
+  return manifest({ bands_on: true, bands: BANDS, ...over });
+}
+
+describe("bands", () => {
+  it("shows the tick and no dots while the switch is off", async () => {
+    await show();
+    expect(await screen.findAllByRole("button", { name: /^Mark reviewed$/ }))
+      .toHaveLength(3);
+    expect(screen.queryAllByRole("button", { name: /^Band / })).toHaveLength(0);
+  });
+
+  it("gives every photograph one dot per band once the switch is on", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    await show();
+    // three photographs, three bands
+    expect(await screen.findAllByRole("button", { name: "Band A" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Band C" })).toHaveLength(3);
+    // and the tick has not gone anywhere
+    expect(screen.getAllByRole("button", { name: /^Mark reviewed$/ })).toHaveLength(3);
+  });
+
+  it("puts the photograph in the band he clicks", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    const set = vi.spyOn(api, "setPhotoBand").mockResolvedValue(
+      banded({ photos: [{ file: "photo-01.jpg", caption: "", band: "A" },
+                        { file: "photo-02.jpg", caption: "" },
+                        { file: "photo-03.jpg", caption: "" }] }));
+    await show();
+    await userEvent.click((await screen.findAllByRole("button", { name: "Band A" }))[0]);
+    expect(set).toHaveBeenCalledWith(JOB, "photo-01.jpg", "A");
+  });
+
+  it("holds the build while photographs are still waiting for a band", async () => {
+    api.getManifest.mockResolvedValue(banded({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true },
+               { file: "photo-02.jpg", caption: "two", reviewed: true, band: "A" },
+               { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }],
+    }));
+    await show();
+    expect(await screen.findByText(/1 photograph is waiting for a band/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
+  });
+
+  it("lets the build go once every photograph has a band", async () => {
+    api.getManifest.mockResolvedValue(banded({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true, band: "A" },
+               { file: "photo-02.jpg", caption: "two", reviewed: true, band: "A" },
+               { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }],
+    }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByText(/waiting for a band/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing about waiting while the switch is off", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true },
+               { file: "photo-02.jpg", caption: "two", reviewed: true },
+               { file: "photo-03.jpg", caption: "three", reviewed: true }],
+    }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByText(/waiting for a band/)).not.toBeInTheDocument();
+  });
+});

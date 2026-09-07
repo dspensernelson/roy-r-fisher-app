@@ -112,7 +112,8 @@ def test_nothing_else_is_at_the_top(built):
     "VERSION", "MANIFEST",
     "app/run_app.py", "app/server/main.py", "app/server/packaging.py",
     "app/server/startup.py", "app/engine/photo_pages.py",
-    "app/templates/Photo.docx", "app/data/engagement-matrix.md",
+    "app/templates/Photo.docx", "app/templates/Photo six-up.docx",
+    "app/data/engagement-matrix.md",
     "app/web/dist/index.html",
 ])
 def test_every_required_path_is_present(program, required):

@@ -1,7 +1,37 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, jobFacts, putJobFacts, reveal,
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
+
+// One page of the caption chooser's preview, in the shape the engine builds.
+// Three-up pairs each photograph with the caption beside it. Six-up puts two
+// photographs in a row and their two captions in the row beneath, which is
+// the reading order Spenser chose on 2026-09-07.
+function previewRows(samples, perPage) {
+  if (perPage !== 6) {
+    return samples.map((line, n) => (
+      <React.Fragment key={`three-${n}`}>
+        <div className="cell-photo is-example" aria-hidden="true" />
+        <div className="cell-caption">{line}</div>
+      </React.Fragment>
+    ));
+  }
+  const rows = [];
+  for (let i = 0; i < samples.length; i += 2) {
+    const pair = samples.slice(i, i + 2);
+    rows.push(
+      <React.Fragment key={`six-${i}`}>
+        {pair.map((_, n) => (
+          <div key={`p${n}`} className="cell-photo is-example" aria-hidden="true" />
+        ))}
+        {pair.map((line, n) => (
+          <div key={`c${n}`} className="cell-caption">{line}</div>
+        ))}
+      </React.Fragment>
+    );
+  }
+  return rows;
+}
 
 export default function PhotosScreen({ job }) {
   const [manifest, setManifest] = useState(null);
@@ -158,6 +188,30 @@ export default function PhotosScreen({ job }) {
     try {
       setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
     } catch (e) { setError(e.message); }
+  }
+
+  // The switch, and later the list behind it. Whatever comes back is what the
+  // screen draws: it never sorts or seeds anything itself, because the server
+  // is the one that decides what a band list looks like.
+  async function onBands(body) {
+    setError(null);
+    try { setManifest(await putBands(job, body)); }
+    catch (e) { setError(e.message); }
+  }
+
+  // Three or six to a page. It goes through the manifest rather than a route
+  // of its own, because it is one value on the job the way caption_style is,
+  // and putManifest already refuses anything that is not 3 or 6.
+  //
+  // The manifest we hold is sent back amended rather than re-fetched first,
+  // so this cannot race a caption he is in the middle of typing.
+  async function onPerPage(n) {
+    if (n === perPage) return;              // pressing the one already on does nothing
+    setError(null);
+    const next = { ...manifest, photos_per_page: n };
+    setManifest(next);                      // the switch moves under his finger
+    try { await putManifest(job, next); }
+    catch (e) { setManifest(manifest); setError(e.message); }
   }
 
   // One click, one photograph, one band. Clicking the band it is already in
@@ -333,7 +387,15 @@ export default function PhotosScreen({ job }) {
   // filters of that one list, so nothing is reordered by cutting.
   const inPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => !x.p.cut);
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
-  const pagesIn = Math.max(1, Math.ceil(inPhotos.length / 3));
+  // How many photographs share a page. The server normalises this on the way
+  // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
+  // a guard for a manifest that never came from the server, not a second copy
+  // of the default rule: the rule lives in `photos_per_page()` in
+  // app/server/photos.py, and the engine's Layout is where the shape lives.
+  // This line used to read `/ 3`, which was a copy of a constant in the engine
+  // and started lying the moment a second layout existed.
+  const perPage = manifest.photos_per_page || 3;
+  const pagesIn = Math.max(1, Math.ceil(inPhotos.length / perPage));
 
   // Review, counted from the manifest so the screen and the server agree even
   // if one of them is a moment stale.
@@ -488,6 +550,42 @@ export default function PhotosScreen({ job }) {
             )}
             <input ref={filePicker} type="file" multiple accept="image/*,.heic" style={{ display: "none" }}
               onChange={(e) => onFiles(e.target.files)} />
+          </div>
+          {/* The switch, and the bands it brings. Off is where every job
+              starts. Turning it off keeps every band and every click, so it
+              is never a thing he is afraid to press. Spenser, 2026-09-07. */}
+          <div className="action-row band-row">
+            <div className="bands-pill" role="group" aria-label="Bands">
+              <span className="bands-label">Bands</span>
+              <button className={`pill-opt${bandsOn ? " is-on" : ""}`}
+                      aria-pressed={bandsOn} disabled={!!busy}
+                      onClick={() => onBands({ bands_on: true })}>On</button>
+              <button className={`pill-opt${bandsOn ? "" : " is-on"}`}
+                      aria-pressed={!bandsOn} disabled={!!busy}
+                      onClick={() => onBands({ bands_on: false })}>Off</button>
+            </div>
+            {/* Three or six to a page, in the same shape as the Bands
+                switch beside it, because it is the same kind of fact: one
+                thing about this job that Mark sets and then forgets.
+                Spenser asked for it up top, 2026-09-07. */}
+            <div className="bands-pill" role="group" aria-label="Photographs to a page">
+              <span className="bands-label">Per page</span>
+              <button className={`pill-opt${perPage === 3 ? " is-on" : ""}`}
+                      aria-pressed={perPage === 3} disabled={!!busy}
+                      aria-label="Three photographs to a page"
+                      onClick={() => onPerPage(3)}>Three</button>
+              <button className={`pill-opt${perPage === 6 ? " is-on" : ""}`}
+                      aria-pressed={perPage === 6} disabled={!!busy}
+                      aria-label="Six photographs to a page"
+                      onClick={() => onPerPage(6)}>Six</button>
+            </div>
+            {bands.map((b) => (
+              <button key={b.letter} className="band-chip"
+                      aria-label={`Band ${b.letter}`}
+                      title={b.name === b.letter ? `Band ${b.letter}` : b.name}>
+                {b.letter}
+              </button>
+            ))}
           </div>
           {/* Something has to move while the model is looking at the photos.
               Writing a dozen captions takes real seconds, and a screen that
@@ -733,7 +831,7 @@ export default function PhotosScreen({ job }) {
                 {bands.map((b) => (
                   <button key={b.letter}
                           className={`dot band-dot${p.band === b.letter ? " is-on" : ""}`}
-                          aria-label={`Band ${b.letter}`}
+                          aria-label={`Put in band ${b.letter}`}
                           title={b.name === b.letter ? `Band ${b.letter}` : b.name}
                           onClick={() => onBand(p.file, p.band === b.letter ? null : b.letter)}>
                     <span aria-hidden="true">{b.letter}</span>
@@ -864,9 +962,10 @@ export default function PhotosScreen({ job }) {
                 photo_pages.py builds the real thing. The toggle sits at the
                 head of the caption column, because that is the column it
                 changes. */}
-            <div className="page-preview">
-              <div className="cell-photo head" />
-              <div className="cell-caption head">
+            <div className={`page-preview${perPage === 6 ? " is-six" : ""}`}
+                 data-testid="page-preview">
+              {perPage === 3 && <div className="cell-photo head" />}
+              <div className={`cell-caption head${perPage === 6 ? " spans" : ""}`}>
                 {/* The recommendation is a flag above the option it names,
                     following the design system's segmented control, rather
                     than a second word sitting inside the label. Which option
@@ -889,12 +988,13 @@ export default function PhotosScreen({ job }) {
                   his photographs. A line of text sitting next to a real photo
                   reads as a caption OF that photo, and the app has not looked
                   at it and cannot say. The frame is deliberately blank. */}
-              {(styles.find((s) => s.key === showing)?.samples || []).map((line, n) => (
-                <React.Fragment key={`${showing}-${n}`}>
-                  <div className="cell-photo is-example" aria-hidden="true" />
-                  <div className="cell-caption">{line}</div>
-                </React.Fragment>
-              ))}
+              {/* Three-up is one photograph beside its caption. Six-up is two
+                  photographs above their two captions, which is what
+                  photo_pages.py builds and therefore what this has to draw.
+                  The comment above is a promise that this grid matches the
+                  engine, and a promise like that has to survive a second
+                  layout. */}
+              {previewRows(styles.find((s) => s.key === showing)?.samples || [], perPage)}
             </div>
 
             <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>

@@ -81,13 +81,13 @@ fails until it is deleted.
 
 ### Slice 1, the pill, and the chips that appear with it
 
-- [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
-- [ ] Add the pill to the title's row: `Bands` with `On` and `Off`
-- [ ] `On` calls `putBands` with the switch, and A, B and C arrive
-- [ ] `Off` calls it again and the dots go, with every band and click kept
-- [ ] Show the chips for A, B and C to the right of the pill while it is on
-- [ ] Add the styles to `app/web/src/brand.css` next to `.band-dot`
-- [ ] The whole suite passes and nothing skips
+- [x] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [x] Add the pill to the title's row: `Bands` with `On` and `Off`
+- [x] `On` calls `putBands` with the switch, and A, B and C arrive
+- [x] `Off` calls it again and the dots go, with every band and click kept
+- [x] Show the chips for A, B and C to the right of the pill while it is on
+- [x] Add the styles to `app/web/src/brand.css` next to `.band-dot`
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `the-bands-switch`, and Spenser says yes
 
 ### Slice 2, the plus, and the name he types

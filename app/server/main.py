@@ -45,19 +45,31 @@ try:
 except ImportError:                                  # pragma: no cover - see test_packaged_app
     demo = None
 
-# Ships inside the app. It used to be read out of the client corpus, which
+# Ships inside the app. These used to be read out of the client corpus, which
 # only exists on the development Mac, so the first press of Build photo pages
-# on Mark's PC would have failed. RRF_PHOTO_TEMPLATE still overrides it.
-DEFAULT_PHOTO_TEMPLATE = (
-    Path(__file__).resolve().parents[1] / "templates" / "Photo.docx"
-)
+# on Mark's PC would have failed. RRF_PHOTO_TEMPLATE still overrides the file.
+TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
 
 
-def photo_pages_per_table() -> int:
-    """How many photos share one printed page, read from the engine rather
-    than restated, so a preview always shows exactly one page."""
-    from photo_pages import PHOTOS_PER_TABLE
-    return PHOTOS_PER_TABLE
+def _template_and_layout(manifest: dict):
+    """The template and the page shape, decided by one value in the manifest.
+
+    Together, deliberately: a six-up layout filled into a three-up template
+    would put captions in cells that do not exist. One value picks both, so
+    the two cannot disagree.
+
+    RRF_PHOTO_TEMPLATE still overrides which file is opened, because that is
+    how a different template is tested, but it does not decide the layout.
+    The job says how its pages are shaped and nothing in the environment
+    overrules that.
+    """
+    import photos as photos_module
+    from photo_pages import LAYOUTS
+
+    layout = LAYOUTS[photos_module.photos_per_page(manifest)]
+    override = os.environ.get("RRF_PHOTO_TEMPLATE")
+    template = Path(override) if override else TEMPLATES_DIR / layout.template
+    return template, layout
 
 
 class NewJob(BaseModel):
@@ -1112,7 +1124,7 @@ def create_app() -> FastAPI:
 
         from photo_pages import build_photo_docx  # sys.path set up by the photos import above
 
-        template = Path(os.environ.get("RRF_PHOTO_TEMPLATE", DEFAULT_PHOTO_TEMPLATE))
+        template, layout = _template_and_layout(manifest)
         from photo_prep import Workspace
 
         with busy.writing():
@@ -1130,7 +1142,8 @@ def create_app() -> FastAPI:
                     out = build_photo_docx(manifest_file, template,
                                            prepare=bench.copy_for_document,
                                            out_base=out_base,
-                                           entries=photos_routes.included(manifest))
+                                           entries=photos_routes.included(manifest),
+                                           layout=layout)
                 except Exception as exc:
                     raise HTTPException(500, f"Build failed: {exc}")
         # The folder is named as well as the file, so the screen can offer to

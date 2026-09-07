@@ -26,8 +26,11 @@ from docx.shared import Emu
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
-from photo_pages import (IMAGE_MAX_HEIGHT_IN, IMAGE_WIDTH_IN,  # noqa: E402
-                         PHOTOS_PER_TABLE, build_photo_docx)
+from photo_pages import THREE_UP, build_photo_docx  # noqa: E402
+
+IMAGE_WIDTH_IN = THREE_UP.width_in
+IMAGE_MAX_HEIGHT_IN = THREE_UP.max_height_in
+PHOTOS_PER_TABLE = THREE_UP.per_page
 
 from conftest import TEMPLATE_DOCX, has_template
 

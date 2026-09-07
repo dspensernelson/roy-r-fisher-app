@@ -24,6 +24,7 @@ import copy
 import json
 import re
 from pathlib import Path
+from typing import NamedTuple
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -31,7 +32,67 @@ from docx.oxml.ns import qn
 from docx.shared import Inches
 from PIL import Image, ExifTags
 
-PHOTOS_PER_TABLE = 3
+class Layout(NamedTuple):
+    """One printed page's shape. The single place a layout's facts live.
+
+    Everything in this module that used to be a bare 3 reads one of these
+    instead. `PHOTOS_PER_TABLE` was that bare 3, and it had already been
+    copied into the browser (`PhotosScreen.jsx`, `Math.ceil(length / 3)`),
+    where it started to lie the moment a second layout existed. HOW-WE-WORK:
+    point at where a value lives rather than copying it.
+    """
+    name: str            # what a manifest and a log call it
+    per_page: int        # photographs on one printed page
+    rows_per_page: int   # rows in one of the template's tables
+    columns: int         # photographs across the page
+    template: str        # the file that ships in app/templates/
+    width_in: float      # the box a photograph is fitted inside
+    max_height_in: float
+
+    @property
+    def stacked(self) -> bool:
+        """Whether a caption sits under its photograph rather than beside it.
+
+        `columns` is what actually separates the two layouts, and getting
+        this wrong once already cost a test run: both layouts happen to have
+        as many rows on a page as photographs (3 and 3, 6 and 6), so
+        comparing those two numbers said "not paired" for six-up and put
+        every caption in the wrong cell. One photo column means the caption
+        is beside it; two means it is beneath.
+        """
+        return self.columns > 1
+
+    def cells(self, n: int):
+        """Where photograph `n` goes, `n` counted within its own page.
+
+        Returns (image_row, image_col, caption_row, caption_col).
+
+        Three-up is one row per photograph, image left and caption right,
+        which is what Mark's template has always been. Six-up reads left to
+        right and top to bottom, so a photograph sits in one of two columns
+        and its caption sits directly beneath it in the row below. That
+        reading order is Spenser's answer of 2026-09-07 when asked whether a
+        band should read down a column instead, and it is why bands need no
+        mapping of their own.
+        """
+        if not self.stacked:
+            return n, 0, n, 1
+        row, col = (n // self.columns) * 2, n % self.columns
+        return row, col, row + 1, col
+
+    def rows_for(self, k: int) -> int:
+        """The rows a last page holding `k` photographs keeps.
+
+        Six-up fills in pairs, so a page keeps whole pairs and an odd `k`
+        leaves one empty bordered box at the bottom right. Spenser chose that
+        on 2026-09-07 over merging the last pair into one full-width cell: a
+        photograph that changes size according to how many photographs there
+        happen to be is a rule that surprises somebody six months later.
+        """
+        if not self.stacked:
+            return k
+        return 2 * -(-k // self.columns)   # ceil to a whole pair
+
 
 # The box a photograph is fitted inside, in inches. Both numbers, not just the
 # width.
@@ -51,8 +112,14 @@ PHOTOS_PER_TABLE = 3
 # A landscape photograph is limited by the width and comes out 4.00 x 3.00,
 # which is the size his delivered reports already use, so nothing that was
 # right has moved.
-IMAGE_WIDTH_IN = 4.0
-IMAGE_MAX_HEIGHT_IN = 3.0
+#
+# Six-up's 3.20 x 2.40 is the same discipline at the six-up column width: two
+# photographs share the same 6.70in the one photograph had, so 3.35in a column
+# less the cell margins. Its row heights are a budget, not a preference, and
+# they are written out in docs/plans/2026-09-07-six-up-photo-pages.md.
+THREE_UP = Layout("three-up", 3, 3, 1, "Photo.docx", 4.0, 3.0)
+SIX_UP = Layout("six-up", 6, 6, 2, "Photo six-up.docx", 3.20, 2.40)
+LAYOUTS = {layout.per_page: layout for layout in (THREE_UP, SIX_UP)}
 
 _DATETIME_TAG = next(k for k, v in ExifTags.TAGS.items() if v == "DateTimeOriginal")
 
@@ -142,7 +209,7 @@ def next_output_name(photos_dir: Path, base: str = DEFAULT_OUTPUT_BASE) -> str:
     return candidate
 
 
-def _fitted_size(image_path: Path):
+def _fitted_size(image_path: Path, layout: Layout = THREE_UP):
     """The size to place this photograph at, fitted inside the box.
 
     Both edges are honoured and the shape is kept. A photograph wider than it
@@ -163,23 +230,23 @@ def _fitted_size(image_path: Path):
         with Image.open(image_path) as opened:
             pixel_w, pixel_h = opened.size
     except Exception:
-        return Inches(IMAGE_WIDTH_IN), None
+        return Inches(layout.width_in), None
     if pixel_w <= 0 or pixel_h <= 0:
-        return Inches(IMAGE_WIDTH_IN), None
+        return Inches(layout.width_in), None
 
     shape = pixel_w / pixel_h
-    width = IMAGE_WIDTH_IN
+    width = layout.width_in
     height = width / shape
-    if height > IMAGE_MAX_HEIGHT_IN:
-        height = IMAGE_MAX_HEIGHT_IN
+    if height > layout.max_height_in:
+        height = layout.max_height_in
         width = height * shape
     return Inches(width), Inches(height)
 
 
-def _fill_cell_image(cell, image_path: Path):
+def _fill_cell_image(cell, image_path: Path, layout: Layout = THREE_UP):
     p = cell.paragraphs[0]
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    width, height = _fitted_size(image_path)
+    width, height = _fitted_size(image_path, layout)
     p.add_run().add_picture(str(image_path), width=width, height=height)
 
 
@@ -407,7 +474,7 @@ def _shrink_tables(doc: Document, needed: int):
     _merge_orphaned_section(doc)
 
 
-def _trim_unused_rows(doc, photo_count: int) -> int:
+def _trim_unused_rows(doc, photo_count: int, layout: Layout = THREE_UP) -> int:
     """Cut the rows on the last page that hold no photograph.
 
     The template's tables are three rows each, and the last page rarely wants
@@ -421,9 +488,9 @@ def _trim_unused_rows(doc, photo_count: int) -> int:
     if not doc.tables:
         return 0
     last = doc.tables[-1]
-    used = photo_count - (len(doc.tables) - 1) * PHOTOS_PER_TABLE
+    used = photo_count - (len(doc.tables) - 1) * layout.per_page
     removed = 0
-    for row in list(last.rows)[max(0, used):]:
+    for row in list(last.rows)[layout.rows_for(max(0, used)):]:
         row._tr.getparent().remove(row._tr)
         removed += 1
     return removed
@@ -465,7 +532,7 @@ def _drop_trailing_blank_paragraphs(doc) -> int:
 
 def build_photo_docx(manifest_path: Path, template_path: Path,
                      prepare=None, out_base: str = DEFAULT_OUTPUT_BASE,
-                     entries=None) -> Path:
+                     entries=None, layout: Layout = THREE_UP) -> Path:
     """Build the document. `prepare` decides what bytes actually go in.
 
     `entries` decides which photographs go in. Without it the manifest file is
@@ -495,26 +562,28 @@ def build_photo_docx(manifest_path: Path, template_path: Path,
     photos = [e for e in source if not e.get("cut")]
     doc = Document(str(template_path))
 
-    needed = max(1, -(-len(photos) // PHOTOS_PER_TABLE))  # ceil
+    needed = max(1, -(-len(photos) // layout.per_page))  # ceil
     _grow_tables(doc, needed)
     _shrink_tables(doc, needed)
 
     for i, entry in enumerate(photos):
-        table = doc.tables[i // PHOTOS_PER_TABLE]
-        row = table.rows[i % PHOTOS_PER_TABLE]
+        table = doc.tables[i // layout.per_page]
+        img_row, img_col, cap_row, cap_col = layout.cells(i % layout.per_page)
         # `folder` is the subfolder of Photos the photograph came from, empty
         # or absent for one sitting at the top. Joining an empty part is a
         # no-op, so a manifest written before subfolders were read still
         # resolves exactly where it always did.
         source = photos_dir / entry.get("folder", "") / entry["file"]
-        _fill_cell_image(row.cells[0], prepare(source) if prepare else source)
-        _fill_cell_caption(row.cells[1], entry.get("caption", ""))
+        _fill_cell_image(table.rows[img_row].cells[img_col],
+                         prepare(source) if prepare else source, layout)
+        _fill_cell_caption(table.rows[cap_row].cells[cap_col],
+                           entry.get("caption", ""))
 
     if manifest.get("report_year"):
         _set_copyright_year(doc, int(manifest["report_year"]))
 
     # The last page is only as tall as the photographs on it.
-    _trim_unused_rows(doc, len(photos))
+    _trim_unused_rows(doc, len(photos), layout)
 
     # Last, after every table is filled and trimmed, so what is trailing is
     # actually trailing.

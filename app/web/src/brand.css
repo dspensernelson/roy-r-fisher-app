@@ -407,6 +407,14 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .cell-photo.head, .cell-caption.head { background: #FAF8F4; padding-top: 7px; padding-bottom: 7px; }
 .cell-caption.head { padding-left: 12px; padding-right: 12px; }
 .page-preview > :nth-last-child(-n+2) { border-bottom: none; }
+/* Six to a page: two equal columns, photographs above their captions, which
+   is what app/engine/photo_pages.py builds. The caption-style toggle heads
+   the whole grid here rather than one column, because at six-up both columns
+   carry captions. */
+.page-preview.is-six { grid-template-columns: 1fr 1fr; }
+.page-preview.is-six .cell-photo { border-right: 1px solid var(--line); }
+.page-preview.is-six .cell-photo:nth-child(odd) { border-right: 1px solid var(--line); }
+.cell-caption.head.spans { grid-column: 1 / -1; }
 .cell-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; display: block; }
 .cell-caption em { color: var(--ink-muted); font-style: italic; }
 /* An empty frame where a photograph sits on the printed page. Blank on
@@ -551,6 +559,49 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   border-color: var(--brand);
   color: #fff;
 }
+/* The switch, and the chips it brings with it. */
+/* The actions column is right-aligned, so a short row would float away
+   from the buttons above it. This one starts where they start. */
+.band-row { align-items: center; gap: 8px; margin-top: 2px;
+            align-self: stretch; justify-content: flex-start; }
+.bands-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #d7d4cf;
+  border-radius: 999px;
+  background: #fff;
+}
+.bands-label { font-size: 13px; color: #6b6b6b; padding: 0 6px 0 8px; }
+.pill-opt {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: #6b6b6b;
+  cursor: pointer;
+}
+.pill-opt.is-on { background: var(--brand); color: #fff; font-weight: 600; }
+.pill-opt:disabled { opacity: .45; cursor: not-allowed; }
+.band-chip {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #d7d4cf;
+  background: #fff;
+  color: #4a4a4a;
+  cursor: pointer;
+}
+.band-chip:hover { border-color: #b9b5ae; }
 .review-progress { font-size: 13px; color: #6b6b6b; }
 .review-progress.is-done { color: #2f5d33; font-weight: 600; }
 

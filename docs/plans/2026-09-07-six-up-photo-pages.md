@@ -165,15 +165,15 @@ from the six longest captions in the corpus fits with all of it still spare.
 
 ### Slice 4, the toggle on the screen, and the hardcoded 3 goes away
 
-- [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
-- [ ] Delete `Math.ceil(inPhotos.length / 3)` and read the value the server normalised
-- [ ] Add the toggle to the Photos title row, using the existing `.toggle` control
-- [ ] The page count in the subtitle follows the toggle
-- [ ] The `page-preview` grid in the caption chooser follows the toggle
-- [ ] Nothing else on the screen changes: tiles, dots, drag order all untouched
-- [ ] A job with no key shows Three per page selected
-- [ ] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
-- [ ] Commit on `six-up-on-the-screen`, and Spenser says yes
+- [x] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [x] Delete `Math.ceil(inPhotos.length / 3)` and read the value the server normalised
+- [x] Add the toggle to the Photos title row, using the existing `.toggle` control
+- [x] The page count in the subtitle follows the toggle
+- [x] The `page-preview` grid in the caption chooser follows the toggle
+- [x] Nothing else on the screen changes: tiles, dots, drag order all untouched
+- [x] A job with no key shows Three per page selected
+- [x] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
+- [x] Commit on `six-up-on-the-screen`, and Spenser says yes
 
 ### Closing this plan out
 

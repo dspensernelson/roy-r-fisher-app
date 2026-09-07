@@ -566,3 +566,84 @@ describe("the bands switch", () => {
     expect(captions).toHaveLength(order.length);
   });
 });
+
+describe("three or six to a page", () => {
+  it("starts on three, which is what every job that never chose is", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos_per_page: 3 }));
+    await show();
+    expect(await screen.findByRole("button", { name: "Three photographs to a page" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Six photographs to a page" }))
+      .toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("counts three to a page while three is chosen", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 3 }));
+    await show();
+    expect(await screen.findByText(/about 4 pages/)).toBeInTheDocument();
+  });
+
+  it("halves the page count when six is chosen", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 6 }));
+    await show();
+    expect(await screen.findByText(/about 2 pages/)).toBeInTheDocument();
+  });
+
+  it("says one page rather than one pages", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(5), photos_per_page: 6 }));
+    await show();
+    expect(await screen.findByText(/about 1 page\./)).toBeInTheDocument();
+  });
+
+  it("writes the choice into the manifest and nothing else", async () => {
+    const before = manifest({ photos: photos(6), photos_per_page: 3 });
+    api.getManifest.mockResolvedValue(before);
+    const put = vi.spyOn(api, "putManifest")
+      .mockResolvedValue({ ok: true });
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Six photographs to a page" }));
+    expect(put).toHaveBeenCalledWith(JOB, { ...before, photos_per_page: 6 });
+  });
+
+  it("leaves the photographs alone", async () => {
+    // The toggle changes what Build makes. It must not touch the list, the
+    // order, or a single caption.
+    const names = () => screen.getAllByRole("img").map((i) => i.getAttribute("alt"));
+    const captions = () => screen.getAllByRole("textbox").map((t) => t.value);
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(6, "a caption") }));
+    await show();
+    const wasOrder = names();
+    const wasCaptions = captions();
+    await userEvent.click(screen.getByRole("button", { name: "Six photographs to a page" }));
+    await waitFor(() => expect(names()).toEqual(wasOrder));
+    expect(captions()).toEqual(wasCaptions);
+  });
+});
+
+describe("the caption chooser's page preview", () => {
+  // Its own comment promises it is drawn "exactly the way photo_pages.py
+  // builds the real thing". A second layout is what makes that promise
+  // testable rather than decorative.
+  async function openChooser(perPage) {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(3), photos_per_page: perPage }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
+    return screen.findByTestId("page-preview");
+  }
+
+  it("draws one photograph beside its caption at three to a page", async () => {
+    const grid = await openChooser(3);
+    expect(grid).not.toHaveClass("is-six");
+    expect(grid.querySelectorAll(".cell-photo.is-example").length)
+      .toBe(grid.querySelectorAll(".cell-caption:not(.head)").length);
+  });
+
+  it("draws two photographs above their two captions at six to a page", async () => {
+    const grid = await openChooser(6);
+    expect(grid).toHaveClass("is-six");
+    const kids = [...grid.children].filter((el) => !el.classList.contains("head"));
+    // photo photo caption caption, repeating
+    expect(kids.slice(0, 4).map((el) => el.className.split(" ")[0]))
+      .toEqual(["cell-photo", "cell-photo", "cell-caption", "cell-caption"]);
+  });
+});

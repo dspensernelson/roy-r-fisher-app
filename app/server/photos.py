@@ -68,6 +68,60 @@ def is_reviewed(entry: dict) -> bool:
     return bool(entry.get(REVIEWED))
 
 
+BANDS = "bands"
+BANDS_ON = "bands_on"
+BAND = "band"
+
+
+def bands_on(manifest: dict) -> bool:
+    """Whether this job orders its photographs by band.
+
+    Absent means off, the same answer `is_cut` and `is_reviewed` give for a
+    missing key. Every manifest written before bands existed therefore reads
+    as a job that does not use them, with nothing on disk to convert.
+    """
+    return bool(manifest.get(BANDS_ON))
+
+
+def band_list(manifest: dict) -> list:
+    """The job's bands, in the order the property reads."""
+    return manifest.get(BANDS) or []
+
+
+def band_of(entry: dict) -> Optional[str]:
+    """The band this photograph is in, or None while it is unassigned."""
+    return entry.get(BAND) or None
+
+
+def letter_for(name: str, taken) -> str:
+    """The letter a new band is known by. Assigned at creation and frozen.
+
+    First letter of the name, then the first two on a collision, then three.
+    A name with no letters left to give takes a number instead, because the
+    answer still has to be unique.
+
+    **Adding, renaming or deleting a band never relabels an existing one.**
+    That is constraint 3 of F6 and it is why this function is only ever
+    called when a band is created. The letter is what every photograph
+    carries: relabel a band and every photograph pointing at it is suddenly
+    pointing somewhere else, silently, in a file nobody reads. So the new
+    band bends around the ones already there, never the other way round.
+    Warehouse keeps W when Workshop arrives and takes Wo.
+    """
+    held = set(taken or [])
+    clean = str(name).strip()
+    for size in range(1, len(clean) + 1):
+        candidate = clean[:size]
+        candidate = candidate[0].upper() + candidate[1:]
+        if candidate not in held:
+            return candidate
+    base = (clean[:1].upper() + clean[1:]) if clean else "Band"
+    n = 2
+    while "%s%d" % (base, n) in held:
+        n += 1
+    return "%s%d" % (base, n)
+
+
 def review_progress(manifest: dict) -> dict:
     """`8 of 12 reviewed`, counting only the photographs that are in.
 
@@ -565,12 +619,34 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
     path safety (bare filename, resolves inside Photos/) plus the minimum
     shape the engine needs (a "photos" list of file-bearing objects) -- it
     is not a general schema validator.
+
+    Bands are checked here too, for the same reason and to the same depth: a
+    photograph carries a band's letter, so a letter naming a band the job
+    does not have is a manifest that cannot be read back correctly. It is
+    refused rather than quietly unassigned.
     """
     if not isinstance(manifest, dict):
         return "Manifest must be a JSON object."
     photos = manifest.get("photos")
     if not isinstance(photos, list):
         return "Manifest 'photos' must be a list."
+    if BANDS_ON in manifest and not isinstance(manifest[BANDS_ON], bool):
+        return "A job's 'bands_on' must be true or false."
+    bands = manifest.get(BANDS, [])
+    if not isinstance(bands, list):
+        return "Manifest 'bands' must be a list."
+    letters = set()
+    for band in bands:
+        if not isinstance(band, dict):
+            return "Each entry in 'bands' must be an object."
+        letter, band_name = band.get("letter"), band.get("name")
+        if not isinstance(letter, str) or not letter:
+            return "Each band needs a non-empty 'letter'."
+        if not isinstance(band_name, str) or not band_name:
+            return "Each band needs a non-empty 'name'."
+        if letter in letters:
+            return "Two bands cannot share the letter %r." % letter
+        letters.add(letter)
     photos_dir = jobs.photos_dir(job)
     for entry in photos:
         if not isinstance(entry, dict):
@@ -592,6 +668,16 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
             return "A photo's reviewed flag must be true or false."
         if "cut" in entry and not isinstance(entry["cut"], bool):
             return "A photo's 'cut' must be true or false."
+        if BAND in entry:
+            # An unknown letter is an error rather than a silent unassign.
+            # Quietly dropping it would hide whatever wrote it, the same
+            # reason a file resolving outside Photos is refused rather than
+            # skipped.
+            if not isinstance(entry[BAND], str) or not entry[BAND]:
+                return "A photo's 'band' must be a letter naming one of this job's bands."
+            if entry[BAND] not in letters:
+                return "Photo %r is in band %r, which this job does not have." % (
+                    name, entry[BAND])
     return None
 
 

@@ -122,6 +122,42 @@ def letter_for(name: str, taken) -> str:
     return "%s%d" % (base, n)
 
 
+def sort_by_band(manifest: dict) -> dict:
+    """Put `manifest["photos"]` in band order, in place.
+
+    **A band click resorts the list itself.** That is constraint 2 of F6 and
+    it is the reason bands are safe to add: array order always equals band
+    order, then the order the photographs already had inside their band. The
+    array stays the one ordering fact in the app, so `included()` and
+    `build_photo_docx` need to know nothing about bands at all.
+
+    Sorting at read time instead would give two answers to one question: the
+    order on disk and the order in the report. The manifest is hand-editable
+    and somebody would eventually read the wrong one.
+
+    A photograph with no band waits after every band, which is what the
+    unassigned strip on the screen is showing. A cut photograph keeps its
+    band and sorts with it, so uncutting puts it back where it belongs
+    rather than wherever the list happened to have room.
+
+    With bands off this returns the list untouched, which is what lets a job
+    take bands up or leave them behind without anything moving.
+    """
+    if not bands_on(manifest):
+        return manifest
+    places = {}
+    for i, band in enumerate(band_list(manifest)):
+        if isinstance(band, dict) and band.get("letter"):
+            places[band["letter"]] = i
+    waiting = len(places)
+    # sorted() is stable, so photographs inside one band keep the order they
+    # already had. That is half of what constraint 2 promises.
+    manifest["photos"] = sorted(
+        manifest.get("photos", []),
+        key=lambda e: places.get(band_of(e), waiting) if isinstance(e, dict) else waiting)
+    return manifest
+
+
 def review_progress(manifest: dict) -> dict:
     """`8 of 12 reviewed`, counting only the photographs that are in.
 
@@ -757,6 +793,40 @@ def mark_reviewed(name: str, file: str):
 def mark_unreviewed(name: str, file: str):
     """Undo the tick. The same click again, so nothing is a trap."""
     return _set_reviewed(_job_or_404(name), file, False)
+
+
+def _set_band(job: Path, file: str, letter) -> dict:
+    """Put one photograph in a band, or take it back to unassigned.
+
+    Follows `_set_reviewed`: load, touch the one key, save. The difference is
+    the sort, which is the whole feature. See `sort_by_band`.
+    """
+    manifest = load_manifest(job)
+    if letter is not None:
+        known = {b.get("letter") for b in band_list(manifest) if isinstance(b, dict)}
+        if letter not in known:
+            raise HTTPException(400, "This job has no band %r." % letter)
+    name = Path(file).name
+    for entry in manifest["photos"]:
+        if entry.get("file") == name:
+            if letter is None:
+                # Removing the key rather than writing an empty one, so a
+                # manifest never accumulates a field that means the default.
+                entry.pop(BAND, None)
+            else:
+                entry[BAND] = letter
+            sort_by_band(manifest)
+            with busy.writing():
+                save_manifest(job, manifest)
+            return manifest
+    raise HTTPException(404, "That photo is not in this job.")
+
+
+@router.post("/api/jobs/{name}/photos/{file}/band")
+def set_band(name: str, file: str, body: dict):
+    """One click, one photograph, one band. `{"band": null}` sends it back to
+    the unassigned strip."""
+    return _set_band(_job_or_404(name), file, (body or {}).get(BAND))
 
 
 def _set_cut(job: Path, file: str, cut: bool) -> dict:

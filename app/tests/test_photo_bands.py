@@ -8,14 +8,24 @@ The rule matters because the letter is what every photograph carries. Relabel
 a band and every photograph pointing at it is suddenly pointing somewhere
 else, silently, in a file nobody looks at.
 """
+import json
 import sys
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
+
+from docx import Document  # noqa: E402
+from PIL import Image  # noqa: E402
 
 import photos as photos_routes  # noqa: E402
+from main import create_app  # noqa: E402
+from photo_pages import build_photo_docx  # noqa: E402
+
+from conftest import TEMPLATE_DOCX, has_template  # noqa: E402
 
 
 @pytest.fixture
@@ -120,3 +130,214 @@ def test_a_band_needs_a_letter_and_a_name(job):
 def test_a_job_with_no_bands_still_validates(job):
     """Nothing added here may make an existing manifest illegal."""
     assert photos_routes._validate_manifest_shape(job, BEFORE_BANDS) is None
+
+
+# ---------------------------------------------------------------------------
+# Slice 2: a band click resorts the list itself.
+#
+# The array is the one ordering fact in the app. `included()` reads it for
+# captions, the preview and the build, so a sort applied at read time would
+# leave the order on disk and the order in the report saying different things.
+# Constraint 2 of F6 exists to stop that, and these are its tests.
+# ---------------------------------------------------------------------------
+
+TWO_BANDS = [{"letter": "A", "name": "First", "locked": True},
+             {"letter": "C", "name": "Last", "locked": True}]
+
+
+def with_bands(photos, on=True):
+    return {"job": "A job", "bands_on": on,
+            "bands": [dict(b) for b in TWO_BANDS], "photos": photos}
+
+
+def order(manifest):
+    return [e["file"] for e in manifest["photos"]]
+
+
+def test_a_band_click_moves_the_photograph_in_the_list():
+    m = with_bands([{"file": "a.jpg", "band": "C"},
+                    {"file": "b.jpg", "band": "A"}])
+    photos_routes.sort_by_band(m)
+    assert order(m) == ["b.jpg", "a.jpg"]
+
+
+def test_where_a_photograph_sits_inside_its_band_is_left_alone():
+    """Band order, then the order it already had. Clicking a band answers one
+    question and must not silently answer the other."""
+    m = with_bands([{"file": "a.jpg", "band": "A"},
+                    {"file": "b.jpg", "band": "C"},
+                    {"file": "c.jpg", "band": "A"}])
+    photos_routes.sort_by_band(m)
+    assert order(m) == ["a.jpg", "c.jpg", "b.jpg"]
+
+
+def test_a_photograph_with_no_band_waits_after_every_band():
+    m = with_bands([{"file": "a.jpg"}, {"file": "b.jpg", "band": "C"}])
+    photos_routes.sort_by_band(m)
+    assert order(m) == ["b.jpg", "a.jpg"]
+
+
+def test_with_bands_off_nothing_moves():
+    """Constraint 1. Turning bands off reorders nothing, so a job can leave
+    them behind as easily as it took them up."""
+    m = with_bands([{"file": "a.jpg", "band": "C"},
+                    {"file": "b.jpg", "band": "A"}], on=False)
+    photos_routes.sort_by_band(m)
+    assert order(m) == ["a.jpg", "b.jpg"]
+
+
+def test_a_cut_photograph_keeps_its_band_and_sorts_with_it():
+    """F6's edge, decided 2026-09-02: uncutting puts it back where it belongs
+    rather than wherever the list happened to have room."""
+    m = with_bands([{"file": "a.jpg", "band": "C"},
+                    {"file": "b.jpg", "band": "A", "cut": True},
+                    {"file": "c.jpg", "band": "A"}])
+    photos_routes.sort_by_band(m)
+    assert order(m) == ["b.jpg", "c.jpg", "a.jpg"]
+    assert [e["file"] for e in photos_routes.included(m)] == ["c.jpg", "a.jpg"]
+
+
+def test_included_still_answers_exactly_what_it_answered_before():
+    """The list a job has today, run through the new sort, comes back
+    untouched. Nothing added in this slice may change a job that has no
+    bands."""
+    before = [dict(e) for e in BEFORE_BANDS["photos"]]
+    m = dict(BEFORE_BANDS, photos=[dict(e) for e in BEFORE_BANDS["photos"]])
+    photos_routes.sort_by_band(m)
+    assert m["photos"] == before
+    assert photos_routes.included(m) == before
+
+
+# ---------------------------------------------------------------------------
+# The click itself, through the API Mark's screen will use.
+# ---------------------------------------------------------------------------
+
+BANDED = {
+    "job": "A job",
+    "caption_style": "view",
+    "bands_on": True,
+    "bands": [{"letter": "A", "name": "First", "locked": True},
+              {"letter": "C", "name": "Last", "locked": True}],
+    "photos": [{"file": "a.jpg", "caption": "one"},
+               {"file": "b.jpg", "caption": "two"},
+               {"file": "c.jpg", "caption": "three"}],
+}
+
+
+@pytest.fixture
+def home(tmp_path, monkeypatch):
+    monkeypatch.setenv("RRF_JOBS_HOME", str(tmp_path / "jobs"))
+    where = tmp_path / "jobs" / "A job" / "Photos"
+    where.mkdir(parents=True)
+    for entry in BANDED["photos"]:
+        (where / entry["file"]).write_bytes(b"pretend jpeg " + entry["file"].encode())
+    (where / "photo-manifest.json").write_text(json.dumps(BANDED, indent=2))
+    return tmp_path / "jobs"
+
+
+@pytest.fixture
+def client(home):
+    return TestClient(create_app())
+
+
+def on_disk(home) -> dict:
+    return json.loads((home / "A job" / "Photos" / "photo-manifest.json").read_text())
+
+
+def test_one_click_puts_a_photograph_in_a_band_and_moves_it(client, home):
+    r = client.post("/api/jobs/A job/photos/c.jpg/band", json={"band": "A"})
+    assert r.status_code == 200
+    assert [e["file"] for e in on_disk(home)["photos"]] == ["c.jpg", "a.jpg", "b.jpg"]
+
+
+def test_the_order_on_disk_is_the_order_the_report_will_use(client, home):
+    client.post("/api/jobs/A job/photos/c.jpg/band", json={"band": "A"})
+    client.post("/api/jobs/A job/photos/b.jpg/band", json={"band": "C"})
+    assert [e["file"] for e in on_disk(home)["photos"]] == ["c.jpg", "b.jpg", "a.jpg"]
+
+
+def test_a_click_touches_the_band_and_nothing_else(client, home):
+    assert client.post("/api/jobs/A job/photos/c.jpg/band",
+                       json={"band": "A"}).status_code == 200
+    after = on_disk(home)["photos"]
+    assert {e["file"]: e["caption"] for e in after} == {
+        "a.jpg": "one", "b.jpg": "two", "c.jpg": "three"}
+    assert [e.get("band") for e in after] == ["A", None, None]
+
+
+def test_a_photograph_can_be_put_back_in_the_unassigned_strip(client, home):
+    assert client.post("/api/jobs/A job/photos/a.jpg/band",
+                       json={"band": "A"}).status_code == 200
+    assert [e for e in on_disk(home)["photos"] if e["file"] == "a.jpg"][0]["band"] == "A"
+    assert client.post("/api/jobs/A job/photos/a.jpg/band",
+                       json={"band": None}).status_code == 200
+    entry = [e for e in on_disk(home)["photos"] if e["file"] == "a.jpg"][0]
+    assert "band" not in entry, "unassigning removes the key rather than writing an empty one"
+
+
+def test_a_band_this_job_does_not_have_is_refused(client, home):
+    r = client.post("/api/jobs/A job/photos/a.jpg/band", json={"band": "Z"})
+    assert r.status_code == 400
+    assert "Z" in r.json()["detail"]
+
+
+def test_a_photograph_this_job_does_not_have_is_refused(client):
+    r = client.post("/api/jobs/A job/photos/nope.jpg/band", json={"band": "A"})
+    assert r.status_code == 404
+    # The same sentence the reviewed and cut routes give, rather than the
+    # bare 404 a missing route would answer with.
+    assert r.json()["detail"] == "That photo is not in this job."
+
+
+# ---------------------------------------------------------------------------
+# The proof that bands are not a second ordering system.
+# ---------------------------------------------------------------------------
+
+def _job_with_photos(where: Path, names) -> Path:
+    where.mkdir(parents=True)
+    for i, n in enumerate(names):
+        Image.new("RGB", (400, 300), (i * 40 % 255, 90, 120)).save(where / n)
+    return where
+
+
+def _build(where: Path, photos) -> list:
+    """Build the photo pages and read the captions back in page order."""
+    manifest = where / "photo-manifest.json"
+    manifest.write_text(json.dumps({
+        "job": "TESTJOB", "context": "123 Test St, Davenport, Iowa",
+        "report_year": 2026, "photos": photos,
+    }))
+    out = build_photo_docx(manifest, TEMPLATE_DOCX)
+    doc = Document(str(out))
+    return [r.cells[1].text.strip() for t in doc.tables for r in t.rows]
+
+
+@has_template
+def test_clicking_bands_builds_the_same_document_as_dragging(tmp_path):
+    """The whole point of constraint 2, proved on a real document.
+
+    Two routes to one order: dragging the photographs into place, and leaving
+    them in capture order while clicking a band under each. The pages that
+    come out have to be the same, because the build knows nothing about bands
+    and never should.
+    """
+    names = ["a.jpg", "b.jpg", "c.jpg", "d.jpg"]
+    caption = {n: "View of subject %s" % n[0] for n in names}
+
+    dragged = _job_with_photos(tmp_path / "dragged", names)
+    by_hand = [{"file": n, "caption": caption[n]} for n in ["c.jpg", "d.jpg", "a.jpg", "b.jpg"]]
+
+    clicked = _job_with_photos(tmp_path / "clicked", names)
+    banded = {
+        "bands_on": True,
+        "bands": [{"letter": "A", "name": "First", "locked": True},
+                  {"letter": "C", "name": "Last", "locked": True}],
+        # Capture order, untouched. Only the band under each has been clicked.
+        "photos": [{"file": "a.jpg", "caption": caption["a.jpg"], "band": "C"},
+                   {"file": "b.jpg", "caption": caption["b.jpg"], "band": "C"},
+                   {"file": "c.jpg", "caption": caption["c.jpg"], "band": "A"},
+                   {"file": "d.jpg", "caption": caption["d.jpg"], "band": "A"}],
+    }
+    photos_routes.sort_by_band(banded)
+
+    assert _build(dragged, by_hand) == _build(clicked, banded["photos"])

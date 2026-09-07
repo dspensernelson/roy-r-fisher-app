@@ -515,10 +515,26 @@ files came back to the Mac and were looked at, not taken on trust.
    finished and every file appeared. Judging the picture needs a person, which
    is why `docs/CHECKS.md` Check 14 asks somebody to open the PDF and look.
 
-**What is still owed on this.** The Windows run used the practice workbook the
-tool builds for itself. One of Mark's real grids has been through the whole
-chain on the Mac and not yet on Windows. The extraction is shared and
-platform-independent, so the risk is low, and low is not proven.
+**Then one of Mark's real grids ran on Windows too**, the Utica Ridge
+assessment block, twelve columns wide. It came out with his grey banner, his
+wrapped headings, currency, percentages and row rules, and nothing clipped. The
+workbook was not changed.
+
+**That run found a fourth thing, and it is the best argument in this whole
+file for the fallback.** The sharpness fix above broke `pywin32`: it asked for
+the pasted picture by calling the collection rather than by naming `Item`, and
+it did not wait for the clipboard. Excel answered "the index into the specified
+collection is out of bounds". PowerShell did the work instead and the grid came
+out correct, so the run reported success and nobody would have known.
+
+Two things caught it. The log line `_note` writes when the first way fails, and
+the `office.ps1` the fallback leaves behind. **Spenser asked for that log after
+being talked out of it once.** Without it this would have shipped as a machine
+that quietly pays for a failed attempt on every grid.
+
+Fixed by naming `Item` and by looking up to ten times over three seconds. Proven
+on 2026-09-07: the real grid ran again, no `office.ps1` was left, so `pywin32`
+did it.
 
 ### Still owed out of that work
 

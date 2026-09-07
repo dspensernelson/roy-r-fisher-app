@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, jobFacts, putJobFacts, reveal,
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
 
 export default function PhotosScreen({ job }) {
@@ -158,6 +158,14 @@ export default function PhotosScreen({ job }) {
     try {
       setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
     } catch (e) { setError(e.message); }
+  }
+
+  // One click, one photograph, one band. Clicking the band it is already in
+  // takes it back out, so the same click is never a trap.
+  async function onBand(file, letter) {
+    setError(null);
+    try { setManifest(await setPhotoBand(job, file, letter)); }
+    catch (e) { setError(e.message); }
   }
 
   async function onFixFacts(city, address) {
@@ -343,7 +351,16 @@ export default function PhotosScreen({ job }) {
   const needsConfirm = !!(quote && quote.needs_confirmation);
   const blockedBecause = quote ? quote.blocked_because : "";
 
-  const buildReady = inPhotos.length > 0 && allReviewed && !(facts && !facts.ready);
+  // Bands, read from the manifest like everything else on this screen. Off
+  // means no dots and nothing held: a job that does not use bands must not
+  // gain a single thing to look at or a single reason it cannot build.
+  const bandsOn = !!manifest.bands_on;
+  const bands = bandsOn ? (manifest.bands || []) : [];
+  const waiting = bandsOn ? inPhotos.filter((x) => !x.p.band).length : 0;
+  const waitingText = `${waiting} photograph${waiting === 1 ? " is" : "s are"} waiting for a band`;
+
+  const buildReady = inPhotos.length > 0 && allReviewed && waiting === 0
+                     && !(facts && !facts.ready);
   // The quote has to be in hand before this can be pressed, and that is a
   // safety rule rather than a nicety. `toSend` falls back to counting
   // uncaptioned photographs when the estimate has not arrived, so the button
@@ -382,6 +399,11 @@ export default function PhotosScreen({ job }) {
             {" "}· about {pagesIn} {pagesIn === 1 ? "page" : "pages"}.
             {" "}Drag a photo to reorder it.
           </p>
+          {waiting > 0 && (
+            <p className="sub review-progress" style={{ margin: "6px 0 0" }}>
+              {waitingText}. They sit at the end of the list until you click one.
+            </p>
+          )}
           {inPhotos.length > 0 && (
             <p className={`sub review-progress${allReviewed ? " is-done" : ""}`} style={{ margin: "6px 0 0" }}>
               {reviewText}{allReviewed ? ". Ready to build." : ". Build waits until you have read them all."}
@@ -439,6 +461,7 @@ export default function PhotosScreen({ job }) {
                     disabled={!!busy || !buildReady}
                     title={inPhotos.length === 0 ? "No photos in the report yet"
                            : !allReviewed ? "Tick every caption you have read first"
+                           : waiting > 0 ? waitingText
                            : facts && !facts.ready ? "The file cannot be named yet" : ""}>
               Build photo pages
             </button>
@@ -691,13 +714,31 @@ export default function PhotosScreen({ job }) {
                   tick in a corner. It is not called Approve, and there is
                   deliberately no way to do all of them at once: the point is
                   that he has read each one. */}
+              {/* The tick is the first thing in the row and stays there,
+                  however many bands the job grows. Spenser, 2026-09-07. It
+                  is still one photograph at a time: there is deliberately no
+                  way to tick them all. */}
               <div className="review-line">
-                <button className={`review-btn${p.reviewed ? " is-reviewed" : ""}`}
+                <button className={`dot tick-dot${p.reviewed ? " is-reviewed" : ""}`}
                         disabled={!(p.caption || "").trim()}
-                        title={(p.caption || "").trim() ? "" : "Write a caption first"}
+                        aria-label={p.reviewed ? "Reviewed" : "Mark reviewed"}
+                        title={(p.caption || "").trim()
+                               ? (p.reviewed ? "Reviewed" : "Mark reviewed")
+                               : "Write a caption first"}
                         onClick={() => onReview(p.file, !!p.reviewed)}>
-                  {p.reviewed ? "Reviewed" : "Mark reviewed"}
+                  <span aria-hidden="true">&#10003;</span>
                 </button>
+                {/* One dot per band, in band order. Clicking the band it is
+                    already in takes it back out. */}
+                {bands.map((b) => (
+                  <button key={b.letter}
+                          className={`dot band-dot${p.band === b.letter ? " is-on" : ""}`}
+                          aria-label={`Band ${b.letter}`}
+                          title={b.name === b.letter ? `Band ${b.letter}` : b.name}
+                          onClick={() => onBand(p.file, p.band === b.letter ? null : b.letter)}>
+                    <span aria-hidden="true">{b.letter}</span>
+                  </button>
+                ))}
                 <button className="linky cut-link" style={{ marginLeft: 0 }}
                         onClick={() => onCut(p.file)}>
                   Take out

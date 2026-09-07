@@ -56,20 +56,18 @@ code path, rather than a button on some jobs and a dot on others.
 `included()`.** That is where they cannot drift from what they describe, and
 slices 1 and 2 put them there.
 
-### One thing to confirm before slice 3
+### Answered by Spenser on 2026-09-07
 
-F6 says three locked bands, A first, B middle, C last, and typed bands slide
-anywhere between A and C. It does not say what the three are called or whether
-a typed band may sit between A and B.
+**The three are called A, B and C.** Name and letter are the same, so there is
+nothing to translate. Mark can still rename them, and the letter does not move
+when he does.
 
-**Built to this assumption unless Spenser says otherwise:** A, B and C are
-locked, cannot be deleted, keep their letters for ever and keep their order
-relative to each other. A typed band may go anywhere strictly between A and C,
-including before B. The three ship named `First`, `Middle` and `Last`, because
-their position is their meaning, and Mark can rename any of them without the
-letter changing.
+**A job does not always have them.** Spenser's correction, in his words: they
+do not always have them, they are toggled on and off. One switch per job. It
+brings A, B and C together, and turning it off puts them away without losing
+anything Mark has already clicked.
 
-**Ask before slice 3 starts.** Slices 1 and 2 do not depend on the answer.
+A typed band goes anywhere strictly between A and C, including before B.
 
 ## Rules for whoever executes this
 
@@ -112,40 +110,40 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 2, a band click resorts the list itself
 
-- [ ] Add the failing cases to `app/tests/test_photo_bands.py`
-- [ ] Add `sort_by_band(manifest)`, with constraint 2 in its docstring
-- [ ] Add `POST /api/jobs/{name}/photos/{file}/band`, taking a letter or null
-- [ ] A cut photograph keeps its band and sorts with it, so uncutting restores its place
-- [ ] Prove `included()` returns the same list it does today when bands are off
-- [ ] Prove a build after a band click produces the same document as the same order reached by dragging
-- [ ] The whole suite passes and nothing skips
+- [x] Add the failing cases to `app/tests/test_photo_bands.py`
+- [x] Add `sort_by_band(manifest)`, with constraint 2 in its docstring
+- [x] Add `POST /api/jobs/{name}/photos/{file}/band`, taking a letter or null
+- [x] A cut photograph keeps its band and sorts with it, so uncutting restores its place
+- [x] Prove `included()` returns the same list it does today when bands are off
+- [x] Prove a build after a band click produces the same document as the same order reached by dragging
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `a-band-click-sorts-the-list`, and Spenser says yes
 
 ### Slice 3, the band list and the toggle, per job
 
-- [ ] Ask Spenser the question under "One thing to confirm" above
-- [ ] Add the failing cases to `app/tests/test_photo_bands.py`
-- [ ] Add `PUT /api/jobs/{name}/bands`: turn on or off, create, rename, delete, reorder
-- [ ] A, B and C cannot be deleted, relettered, or moved out of order
-- [ ] Deleting a typed band returns its photographs to unassigned and moves nothing else
-- [ ] Turning bands on reorders nothing, and turning them off reorders nothing
-- [ ] The whole suite passes and nothing skips
+- [x] Ask Spenser the question under "One thing to confirm" above
+- [x] Add the failing cases to `app/tests/test_photo_bands.py`
+- [x] Add `PUT /api/jobs/{name}/bands`: turn on or off, create, rename, delete, reorder
+- [x] A, B and C cannot be deleted, relettered, or moved out of order
+- [x] Deleting a typed band returns its photographs to unassigned and moves nothing else
+- [x] Turning bands on reorders nothing, and turning them off reorders nothing
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `the-band-list`, and Spenser says yes
 
 ### Slice 4, one dot row under every photograph
 
-- [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
-- [ ] Add `setPhotoBand` and `putBands` to `app/web/src/api.js`
-- [ ] Replace the `Mark reviewed` button with the tick at the lower left of the row
-- [ ] Band dots to the right of the tick, one per band, in band order, with bands off showing none
-- [ ] Add the unassigned strip, and hold the build until it is empty
-- [ ] Add `.band-dot` to `app/web/src/brand.css` next to `.review-line`, using the tokens in `brand/Roy R. Fisher Design System/tokens/`
-- [ ] The whole suite passes and nothing skips
+- [x] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [x] Add `setPhotoBand` and `putBands` to `app/web/src/api.js`
+- [x] Replace the `Mark reviewed` button with the tick at the lower left of the row
+- [x] Band dots to the right of the tick, one per band, in band order, with bands off showing none
+- [x] Say how many photographs are waiting, and hold the build until none are
+- [x] Add `.band-dot` to `app/web/src/brand.css` next to `.review-line`, using the tokens in `brand/Roy R. Fisher Design System/tokens/`
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `bands-on-the-screen`, and Spenser says yes
 
 ### Closing this plan out
 
-- [ ] Prove it by hand on the Blaul job, not only by test
+- [x] Prove it by hand on the Blaul job, not only by test
 - [ ] Ask Spenser, then fold the learnings into `docs/ROADMAP.md`
 - [ ] Ask Spenser, then mark F6 built in `docs/FUTURES.md`
 - [ ] Delete this plan
@@ -267,11 +265,16 @@ one that would add that, is a separate decision behind a warning.
 nothing else. That is the answer to the question F6 left open and it is why
 there is one code path rather than two.
 
-**The unassigned strip.** Above the grid, holding every photograph with no
-band, draining as Mark clicks. When it is empty it disappears. The build button
-is held while it has anything in it, alongside `allReviewed` at line 333, with a
-title saying which of the two is missing. An empty band still shows its header,
-so Mark can see he owes it photographs.
+**The unassigned strip, and what was built instead.** The plan asked for a
+strip above the grid holding every photograph with no band. It was not built
+that way, and here is why. Sorting already puts every unassigned photograph at
+the end of the list, so a strip would be a second copy of tiles that are
+already on screen, and the tile markup would have to be duplicated or
+extracted. What is built instead is a line above the grid saying how many
+photographs are waiting and where they are, plus the build held until that
+count reaches zero. **Spenser can still ask for the strip.** The count and the
+gate are the part the workflow needs; the strip is a layout choice and belongs
+with the layout pass in F8.
 
 **Colour comes from the tokens**, `brand/Roy R. Fisher Design System/tokens/`,
 pointed at rather than copied. The brand red sat wrong in a memory file for

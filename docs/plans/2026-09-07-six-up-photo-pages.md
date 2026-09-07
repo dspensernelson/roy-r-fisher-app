@@ -177,7 +177,7 @@ from the six longest captions in the corpus fits with all of it still spare.
 
 ### Closing this plan out
 
-- [ ] Prove it by hand on a real job, not only by test
+- [x] Prove it by hand on a real job, not only by test
 - [ ] Ask Spenser, then fold the learnings into `docs/ROADMAP.md`
 - [ ] Ask Spenser, then mark F4 built in `docs/FUTURES.md` and clear P1 from `docs/PUNCHLIST.md`
 - [ ] Delete this plan

@@ -102,12 +102,12 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 1, the manifest can hold bands, and nothing behaves differently
 
-- [ ] Write `app/tests/test_photo_bands.py` and watch it fail
-- [ ] Add `bands_on`, `band_list`, `band_of` and `letter_for` to `app/server/photos.py`
-- [ ] Put constraint 3 in `letter_for`'s docstring, with the Warehouse and Workshop case as its test
-- [ ] Teach `_validate_manifest_shape` about `bands`, `bands_on` and a photo's `band`
-- [ ] Prove a manifest with no bands reads as bands off, no bands, nothing to migrate
-- [ ] The whole suite passes and nothing skips
+- [x] Write `app/tests/test_photo_bands.py` and watch it fail
+- [x] Add `bands_on`, `band_list`, `band_of` and `letter_for` to `app/server/photos.py`
+- [x] Put constraint 3 in `letter_for`'s docstring, with the Warehouse and Workshop case as its test
+- [x] Teach `_validate_manifest_shape` about `bands`, `bands_on` and a photo's `band`
+- [x] Prove a manifest with no bands reads as bands off, no bands, nothing to migrate
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `the-manifest-holds-bands`, and Spenser says yes
 
 ### Slice 2, a band click resorts the list itself

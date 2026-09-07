@@ -143,7 +143,7 @@ fails until it is deleted. That is deliberate.
 
 ### Closing this plan out
 
-- [ ] Prove it by hand on the Blaul job, not only by test
+- [x] Prove it by hand on the Blaul job, not only by test
 - [ ] Ask Spenser, then fold the learnings into `docs/ROADMAP.md`
 - [ ] Ask Spenser, then mark F6 built in `docs/FUTURES.md`
 - [ ] Delete this plan

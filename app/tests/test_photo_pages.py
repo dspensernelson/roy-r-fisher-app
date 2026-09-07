@@ -1,6 +1,7 @@
 import json
 import math
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,8 @@ from docx import Document
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
-from photo_pages import build_photo_docx, exif_order, next_output_name  # noqa: E402
+from photo_pages import (LAYOUTS, SIX_UP, THREE_UP, build_photo_docx,  # noqa: E402
+                         exif_order, next_output_name)
 
 from conftest import TEMPLATE_DOCX, has_template
 
@@ -149,3 +151,86 @@ def test_build_page_shape_has_no_orphaned_continuation_section(tmp_path, n, expe
     # Page 1 is always section 0's own first page; it must never show the
     # continuation header, regardless of whether a second section exists.
     assert "CONTINUED" not in _first_page_header_text(d, 0)
+
+
+# --- The layout object, added 2026-09-07 for six-up ------------------------
+#
+# These need no template and no corpus: they are arithmetic about where a
+# photograph goes, which is the thing six-up changes and the thing that used
+# to be a bare 3 in two different files.
+
+
+def test_three_up_puts_the_caption_beside_the_photograph():
+    """One row per photograph, image left and caption right. This is what the
+    template has always been and it must not move."""
+    assert [THREE_UP.cells(n) for n in range(3)] == [
+        (0, 0, 0, 1), (1, 0, 1, 1), (2, 0, 2, 1)]
+
+
+def test_six_up_reads_left_to_right_then_down():
+    """Spenser, 2026-09-07, asked whether a band should read down a column
+    instead: left to right, top to bottom. So a photograph sits in one of two
+    columns and its caption sits directly beneath it."""
+    assert [SIX_UP.cells(n) for n in range(6)] == [
+        (0, 0, 1, 0), (0, 1, 1, 1),
+        (2, 0, 3, 0), (2, 1, 3, 1),
+        (4, 0, 5, 0), (4, 1, 5, 1)]
+
+
+def test_three_up_trims_one_row_per_photograph():
+    assert [THREE_UP.rows_for(k) for k in (1, 2, 3)] == [1, 2, 3]
+
+
+def test_six_up_trims_in_whole_pairs_and_an_odd_one_leaves_a_gap():
+    """Spenser chose this on 2026-09-07 over merging the last pair into one
+    full-width cell: a photograph that changes size according to how many
+    there happen to be is a rule that surprises somebody six months later."""
+    assert [SIX_UP.rows_for(k) for k in (1, 2, 3, 4, 5, 6)] == [2, 2, 4, 4, 6, 6]
+
+
+def test_the_layouts_are_reachable_by_how_many_go_on_a_page():
+    """One value in the manifest decides both the template and the shape, so
+    the two can never disagree."""
+    assert LAYOUTS[3] is THREE_UP and LAYOUTS[6] is SIX_UP
+    assert (THREE_UP.template, SIX_UP.template) == ("Photo.docx", "Photo six-up.docx")
+
+
+def _body_xml(path: Path) -> bytes:
+    """The document body as Word stores it, for comparing two builds.
+
+    Compared as bytes rather than by walking the tree, because the point is
+    that nothing moved at all: not a cell, not an attribute, not a run.
+    """
+    with zipfile.ZipFile(path) as z:
+        return z.read("word/document.xml")
+
+
+@has_template
+def test_the_layout_object_did_not_move_three_up(tmp_path):
+    """The Layout refactor must be a refactor and nothing else.
+
+    Every count in the engine used to be a bare 3 and now comes off THREE_UP.
+    If any of them came off wrong, the document changes, and the document is
+    what Mark signs. So this compares the real bytes rather than a shape.
+    """
+    names = make_photos(tmp_path, 5)
+    m = write_manifest(tmp_path, names)
+    default = build_photo_docx(m, TEMPLATE_DOCX)
+    explicit = build_photo_docx(m, TEMPLATE_DOCX, layout=THREE_UP)
+    assert _body_xml(default) == _body_xml(explicit)
+
+
+@has_template
+@pytest.mark.parametrize("count", [1, 2, 3, 4, 5, 7, 11, 12, 13])
+def test_three_up_page_and_row_counts_are_what_they_always_were(tmp_path, count):
+    """The counts Spenser found the trimming bugs on: 11 and 12 and 61 all
+    behaved differently before `_trim_unused_rows` and
+    `_drop_trailing_blank_paragraphs` existed. Pin them so the layout object
+    cannot quietly change one."""
+    names = make_photos(tmp_path, count)
+    out = build_photo_docx(write_manifest(tmp_path, names), TEMPLATE_DOCX)
+    d = Document(str(out))
+    assert len(d.tables) == max(1, math.ceil(count / 3))
+    assert len(d.inline_shapes) == count
+    on_last = count - (len(d.tables) - 1) * 3
+    assert len(d.tables[-1].rows) == on_last

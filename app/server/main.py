@@ -53,13 +53,6 @@ DEFAULT_PHOTO_TEMPLATE = (
 )
 
 
-def photo_pages_per_table() -> int:
-    """How many photos share one printed page, read from the engine rather
-    than restated, so a preview always shows exactly one page."""
-    from photo_pages import PHOTOS_PER_TABLE
-    return PHOTOS_PER_TABLE
-
-
 class NewJob(BaseModel):
     name: str
 

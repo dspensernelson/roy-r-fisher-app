@@ -124,16 +124,16 @@ from the six longest captions in the corpus fits with all of it still spare.
 
 ### Slice 1, the engine knows two layouts, and three-up builds the same document
 
-- [ ] Add the failing cases to `app/tests/test_photo_pages.py` and watch them fail
-- [ ] Add `Layout`, `THREE_UP` and `SIX_UP` to `app/engine/photo_pages.py`
-- [ ] `Layout.cells(n)` returns where photograph `n` puts its image and caption
-- [ ] `Layout.rows_for(k)` returns the rows a last page holding `k` keeps
-- [ ] `_fitted_size` takes its box from the layout instead of the module constants
-- [ ] `build_photo_docx` takes `layout=THREE_UP` and uses it for every count
-- [ ] `_trim_unused_rows` takes the layout and trims in whole rows or whole pairs
-- [ ] Prove three-up output is unchanged: same photographs, same document
-- [ ] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
-- [ ] Commit on `the-engine-knows-two-layouts`, and Spenser says yes
+- [x] Add the failing cases to `app/tests/test_photo_pages.py` and watch them fail
+- [x] Add `Layout`, `THREE_UP` and `SIX_UP` to `app/engine/photo_pages.py`
+- [x] `Layout.cells(n)` returns where photograph `n` puts its image and caption
+- [x] `Layout.rows_for(k)` returns the rows a last page holding `k` keeps
+- [x] `_fitted_size` takes its box from the layout instead of the module constants
+- [x] `build_photo_docx` takes `layout=THREE_UP` and uses it for every count
+- [x] `_trim_unused_rows` takes the layout and trims in whole rows or whole pairs
+- [x] Prove three-up output is unchanged: same photographs, same document
+- [x] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
+- [x] Commit on `the-engine-knows-two-layouts`, and Spenser says yes
 
 ### Slice 2, a page that holds six
 
@@ -157,7 +157,7 @@ from the six longest captions in the corpus fits with all of it still spare.
 - [ ] Prove a manifest without the key reads as three, with nothing to migrate
 - [ ] `app/server/main.py` picks the template and the layout together from that one value
 - [ ] `RRF_PHOTO_TEMPLATE` still overrides, and overriding does not change the layout
-- [ ] Delete the dead `photo_pages_per_table()` at `app/server/main.py:56`
+- [x] Delete the dead `photo_pages_per_table()` at `app/server/main.py:56`
 - [ ] The manifest route returns `photos_per_page` always present, without writing it to disk
 - [ ] Prove a build with the key absent produces the document it produces today
 - [ ] `cd app/web && npm run build`, then the whole suite passes with nothing skipped

@@ -214,7 +214,8 @@ def test_the_build_refuses_when_every_photo_is_cut(client, home):
 def test_the_engine_prints_only_included_photos_with_no_blank_rows(tmp_path):
     """Straight at the engine, because it reads the manifest off disk itself."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
-    from photo_pages import build_photo_docx, PHOTOS_PER_TABLE
+    from photo_pages import build_photo_docx, THREE_UP
+    PHOTOS_PER_TABLE = THREE_UP.per_page
 
     from conftest import TEMPLATE_DOCX
     if not TEMPLATE_DOCX.is_file():

@@ -158,6 +158,70 @@ def sort_by_band(manifest: dict) -> dict:
     return manifest
 
 
+LOCKED_BANDS = ("A", "B", "C")
+
+
+def default_bands() -> list:
+    """The three bands a job gets when Mark turns the switch on.
+
+    Spenser, 2026-09-07: a job does not always have them. It has none until
+    the switch goes on, and then it has these three at once. Their position
+    is their meaning, so A is always first and C is always last, and none of
+    the three can be taken away while the switch is on.
+    """
+    return [{"letter": letter, "name": letter, "locked": True}
+            for letter in LOCKED_BANDS]
+
+
+def _merge_bands(existing: list, incoming: list) -> list:
+    """The band list the screen asks for, with every letter still the app's
+    own to give.
+
+    A band arriving with a letter is one that already exists: it may be
+    renamed and moved, and it keeps the letter it was given. A band arriving
+    without one is new, and takes its letter here. The screen never chooses a
+    letter, which is what makes constraint 3 hold from end to end.
+    """
+    known = {b["letter"]: b for b in existing
+             if isinstance(b, dict) and b.get("letter")}
+    out, taken = [], set(known)
+    for want in incoming:
+        if not isinstance(want, dict):
+            raise HTTPException(400, "Each band must be an object.")
+        band_name = str(want.get("name", "")).strip()
+        if not band_name:
+            raise HTTPException(400, "A band needs a name.")
+        letter = want.get("letter")
+        if letter:
+            if letter not in known:
+                raise HTTPException(400, "This job has no band %r." % letter)
+            band = {"letter": letter, "name": band_name}
+            if letter in LOCKED_BANDS:
+                band["locked"] = True
+            out.append(band)
+        else:
+            fresh = letter_for(band_name, taken)
+            taken.add(fresh)
+            out.append({"letter": fresh, "name": band_name})
+    return out
+
+
+def _check_band_order(bands: list) -> None:
+    """A first, C last, and all three still there.
+
+    Their position is their meaning, which is why they are the only bands
+    that cannot move. Everything Mark types slides between them.
+    """
+    letters = [b["letter"] for b in bands]
+    for letter in LOCKED_BANDS:
+        if letter not in letters:
+            raise HTTPException(400, "Band %s cannot be taken away." % letter)
+    if letters[0] != "A":
+        raise HTTPException(400, "Band A is always first.")
+    if letters[-1] != "C":
+        raise HTTPException(400, "Band C is always last.")
+
+
 def review_progress(manifest: dict) -> dict:
     """`8 of 12 reviewed`, counting only the photographs that are in.
 
@@ -827,6 +891,48 @@ def set_band(name: str, file: str, body: dict):
     """One click, one photograph, one band. `{"band": null}` sends it back to
     the unassigned strip."""
     return _set_band(_job_or_404(name), file, (body or {}).get(BAND))
+
+
+@router.put("/api/jobs/{name}/bands")
+def put_bands(name: str, body: dict):
+    """The switch, and the list of bands behind it.
+
+    Sends the whole list, the way the manifest route does, because the
+    screen holds the whole list. Turning the switch on for the first time
+    brings A, B and C. Turning it off keeps every band and everything Mark
+    has already clicked, so he can put it back on and find his work.
+    """
+    job = _job_or_404(name)
+    manifest = load_manifest(job)
+    body = body or {}
+    want_on = body.get(BANDS_ON)
+    incoming = body.get(BANDS)
+
+    bands = band_list(manifest)
+    if incoming is not None:
+        if not isinstance(incoming, list):
+            raise HTTPException(400, "Manifest 'bands' must be a list.")
+        bands = _merge_bands(bands, incoming)
+        _check_band_order(bands)
+    elif want_on and not bands:
+        bands = default_bands()
+
+    manifest[BANDS] = bands
+    if want_on is not None:
+        manifest[BANDS_ON] = bool(want_on)
+
+    # A photograph whose band has gone waits again, in the unassigned strip.
+    # Nothing else moves, which is what makes deleting a band safe to undo by
+    # hand: every other photograph is exactly where it was.
+    known = {b["letter"] for b in bands}
+    for entry in manifest["photos"]:
+        if band_of(entry) and entry[BAND] not in known:
+            entry.pop(BAND, None)
+
+    sort_by_band(manifest)
+    with busy.writing():
+        save_manifest(job, manifest)
+    return manifest
 
 
 def _set_cut(job: Path, file: str, cut: bool) -> dict:

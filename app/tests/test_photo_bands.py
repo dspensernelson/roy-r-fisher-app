@@ -341,3 +341,153 @@ def test_clicking_bands_builds_the_same_document_as_dragging(tmp_path):
     photos_routes.sort_by_band(banded)
 
     assert _build(dragged, by_hand) == _build(clicked, banded["photos"])
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: the switch, and the list of bands behind it.
+#
+# A job has no bands until Mark turns the switch on. One switch, and A, B and
+# C arrive together. Spenser, 2026-09-07: they are not always there.
+# ---------------------------------------------------------------------------
+
+PLAIN = {
+    "job": "A job",
+    "caption_style": "view",
+    "photos": [{"file": "a.jpg", "caption": "one"},
+               {"file": "b.jpg", "caption": "two"},
+               {"file": "c.jpg", "caption": "three"}],
+}
+
+
+@pytest.fixture
+def plain_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("RRF_JOBS_HOME", str(tmp_path / "jobs"))
+    where = tmp_path / "jobs" / "A job" / "Photos"
+    where.mkdir(parents=True)
+    for entry in PLAIN["photos"]:
+        (where / entry["file"]).write_bytes(b"pretend jpeg " + entry["file"].encode())
+    (where / "photo-manifest.json").write_text(json.dumps(PLAIN, indent=2))
+    return tmp_path / "jobs"
+
+
+@pytest.fixture
+def plain(plain_home):
+    return TestClient(create_app())
+
+
+def letters(manifest) -> list:
+    return [b["letter"] for b in manifest.get("bands", [])]
+
+
+def test_a_job_has_no_bands_until_the_switch_goes_on(plain, plain_home):
+    assert on_disk(plain_home).get("bands_on") in (None, False)
+    assert on_disk(plain_home).get("bands") in (None, [])
+
+
+def test_the_switch_brings_A_B_and_C_together(plain, plain_home):
+    r = plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    assert r.status_code == 200
+    assert letters(on_disk(plain_home)) == ["A", "B", "C"]
+
+
+def test_the_switch_moves_no_photograph(plain, plain_home):
+    """Constraint 1. Everything loaded stays where it is and waits to be
+    clicked."""
+    assert plain.put("/api/jobs/A job/bands",
+                     json={"bands_on": True}).status_code == 200
+    assert [e["file"] for e in on_disk(plain_home)["photos"]] == \
+        ["a.jpg", "b.jpg", "c.jpg"]
+
+
+def test_the_switch_off_keeps_what_he_already_clicked(plain, plain_home):
+    """Turning it off is not throwing it away. He can put it back on and find
+    his work."""
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    plain.post("/api/jobs/A job/photos/c.jpg/band", json={"band": "A"})
+    plain.put("/api/jobs/A job/bands", json={"bands_on": False})
+    kept = {e["file"]: e.get("band") for e in on_disk(plain_home)["photos"]}
+    assert kept["c.jpg"] == "A"
+
+
+def test_a_band_he_types_takes_its_letter_from_its_name(plain, plain_home):
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"name": "Warehouse"}, {"letter": "C", "name": "C"}]})
+    assert letters(on_disk(plain_home)) == ["A", "B", "W", "C"]
+
+
+def test_renaming_a_band_does_not_move_its_letter(plain, plain_home):
+    """Constraint 3, seen from the screen. Every photograph in that band
+    points at the letter."""
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"name": "Warehouse"}, {"letter": "C", "name": "C"}]})
+    plain.post("/api/jobs/A job/photos/a.jpg/band", json={"band": "W"})
+    plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"letter": "W", "name": "Storage"}, {"letter": "C", "name": "C"}]})
+    after = on_disk(plain_home)
+    assert letters(after) == ["A", "B", "W", "C"]
+    assert [b["name"] for b in after["bands"]] == ["A", "B", "Storage", "C"]
+    assert [e for e in after["photos"] if e["file"] == "a.jpg"][0]["band"] == "W"
+
+
+def test_A_B_and_C_cannot_be_taken_away(plain, plain_home):
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    r = plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "C", "name": "C"}]})
+    assert r.status_code == 400
+    assert "B" in r.json()["detail"]
+    assert letters(on_disk(plain_home)) == ["A", "B", "C"]
+
+
+def test_a_band_this_job_never_had_cannot_arrive_with_a_letter(plain, plain_home):
+    """A letter is given out by the app, once, and never chosen by the
+    screen. This is how a reletter is refused."""
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    r = plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"letter": "Z", "name": "Warehouse"}, {"letter": "C", "name": "C"}]})
+    assert r.status_code == 400
+    assert "Z" in r.json()["detail"]
+
+
+def test_nothing_goes_before_A_or_after_C(plain, plain_home):
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    first = plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"name": "Warehouse"}, {"letter": "A", "name": "A"},
+        {"letter": "B", "name": "B"}, {"letter": "C", "name": "C"}]})
+    assert first.status_code == 400
+    last = plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"letter": "C", "name": "C"}, {"name": "Warehouse"}]})
+    assert last.status_code == 400
+
+
+def test_a_typed_band_may_sit_before_or_after_B(plain, plain_home):
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    r = plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"name": "Warehouse"},
+        {"letter": "B", "name": "B"}, {"letter": "C", "name": "C"}]})
+    assert r.status_code == 200
+    assert letters(on_disk(plain_home)) == ["A", "W", "B", "C"]
+
+
+def test_taking_a_band_away_sends_its_photographs_back_to_waiting(plain, plain_home):
+    """And moves nothing else. F6, 2026-09-02."""
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"name": "Warehouse"}, {"letter": "C", "name": "C"}]})
+    plain.post("/api/jobs/A job/photos/a.jpg/band", json={"band": "W"})
+    plain.post("/api/jobs/A job/photos/b.jpg/band", json={"band": "B"})
+    plain.put("/api/jobs/A job/bands", json={"bands": [
+        {"letter": "A", "name": "A"}, {"letter": "B", "name": "B"},
+        {"letter": "C", "name": "C"}]})
+    after = on_disk(plain_home)
+    kept = {e["file"]: e.get("band") for e in after["photos"]}
+    assert kept["a.jpg"] is None, "its band is gone, so it waits again"
+    assert kept["b.jpg"] == "B", "nothing else moved"
+    assert letters(after) == ["A", "B", "C"]

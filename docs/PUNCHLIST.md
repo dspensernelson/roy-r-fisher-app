@@ -16,15 +16,15 @@ thing it decided.
 
 ## Answered on 2026-09-03, kept here until the work lands
 
-**P1. The six-per-page layout.** Answered. Three down the left, three down the
-right, each pair of captions under its pair of photographs. Written out in full
-in `docs/FUTURES.md` under F4. Also decided: three-per-page stays, and Mark
-picks which one a job uses.
-
 **P4. The black window.** Answered. Hidden completely. Spenser, 2026-09-03: *"I
 just want the app to open like an app."* He also wants a desktop icon you
 double-click, which the installer already makes, so the work is hiding the
 console and nothing else. This is B8.
+
+**P5. Moving `Close the app` into the nav bar.** Answered. No belt and
+suspenders: it comes out of Settings entirely, moves into the nav bar next to
+`Settings`, and gets a confirm step it does not have today. Written out in full
+in `docs/FUTURES.md` under F13.
 
 ---
 

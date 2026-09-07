@@ -68,6 +68,178 @@ def is_reviewed(entry: dict) -> bool:
     return bool(entry.get(REVIEWED))
 
 
+BANDS = "bands"
+BANDS_ON = "bands_on"
+BAND = "band"
+
+PHOTOS_PER_PAGE = "photos_per_page"
+
+
+def photos_per_page(manifest: dict) -> int:
+    """How many photographs this job puts on a printed page. Three, or six.
+
+    Absent means three, the same answer `is_cut`, `is_reviewed` and
+    `bands_on` give for a missing key. Every manifest written before this
+    existed therefore reads as the layout Mark already has, and there is
+    nothing on disk to convert.
+
+    Read rather than trusted: anything that is not exactly the integer 6
+    comes back as 3. `_validate_manifest_shape` is what refuses a bad value
+    on the way in; this is what makes a file somebody edited by hand still
+    build something sensible.
+    """
+    return 6 if manifest.get(PHOTOS_PER_PAGE) == 6 else 3
+
+
+def bands_on(manifest: dict) -> bool:
+    """Whether this job orders its photographs by band.
+
+    Absent means off, the same answer `is_cut` and `is_reviewed` give for a
+    missing key. Every manifest written before bands existed therefore reads
+    as a job that does not use them, with nothing on disk to convert.
+    """
+    return bool(manifest.get(BANDS_ON))
+
+
+def band_list(manifest: dict) -> list:
+    """The job's bands, in the order the property reads."""
+    return manifest.get(BANDS) or []
+
+
+def band_of(entry: dict) -> Optional[str]:
+    """The band this photograph is in, or None while it is unassigned."""
+    return entry.get(BAND) or None
+
+
+def letter_for(name: str, taken) -> str:
+    """The letter a new band is known by. Assigned at creation and frozen.
+
+    First letter of the name, then the first two on a collision, then three.
+    A name with no letters left to give takes a number instead, because the
+    answer still has to be unique.
+
+    **Adding, renaming or deleting a band never relabels an existing one.**
+    That is constraint 3 of F6 and it is why this function is only ever
+    called when a band is created. The letter is what every photograph
+    carries: relabel a band and every photograph pointing at it is suddenly
+    pointing somewhere else, silently, in a file nobody reads. So the new
+    band bends around the ones already there, never the other way round.
+    Warehouse keeps W when Workshop arrives and takes Wo.
+    """
+    held = set(taken or [])
+    clean = str(name).strip()
+    for size in range(1, len(clean) + 1):
+        candidate = clean[:size]
+        candidate = candidate[0].upper() + candidate[1:]
+        if candidate not in held:
+            return candidate
+    base = (clean[:1].upper() + clean[1:]) if clean else "Band"
+    n = 2
+    while "%s%d" % (base, n) in held:
+        n += 1
+    return "%s%d" % (base, n)
+
+
+def sort_by_band(manifest: dict) -> dict:
+    """Put `manifest["photos"]` in band order, in place.
+
+    **A band click resorts the list itself.** That is constraint 2 of F6 and
+    it is the reason bands are safe to add: array order always equals band
+    order, then the order the photographs already had inside their band. The
+    array stays the one ordering fact in the app, so `included()` and
+    `build_photo_docx` need to know nothing about bands at all.
+
+    Sorting at read time instead would give two answers to one question: the
+    order on disk and the order in the report. The manifest is hand-editable
+    and somebody would eventually read the wrong one.
+
+    A photograph with no band waits after every band, which is what the
+    unassigned strip on the screen is showing. A cut photograph keeps its
+    band and sorts with it, so uncutting puts it back where it belongs
+    rather than wherever the list happened to have room.
+
+    With bands off this returns the list untouched, which is what lets a job
+    take bands up or leave them behind without anything moving.
+    """
+    if not bands_on(manifest):
+        return manifest
+    places = {}
+    for i, band in enumerate(band_list(manifest)):
+        if isinstance(band, dict) and band.get("letter"):
+            places[band["letter"]] = i
+    waiting = len(places)
+    # sorted() is stable, so photographs inside one band keep the order they
+    # already had. That is half of what constraint 2 promises.
+    manifest["photos"] = sorted(
+        manifest.get("photos", []),
+        key=lambda e: places.get(band_of(e), waiting) if isinstance(e, dict) else waiting)
+    return manifest
+
+
+LOCKED_BANDS = ("A", "B", "C")
+
+
+def default_bands() -> list:
+    """The three bands a job gets when Mark turns the switch on.
+
+    Spenser, 2026-09-07: a job does not always have them. It has none until
+    the switch goes on, and then it has these three at once. Their position
+    is their meaning, so A is always first and C is always last, and none of
+    the three can be taken away while the switch is on.
+    """
+    return [{"letter": letter, "name": letter, "locked": True}
+            for letter in LOCKED_BANDS]
+
+
+def _merge_bands(existing: list, incoming: list) -> list:
+    """The band list the screen asks for, with every letter still the app's
+    own to give.
+
+    A band arriving with a letter is one that already exists: it may be
+    renamed and moved, and it keeps the letter it was given. A band arriving
+    without one is new, and takes its letter here. The screen never chooses a
+    letter, which is what makes constraint 3 hold from end to end.
+    """
+    known = {b["letter"]: b for b in existing
+             if isinstance(b, dict) and b.get("letter")}
+    out, taken = [], set(known)
+    for want in incoming:
+        if not isinstance(want, dict):
+            raise HTTPException(400, "Each band must be an object.")
+        band_name = str(want.get("name", "")).strip()
+        if not band_name:
+            raise HTTPException(400, "A band needs a name.")
+        letter = want.get("letter")
+        if letter:
+            if letter not in known:
+                raise HTTPException(400, "This job has no band %r." % letter)
+            band = {"letter": letter, "name": band_name}
+            if letter in LOCKED_BANDS:
+                band["locked"] = True
+            out.append(band)
+        else:
+            fresh = letter_for(band_name, taken)
+            taken.add(fresh)
+            out.append({"letter": fresh, "name": band_name})
+    return out
+
+
+def _check_band_order(bands: list) -> None:
+    """A first, C last, and all three still there.
+
+    Their position is their meaning, which is why they are the only bands
+    that cannot move. Everything Mark types slides between them.
+    """
+    letters = [b["letter"] for b in bands]
+    for letter in LOCKED_BANDS:
+        if letter not in letters:
+            raise HTTPException(400, "Band %s cannot be taken away." % letter)
+    if letters[0] != "A":
+        raise HTTPException(400, "Band A is always first.")
+    if letters[-1] != "C":
+        raise HTTPException(400, "Band C is always last.")
+
+
 def review_progress(manifest: dict) -> dict:
     """`8 of 12 reviewed`, counting only the photographs that are in.
 
@@ -554,6 +726,36 @@ def _job_or_404(name: str) -> Path:
     return job
 
 
+def _entry_path_error(job: Path, entry, photos_dir: Path) -> Optional[str]:
+    """The path safety of one photo entry, checkable on its own.
+
+    Pulled out of `_validate_manifest_shape` on 2026-09-07 so that a click
+    which changes no path can check the one photograph it touches instead of
+    resolving all of them. Resolving is a filesystem round trip, and on a
+    mapped network drive 124 of them is a wait a person notices.
+
+    Nothing is weakened by checking one: `_validate_manifest_shape` still
+    walks every entry before a build, which is the moment an unsafe path
+    would reach the engine.
+    """
+    if not isinstance(entry, dict):
+        return "Each entry in 'photos' must be an object."
+    name = entry.get("file")
+    if not isinstance(name, str) or not name:
+        return "Each photo entry needs a non-empty 'file' name."
+    if name != Path(name).name:
+        return f"Photo file name {name!r} must be a bare filename with no path separators."
+    folder = entry.get("folder", "")
+    if not isinstance(folder, str):
+        return "A photo's 'folder' must be text."
+    if folder and ("\\" in folder or folder.startswith("/")
+                   or ".." in folder.split("/")):
+        return f"Photo folder {folder!r} must be a plain subfolder of Photos."
+    if _resolve_confined(jobs.photo_path(job, entry), photos_dir) is None:
+        return f"Photo file name {name!r} resolves outside the Photos folder."
+    return None
+
+
 def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
     """Return a plain-English error if `manifest` isn't shaped like the
     engine's contract, or if any photo entry's `file` could make the engine
@@ -565,33 +767,62 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
     path safety (bare filename, resolves inside Photos/) plus the minimum
     shape the engine needs (a "photos" list of file-bearing objects) -- it
     is not a general schema validator.
+
+    Bands are checked here too, for the same reason and to the same depth: a
+    photograph carries a band's letter, so a letter naming a band the job
+    does not have is a manifest that cannot be read back correctly. It is
+    refused rather than quietly unassigned.
     """
     if not isinstance(manifest, dict):
         return "Manifest must be a JSON object."
     photos = manifest.get("photos")
     if not isinstance(photos, list):
         return "Manifest 'photos' must be a list."
+    if BANDS_ON in manifest and not isinstance(manifest[BANDS_ON], bool):
+        return "A job's 'bands_on' must be true or false."
+    if PHOTOS_PER_PAGE in manifest:
+        # `type(...) is int` rather than isinstance, and rather than a bare
+        # `in (3, 6)`. Both of the obvious spellings let something through:
+        # `True == 1` and `isinstance(True, int)` is true, and `3.0 in (3, 6)`
+        # is also true. Neither is a layout.
+        value = manifest[PHOTOS_PER_PAGE]
+        if type(value) is not int or value not in (3, 6):
+            return "A job's 'photos_per_page' must be 3 or 6."
+    bands = manifest.get(BANDS, [])
+    if not isinstance(bands, list):
+        return "Manifest 'bands' must be a list."
+    letters = set()
+    for band in bands:
+        if not isinstance(band, dict):
+            return "Each entry in 'bands' must be an object."
+        letter, band_name = band.get("letter"), band.get("name")
+        if not isinstance(letter, str) or not letter:
+            return "Each band needs a non-empty 'letter'."
+        if not isinstance(band_name, str) or not band_name:
+            return "Each band needs a non-empty 'name'."
+        if letter in letters:
+            return "Two bands cannot share the letter %r." % letter
+        letters.add(letter)
     photos_dir = jobs.photos_dir(job)
     for entry in photos:
-        if not isinstance(entry, dict):
-            return "Each entry in 'photos' must be an object."
+        error = _entry_path_error(job, entry, photos_dir)
+        if error:
+            return error
         name = entry.get("file")
-        if not isinstance(name, str) or not name:
-            return "Each photo entry needs a non-empty 'file' name."
-        if name != Path(name).name:
-            return f"Photo file name {name!r} must be a bare filename with no path separators."
-        folder = entry.get("folder", "")
-        if not isinstance(folder, str):
-            return "A photo's 'folder' must be text."
-        if folder and ("\\" in folder or folder.startswith("/")
-                       or ".." in folder.split("/")):
-            return f"Photo folder {folder!r} must be a plain subfolder of Photos."
-        if _resolve_confined(jobs.photo_path(job, entry), photos_dir) is None:
-            return f"Photo file name {name!r} resolves outside the Photos folder."
         if REVIEWED in entry and not isinstance(entry[REVIEWED], bool):
             return "A photo's reviewed flag must be true or false."
         if "cut" in entry and not isinstance(entry["cut"], bool):
             return "A photo's 'cut' must be true or false."
+        if BAND in entry:
+            # An unknown letter is an error rather than a silent unassign.
+            # Quietly dropping it would hide whatever wrote it, the same
+            # reason a file resolving outside Photos is refused rather than
+            # skipped.
+            if not isinstance(entry[BAND], str) or not entry[BAND]:
+                return "A photo's 'band' must be a letter naming one of this job's bands."
+            if entry[BAND] not in letters:
+                return "Photo %r is in band %r, which this job does not have." % (
+                    name, entry[BAND])
     return None
 
 
@@ -624,7 +855,16 @@ def upload_photos(name: str, files: list[UploadFile]):
 
 @router.get("/api/jobs/{name}/manifest")
 def get_manifest(name: str):
-    return load_manifest(_job_or_404(name))
+    """The manifest, with `photos_per_page` always present and always 3 or 6.
+
+    Normalised here rather than on disk. Nothing is written: a job that has
+    never chosen still has no key in its file, which is what keeps every
+    manifest written before this feature readable. The browser gets a
+    straight answer instead of repeating the default rule in JavaScript,
+    which is how `PhotosScreen.jsx` came to hold its own `/ 3`.
+    """
+    manifest = load_manifest(_job_or_404(name))
+    return {**manifest, PHOTOS_PER_PAGE: photos_per_page(manifest)}
 
 
 @router.put("/api/jobs/{name}/manifest")
@@ -643,11 +883,42 @@ def put_manifest(name: str, manifest: dict):
 
 
 def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
-    """Tick or untick one caption. Touches that one key and nothing else."""
-    manifest = load_manifest(job)
+    """Tick or untick one caption. Touches that one key and nothing else.
+
+    **It never lists the photo folder.** A tick cannot change what is on disk,
+    so reconciling the folder against the list is work the click does not
+    need, and on Colleen's mapped network drive that work is the whole wait.
+    Reported by Spenser on 2026-09-07 and measured the same day on the
+    124-photograph Cedar Rapids job: the reconcile is 9.5 ms on a local disk
+    against 0.0 ms to read the list straight off disk, and every file
+    operation inside it is a round trip on her drive.
+
+    The answer still carries the photographs that are in the report rather
+    than every photograph on disk, so the screen never gains tiles it was not
+    shown. That narrowing reads the job's own notes and never the folder,
+    which is what makes this safe.
+    """
+    path = manifest_path(job)
+    if not path.is_file():
+        # No list on disk yet is a job just opened, the same case `_set_cut`
+        # allows for. Reconcile once, because there is nothing to read.
+        manifest = load_manifest(job)
+    else:
+        try:
+            manifest = json.loads(path.read_text())
+        except ValueError:
+            raise HTTPException(400, "This job's photo list could not be read.")
+
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("photos"), list):
+        raise HTTPException(400, "This job's photo list could not be read.")
+
     name = Path(file).name
+    photos_dir = jobs.photos_dir(job)
     for entry in manifest["photos"]:
-        if entry.get("file") == name:
+        if isinstance(entry, dict) and entry.get("file") == name:
+            error = _entry_path_error(job, entry, photos_dir)
+            if error:
+                raise HTTPException(400, error)
             if reviewed:
                 if not str(entry.get("caption", "")).strip():
                     raise HTTPException(400, "Write a caption before marking it reviewed.")
@@ -656,21 +927,159 @@ def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
                 entry.pop(REVIEWED, None)
             with busy.writing():
                 save_manifest(job, manifest)
-            return {**manifest, "review": review_progress(manifest)}
+            in_report, chosen, missing = _report_set(job, manifest["photos"])
+            view = dict(manifest, photos=in_report, photo_folder=chosen,
+                        photo_folder_missing=missing)
+            return {**view, "review": review_progress(view)}
     raise HTTPException(404, "That photo is not in this job.")
 
 
 @router.post("/api/jobs/{name}/photos/{file}/reviewed")
 def mark_reviewed(name: str, file: str):
-    """One click, one caption. Deliberately not called Approve, and there is
-    deliberately no way to do all of them at once."""
+    """One click, one caption. Deliberately not called Approve.
+
+    There was deliberately no way to do all of them at once until 2026-09-07,
+    when Spenser asked for one because Colleen was paying a round trip per
+    photograph on a network drive. It exists now, at `review-all`, and only
+    behind a warning that says what it removes. His condition did not change.
+    """
     return _set_reviewed(_job_or_404(name), file, True)
+
+
+@router.post("/api/jobs/{name}/review-all")
+def review_all(name: str):
+    """Tick every caption in the report at once.
+
+    **The warning belongs on the screen and it is not optional.** Spenser's
+    rule, in his own words on 2026-09-03: it is very important that humans
+    review everything AI does. This is a shortcut for a person who has read
+    them, not a way to skip reading them, so the screen says so plainly and
+    asks before it calls this.
+
+    Asked for again on 2026-09-07, because Colleen was paying for one round
+    trip per photograph on a mapped network drive. One request replaces fifty
+    and, like one tick, it never lists the folder.
+
+    Two photographs it will not touch, for the same reasons one tick will not.
+    A photograph with no caption has nothing to have been read. A photograph
+    taken out of the report needs no caption and no reading. So this can leave
+    a job still not ready to build, and `review` in the answer says so rather
+    than the screen having to guess.
+    """
+    job = _job_or_404(name)
+    path = manifest_path(job)
+    if not path.is_file():
+        manifest = load_manifest(job)
+    else:
+        try:
+            manifest = json.loads(path.read_text())
+        except ValueError:
+            raise HTTPException(400, "This job's photo list could not be read.")
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("photos"), list):
+        raise HTTPException(400, "This job's photo list could not be read.")
+
+    photos_dir = jobs.photos_dir(job)
+    marked = 0
+    for entry in manifest["photos"]:
+        if not isinstance(entry, dict) or is_cut(entry):
+            continue
+        if not str(entry.get("caption", "")).strip() or is_reviewed(entry):
+            continue
+        error = _entry_path_error(job, entry, photos_dir)
+        if error:
+            raise HTTPException(400, error)
+        entry[REVIEWED] = True
+        marked += 1
+
+    if marked:
+        with busy.writing():
+            save_manifest(job, manifest)
+    in_report, chosen, missing = _report_set(job, manifest["photos"])
+    view = dict(manifest, photos=in_report, photo_folder=chosen,
+                photo_folder_missing=missing)
+    return {**view, "marked": marked, "review": review_progress(view)}
 
 
 @router.post("/api/jobs/{name}/photos/{file}/unreviewed")
 def mark_unreviewed(name: str, file: str):
     """Undo the tick. The same click again, so nothing is a trap."""
     return _set_reviewed(_job_or_404(name), file, False)
+
+
+def _set_band(job: Path, file: str, letter) -> dict:
+    """Put one photograph in a band, or take it back to unassigned.
+
+    Follows `_set_reviewed`: load, touch the one key, save. The difference is
+    the sort, which is the whole feature. See `sort_by_band`.
+    """
+    manifest = load_manifest(job)
+    if letter is not None:
+        known = {b.get("letter") for b in band_list(manifest) if isinstance(b, dict)}
+        if letter not in known:
+            raise HTTPException(400, "This job has no band %r." % letter)
+    name = Path(file).name
+    for entry in manifest["photos"]:
+        if entry.get("file") == name:
+            if letter is None:
+                # Removing the key rather than writing an empty one, so a
+                # manifest never accumulates a field that means the default.
+                entry.pop(BAND, None)
+            else:
+                entry[BAND] = letter
+            sort_by_band(manifest)
+            with busy.writing():
+                save_manifest(job, manifest)
+            return manifest
+    raise HTTPException(404, "That photo is not in this job.")
+
+
+@router.post("/api/jobs/{name}/photos/{file}/band")
+def set_band(name: str, file: str, body: dict):
+    """One click, one photograph, one band. `{"band": null}` sends it back to
+    the unassigned strip."""
+    return _set_band(_job_or_404(name), file, (body or {}).get(BAND))
+
+
+@router.put("/api/jobs/{name}/bands")
+def put_bands(name: str, body: dict):
+    """The switch, and the list of bands behind it.
+
+    Sends the whole list, the way the manifest route does, because the
+    screen holds the whole list. Turning the switch on for the first time
+    brings A, B and C. Turning it off keeps every band and everything Mark
+    has already clicked, so he can put it back on and find his work.
+    """
+    job = _job_or_404(name)
+    manifest = load_manifest(job)
+    body = body or {}
+    want_on = body.get(BANDS_ON)
+    incoming = body.get(BANDS)
+
+    bands = band_list(manifest)
+    if incoming is not None:
+        if not isinstance(incoming, list):
+            raise HTTPException(400, "Manifest 'bands' must be a list.")
+        bands = _merge_bands(bands, incoming)
+        _check_band_order(bands)
+    elif want_on and not bands:
+        bands = default_bands()
+
+    manifest[BANDS] = bands
+    if want_on is not None:
+        manifest[BANDS_ON] = bool(want_on)
+
+    # A photograph whose band has gone waits again, in the unassigned strip.
+    # Nothing else moves, which is what makes deleting a band safe to undo by
+    # hand: every other photograph is exactly where it was.
+    known = {b["letter"] for b in bands}
+    for entry in manifest["photos"]:
+        if band_of(entry) and entry[BAND] not in known:
+            entry.pop(BAND, None)
+
+    sort_by_band(manifest)
+    with busy.writing():
+        save_manifest(job, manifest)
+    return manifest
 
 
 def _set_cut(job: Path, file: str, cut: bool) -> dict:

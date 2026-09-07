@@ -436,3 +436,278 @@ describe("when the photo list cannot be read", () => {
     expect(await screen.findByText(/Nothing has been changed/)).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Bands. One click per photograph instead of one drag per photograph.
+//
+// The tick sits at the lower left of every tile, whether bands are on or off,
+// so it keeps one place however many bands a job grows. Spenser, 2026-09-07.
+// ---------------------------------------------------------------------------
+
+const BANDS = [
+  { letter: "A", name: "A", locked: true },
+  { letter: "B", name: "B", locked: true },
+  { letter: "C", name: "C", locked: true },
+];
+
+function banded(over = {}) {
+  return manifest({ bands_on: true, bands: BANDS, ...over });
+}
+
+describe("bands", () => {
+  it("shows the tick and no dots while the switch is off", async () => {
+    await show();
+    expect(await screen.findAllByRole("button", { name: /^Mark reviewed$/ }))
+      .toHaveLength(3);
+    expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0);
+  });
+
+  it("gives every photograph one dot per band once the switch is on", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    await show();
+    // three photographs, three bands
+    expect(await screen.findAllByRole("button", { name: "Put in band A" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Put in band C" })).toHaveLength(3);
+    // and the tick has not gone anywhere
+    expect(screen.getAllByRole("button", { name: /^Mark reviewed$/ })).toHaveLength(3);
+  });
+
+  it("puts the photograph in the band he clicks", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    const set = vi.spyOn(api, "setPhotoBand").mockResolvedValue(
+      banded({ photos: [{ file: "photo-01.jpg", caption: "", band: "A" },
+                        { file: "photo-02.jpg", caption: "" },
+                        { file: "photo-03.jpg", caption: "" }] }));
+    await show();
+    await userEvent.click((await screen.findAllByRole("button", { name: "Put in band A" }))[0]);
+    expect(set).toHaveBeenCalledWith(JOB, "photo-01.jpg", "A");
+  });
+
+  it("holds the build while photographs are still waiting for a band", async () => {
+    api.getManifest.mockResolvedValue(banded({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true },
+               { file: "photo-02.jpg", caption: "two", reviewed: true, band: "A" },
+               { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }],
+    }));
+    await show();
+    expect(await screen.findByText(/1 photograph is waiting for a band/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
+  });
+
+  it("lets the build go once every photograph has a band", async () => {
+    api.getManifest.mockResolvedValue(banded({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true, band: "A" },
+               { file: "photo-02.jpg", caption: "two", reviewed: true, band: "A" },
+               { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }],
+    }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByText(/waiting for a band/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing about waiting while the switch is off", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true },
+               { file: "photo-02.jpg", caption: "two", reviewed: true },
+               { file: "photo-03.jpg", caption: "three", reviewed: true }],
+    }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByText(/waiting for a band/)).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The switch. Bands are off until Mark turns them on, and 0.6.7 shipped with
+// no way to do it. Spenser's design, 2026-09-07: a pill reading Bands On or
+// Off, and once it is on, the chips A, B and C to the right of it.
+// ---------------------------------------------------------------------------
+
+describe("the bands switch", () => {
+  it("starts off, with no chips, on a job that has never used bands", async () => {
+    await show();
+    expect(await screen.findByRole("button", { name: "Off" })).toHaveAttribute(
+      "aria-pressed", "true");
+    expect(screen.queryAllByRole("button", { name: /^Band [ABC]$/ })).toHaveLength(0);
+  });
+
+  it("asks the server to turn them on, and shows what comes back", async () => {
+    const put = vi.spyOn(api, "putBands").mockResolvedValue(banded());
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    expect(put).toHaveBeenCalledWith(JOB, { bands_on: true });
+    expect(await screen.findByRole("button", { name: "Band A" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Band B" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Band C" })).toBeInTheDocument();
+  });
+
+  it("asks the server to turn them off, and the dots go", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    const put = vi.spyOn(api, "putBands").mockResolvedValue(
+      manifest({ bands_on: false, bands: BANDS }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Off" }));
+    expect(put).toHaveBeenCalledWith(JOB, { bands_on: false });
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0));
+  });
+
+  it("moves no photograph of its own accord", async () => {
+    // Constraint 1. The screen redraws from what the server sent back and
+    // sorts nothing itself.
+    const order = ["photo-01.jpg", "photo-02.jpg", "photo-03.jpg"];
+    vi.spyOn(api, "putBands").mockResolvedValue(banded());
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    await screen.findByRole("button", { name: "Band A" });
+    const captions = screen.getAllByRole("textbox");
+    expect(captions).toHaveLength(order.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mark all as reviewed, behind a warning.
+//
+// Spenser's rule, 2026-09-03, in his own words: it is very important that
+// humans review everything AI does. So this is never a plain button. The
+// warning says what it removes, and he chooses.
+// ---------------------------------------------------------------------------
+
+const UNREAD = [
+  { file: "photo-01.jpg", caption: "one" },
+  { file: "photo-02.jpg", caption: "two" },
+  { file: "photo-03.jpg", caption: "three" },
+];
+
+describe("marking every caption reviewed", () => {
+  beforeEach(() => {
+    api.getManifest.mockResolvedValue(manifest({ photos: UNREAD }));
+  });
+
+  it("offers it while something is still unread", async () => {
+    await show();
+    expect(await screen.findByRole("button", { name: "Mark all as reviewed" }))
+      .toBeInTheDocument();
+  });
+
+  it("asks first, and calls nobody until he says yes", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    expect(await screen.findByText(/removes the human check/)).toBeInTheDocument();
+    expect(all).not.toHaveBeenCalled();
+  });
+
+  it("backs out without calling anybody", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(all).not.toHaveBeenCalled();
+    expect(screen.queryByText(/removes the human check/)).not.toBeInTheDocument();
+  });
+
+  it("marks them when he says yes", async () => {
+    const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue(
+      manifest({ photos: UNREAD.map((p) => ({ ...p, reviewed: true })) }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark them all" }));
+    expect(all).toHaveBeenCalledWith(JOB);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+  });
+
+  it("does not offer it once every caption is read", async () => {
+    api.getManifest.mockResolvedValue(manifest({
+      photos: UNREAD.map((p) => ({ ...p, reviewed: true })) }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByRole("button", { name: "Mark all as reviewed" }))
+      .not.toBeInTheDocument();
+  });
+});
+
+describe("three or six to a page", () => {
+  it("starts on three, which is what every job that never chose is", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos_per_page: 3 }));
+    await show();
+    expect(await screen.findByRole("button", { name: "Three photographs to a page" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Six photographs to a page" }))
+      .toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("counts three to a page while three is chosen", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 3 }));
+    await show();
+    expect(await screen.findByText(/about 4 pages/)).toBeInTheDocument();
+  });
+
+  it("halves the page count when six is chosen", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 6 }));
+    await show();
+    expect(await screen.findByText(/about 2 pages/)).toBeInTheDocument();
+  });
+
+  it("says one page rather than one pages", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(5), photos_per_page: 6 }));
+    await show();
+    expect(await screen.findByText(/about 1 page\./)).toBeInTheDocument();
+  });
+
+  it("writes the choice into the manifest and nothing else", async () => {
+    const before = manifest({ photos: photos(6), photos_per_page: 3 });
+    api.getManifest.mockResolvedValue(before);
+    const put = vi.spyOn(api, "putManifest")
+      .mockResolvedValue({ ok: true });
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Six photographs to a page" }));
+    expect(put).toHaveBeenCalledWith(JOB, { ...before, photos_per_page: 6 });
+  });
+
+  it("leaves the photographs alone", async () => {
+    // The toggle changes what Build makes. It must not touch the list, the
+    // order, or a single caption.
+    const names = () => screen.getAllByRole("img").map((i) => i.getAttribute("alt"));
+    const captions = () => screen.getAllByRole("textbox").map((t) => t.value);
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(6, "a caption") }));
+    await show();
+    const wasOrder = names();
+    const wasCaptions = captions();
+    await userEvent.click(screen.getByRole("button", { name: "Six photographs to a page" }));
+    await waitFor(() => expect(names()).toEqual(wasOrder));
+    expect(captions()).toEqual(wasCaptions);
+  });
+});
+
+describe("the caption chooser's page preview", () => {
+  // Its own comment promises it is drawn "exactly the way photo_pages.py
+  // builds the real thing". A second layout is what makes that promise
+  // testable rather than decorative.
+  async function openChooser(perPage) {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(3), photos_per_page: perPage }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
+    return screen.findByTestId("page-preview");
+  }
+
+  it("draws one photograph beside its caption at three to a page", async () => {
+    const grid = await openChooser(3);
+    expect(grid).not.toHaveClass("is-six");
+    expect(grid.querySelectorAll(".cell-photo.is-example").length)
+      .toBe(grid.querySelectorAll(".cell-caption:not(.head)").length);
+  });
+
+  it("draws two photographs above their two captions at six to a page", async () => {
+    const grid = await openChooser(6);
+    expect(grid).toHaveClass("is-six");
+    const kids = [...grid.children].filter((el) => !el.classList.contains("head"));
+    // photo photo caption caption, repeating
+    expect(kids.slice(0, 4).map((el) => el.className.split(" ")[0]))
+      .toEqual(["cell-photo", "cell-photo", "cell-caption", "cell-caption"]);
+  });
+});

@@ -311,3 +311,22 @@ def test_marking_them_all_is_only_ever_offered_behind_a_warning():
     assert "Mark reviewed" in screen, "one at a time is still how it is done"
     assert "Mark all as reviewed" in screen
     assert "removes the human check" in screen, "the shortcut lost its warning"
+
+
+def test_the_actions_never_drop_below_the_title():
+    """They sit up on the right and stay there.
+
+    Spenser, 2026-09-07, from a screenshot: with no caption every action was
+    in the upper right, and typing one caption moved the whole block down and
+    to the left. The cause is that `Clear captions` only appears once a
+    caption exists, which widened the row past what would fit beside the
+    title, and a wrapping head then pushed it onto its own line.
+
+    Nothing here can render a page, so this reads the rule out of the
+    stylesheet. It is a weaker test than looking, and it is the only one
+    available: a layout that has moved once will move again the next time a
+    button is added.
+    """
+    css = (WEB / "brand.css").read_text()
+    head = css.split(".screen-head {", 1)[1].split("}", 1)[0]
+    assert "flex-wrap: nowrap" in head, "the head wraps, so the actions can fall below the title"

@@ -51,7 +51,17 @@ The general question, whether every refusal should offer a way past it, is not
 decided and should not be decided by whoever happens to be writing the next
 one.
 
-## F4. A photo page that holds six, and the choice of which to use
+## F4. A photo page that holds six, and the choice of which to use. Built 2026-09-07
+
+**Done. It stays here with its number so nothing below it is renumbered.**
+
+Mark picks three or six from a switch on the Photos screen, stored per job.
+Three-per-page is unchanged and proved so. The template was manufactured from
+his own, because no six-up page exists anywhere in the corpus, and Spenser
+approved it in Word before it shipped. What the measuring found, and the one
+thing left open, are in `docs/ROADMAP.md`.
+
+What was wanted, kept because it is the record of why:
 
 Today every page holds three. Mark's office wants six, and wants to pick.
 

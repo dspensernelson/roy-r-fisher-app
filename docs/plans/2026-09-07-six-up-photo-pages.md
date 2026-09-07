@@ -137,17 +137,17 @@ from the six longest captions in the corpus fits with all of it still spare.
 
 ### Slice 2, a page that holds six
 
-- [ ] Add `app/tests/test_six_up_pages.py` and watch it fail
-- [ ] Add `app/templates/Photo six-up.docx` and pin its furniture, no skip marker
-- [ ] Add it to the packaging manifest at `app/tests/test_package_manifest.py:115`
-- [ ] Page counts: 1, 6, 7, 12, 13 photographs give 1, 1, 2, 2, 3 pages
-- [ ] No trailing blank page at any of those counts
-- [ ] Pair trimming: 1 and 2 keep 2 rows, 3 and 4 keep 4, 5 and 6 keep 6
-- [ ] An odd count leaves exactly one empty cell, and a test says so by name
-- [ ] A page of six three-line captions does not run past the bottom margin unnoticed
-- [ ] The golden Mason City job builds both ways off the real corpus
-- [ ] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
-- [ ] Commit on `a-page-that-holds-six`, and Spenser says yes
+- [x] Add `app/tests/test_six_up_pages.py` and watch it fail
+- [x] Add `app/templates/Photo six-up.docx` and pin its furniture, no skip marker
+- [x] Add it to the packaging manifest at `app/tests/test_package_manifest.py:115`
+- [x] Page counts: 1, 6, 7, 12, 13 photographs give 1, 1, 2, 2, 3 pages
+- [x] No trailing blank page at any of those counts
+- [x] Pair trimming: 1 and 2 keep 2 rows, 3 and 4 keep 4, 5 and 6 keep 6
+- [x] An odd count leaves exactly one empty cell, and a test says so by name
+- [x] A page of six three-line captions does not run past the bottom margin unnoticed
+- [x] The golden Mason City job builds both ways off the real corpus
+- [x] `cd app/web && npm run build`, then the whole suite passes with nothing skipped
+- [x] Commit on `a-page-that-holds-six`, and Spenser says yes
 
 ### Slice 3, the manifest can hold the choice, and nothing behaves differently
 

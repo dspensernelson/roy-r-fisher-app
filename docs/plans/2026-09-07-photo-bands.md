@@ -56,20 +56,18 @@ code path, rather than a button on some jobs and a dot on others.
 `included()`.** That is where they cannot drift from what they describe, and
 slices 1 and 2 put them there.
 
-### One thing to confirm before slice 3
+### Answered by Spenser on 2026-09-07
 
-F6 says three locked bands, A first, B middle, C last, and typed bands slide
-anywhere between A and C. It does not say what the three are called or whether
-a typed band may sit between A and B.
+**The three are called A, B and C.** Name and letter are the same, so there is
+nothing to translate. Mark can still rename them, and the letter does not move
+when he does.
 
-**Built to this assumption unless Spenser says otherwise:** A, B and C are
-locked, cannot be deleted, keep their letters for ever and keep their order
-relative to each other. A typed band may go anywhere strictly between A and C,
-including before B. The three ship named `First`, `Middle` and `Last`, because
-their position is their meaning, and Mark can rename any of them without the
-letter changing.
+**A job does not always have them.** Spenser's correction, in his words: they
+do not always have them, they are toggled on and off. One switch per job. It
+brings A, B and C together, and turning it off puts them away without losing
+anything Mark has already clicked.
 
-**Ask before slice 3 starts.** Slices 1 and 2 do not depend on the answer.
+A typed band goes anywhere strictly between A and C, including before B.
 
 ## Rules for whoever executes this
 
@@ -123,13 +121,13 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 3, the band list and the toggle, per job
 
-- [ ] Ask Spenser the question under "One thing to confirm" above
-- [ ] Add the failing cases to `app/tests/test_photo_bands.py`
-- [ ] Add `PUT /api/jobs/{name}/bands`: turn on or off, create, rename, delete, reorder
-- [ ] A, B and C cannot be deleted, relettered, or moved out of order
-- [ ] Deleting a typed band returns its photographs to unassigned and moves nothing else
-- [ ] Turning bands on reorders nothing, and turning them off reorders nothing
-- [ ] The whole suite passes and nothing skips
+- [x] Ask Spenser the question under "One thing to confirm" above
+- [x] Add the failing cases to `app/tests/test_photo_bands.py`
+- [x] Add `PUT /api/jobs/{name}/bands`: turn on or off, create, rename, delete, reorder
+- [x] A, B and C cannot be deleted, relettered, or moved out of order
+- [x] Deleting a typed band returns its photographs to unassigned and moves nothing else
+- [x] Turning bands on reorders nothing, and turning them off reorders nothing
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `the-band-list`, and Spenser says yes
 
 ### Slice 4, one dot row under every photograph

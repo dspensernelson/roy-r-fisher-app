@@ -72,6 +72,24 @@ BANDS = "bands"
 BANDS_ON = "bands_on"
 BAND = "band"
 
+PHOTOS_PER_PAGE = "photos_per_page"
+
+
+def photos_per_page(manifest: dict) -> int:
+    """How many photographs this job puts on a printed page. Three, or six.
+
+    Absent means three, the same answer `is_cut`, `is_reviewed` and
+    `bands_on` give for a missing key. Every manifest written before this
+    existed therefore reads as the layout Mark already has, and there is
+    nothing on disk to convert.
+
+    Read rather than trusted: anything that is not exactly the integer 6
+    comes back as 3. `_validate_manifest_shape` is what refuses a bad value
+    on the way in; this is what makes a file somebody edited by hand still
+    build something sensible.
+    """
+    return 6 if manifest.get(PHOTOS_PER_PAGE) == 6 else 3
+
 
 def bands_on(manifest: dict) -> bool:
     """Whether this job orders its photographs by band.
@@ -762,6 +780,14 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
         return "Manifest 'photos' must be a list."
     if BANDS_ON in manifest and not isinstance(manifest[BANDS_ON], bool):
         return "A job's 'bands_on' must be true or false."
+    if PHOTOS_PER_PAGE in manifest:
+        # `type(...) is int` rather than isinstance, and rather than a bare
+        # `in (3, 6)`. Both of the obvious spellings let something through:
+        # `True == 1` and `isinstance(True, int)` is true, and `3.0 in (3, 6)`
+        # is also true. Neither is a layout.
+        value = manifest[PHOTOS_PER_PAGE]
+        if type(value) is not int or value not in (3, 6):
+            return "A job's 'photos_per_page' must be 3 or 6."
     bands = manifest.get(BANDS, [])
     if not isinstance(bands, list):
         return "Manifest 'bands' must be a list."
@@ -829,7 +855,16 @@ def upload_photos(name: str, files: list[UploadFile]):
 
 @router.get("/api/jobs/{name}/manifest")
 def get_manifest(name: str):
-    return load_manifest(_job_or_404(name))
+    """The manifest, with `photos_per_page` always present and always 3 or 6.
+
+    Normalised here rather than on disk. Nothing is written: a job that has
+    never chosen still has no key in its file, which is what keeps every
+    manifest written before this feature readable. The browser gets a
+    straight answer instead of repeating the default rule in JavaScript,
+    which is how `PhotosScreen.jsx` came to hold its own `/ 3`.
+    """
+    manifest = load_manifest(_job_or_404(name))
+    return {**manifest, PHOTOS_PER_PAGE: photos_per_page(manifest)}
 
 
 @router.put("/api/jobs/{name}/manifest")

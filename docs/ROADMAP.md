@@ -522,6 +522,53 @@ done.
   2026-08-25. It is a different feature from choosing several inside one
   folder, and it waits until he has wanted it twice.
 
+## Decisions on record (2026-09-07, Spenser, in chat)
+
+Made while building the photo page that holds six, F4. Recorded here because
+the plan that carried out the work has been deleted, and these outlive it.
+
+- **A value that is copied is a value that will lie, and a second case is what
+  makes it lie.** `PHOTOS_PER_TABLE = 3` sat in the engine and the browser had
+  already written its own `Math.ceil(length / 3)` beside it. Both were correct
+  for as long as there was one layout. The moment a second one existed the copy
+  was wrong and nothing could have caught it, because nothing compared them.
+  This is the third time the same fault has been paid for: the brand red written
+  out instead of pointed at, and the corpus path copied into four files. The
+  number now lives in one `Layout` object and every count reads it.
+
+- **Declare a row the height it will actually be.** Mark's three-up template
+  declares rows 2.926 inches tall and the app puts a 3.00 inch photograph in
+  them, so every row grows past its own declared height, a full page ends up a
+  fifth of an inch too tall, and the empty paragraph after the last table lands
+  on a page of its own. `_drop_trailing_blank_paragraphs` exists to clean up
+  after that. Six-up declares 2.60 inches for a 2.40 inch photograph and needs
+  nothing cleaned up after it. The cheapest fix for a layout defect is usually
+  in the template, not the code that fills it.
+
+- **A test that fails by design is not a test.** A six-up page whose captions
+  fill three over-long rows overflows, and the first plan said to write a test
+  asserting it does not. That test could only ever fail. What shipped instead
+  records where the edge is and passes: the page carries two over-long rows and
+  no more, proved alongside a separate test that builds the worst page Mark's
+  own two hundred captions can produce and shows it fits with the full 0.40 inch
+  of slack spare. **What the app should do when a job crosses that edge is not
+  decided, and shrinking the photographs to dodge it is not the answer.**
+
+- **The self-immolation rule only bites inside `docs/plans/`.**
+  `app/tests/test_plans_delete_themselves.py` reads that one folder and only
+  sees files written with task checkboxes. A design document written anywhere
+  else, however carefully it says it should be deleted, will quietly outlive
+  the work. A spec for this feature was nearly filed in `docs/superpowers/`,
+  where nothing would ever have noticed it again. Work documents go in
+  `docs/plans/`, with checkboxes, or the rule does not apply to them.
+
+- **Measure the corpus, not the example in front of you.** The six-up caption
+  column was sized against two hundred distinct captions read out of every
+  report Mark has delivered, not against the page that happened to be open. At
+  the three-up width 73% of what he writes wraps to two lines or more; at the
+  six-up width two thirds of it fits on one. A page sized against one short
+  caption would have looked right and overflowed in the field.
+
 ## The punch list
 
 It lives in `docs/PUNCHLIST.md`. It is a work list, and this file is not one:

@@ -186,3 +186,61 @@ def test_build_rejects_hand_written_manifest_escape(client, tmp_path):
 
     after = set(photos_dir.iterdir())
     assert after == before, "build must not write any file when the manifest is rejected"
+
+
+# --- the layout the job chose actually reaches the document ---------------
+
+@pytest.fixture
+def six_photo_job(tmp_path, monkeypatch):
+    """A job with six photographs and no RRF_PHOTO_TEMPLATE override, so the
+    server picks the shipped template for itself. That choice is the thing
+    under test and an override would hide it."""
+    home = tmp_path / "jobs"
+    photos = home / "JOB1" / "Photos"
+    photos.mkdir(parents=True)
+    for i in range(6):
+        Image.new("RGB", (400, 300), (i * 40 % 255, 9, 9)).save(photos / f"p{i}.jpg")
+    monkeypatch.setenv("RRF_JOBS_HOME", str(home))
+    monkeypatch.delenv("RRF_PHOTO_TEMPLATE", raising=False)
+    c = TestClient(create_app())
+    m = c.get("/api/jobs/JOB1/manifest").json()
+    m["photos"] = [{"file": f"p{i}.jpg", "caption": f"View of test subject {i}"}
+                   for i in range(6)]
+    m["report_year"] = 2026
+    c.put("/api/jobs/JOB1/manifest", json=m)
+    ready_to_build(c, "JOB1")
+    return c, photos
+
+
+def _built(c, photos):
+    r = c.post("/api/jobs/JOB1/build")
+    assert r.status_code == 200, r.text
+    return Document(str(photos / r.json()["created"]))
+
+
+def test_a_job_that_never_chose_builds_three_per_page(six_photo_job):
+    """Absent means three. Six photographs are two three-up pages."""
+    c, photos = six_photo_job
+    d = _built(c, photos)
+    assert len(d.tables) == 2
+    assert [len(t.rows) for t in d.tables] == [3, 3]
+    assert len(d.inline_shapes) == 6
+
+
+def test_choosing_six_builds_one_page_of_six(six_photo_job):
+    """The same six photographs, one page, captions beneath rather than
+    beside. This is the whole feature, end to end through the endpoint."""
+    c, photos = six_photo_job
+    m = c.get("/api/jobs/JOB1/manifest").json()
+    m["photos_per_page"] = 6
+    assert c.put("/api/jobs/JOB1/manifest", json=m).status_code == 200
+
+    d = _built(c, photos)
+    assert len(d.tables) == 1
+    assert len(d.tables[0].rows) == 6 and len(d.tables[0].columns) == 2
+    assert len(d.inline_shapes) == 6
+    # Captions on the odd rows, photographs on the even ones.
+    t = d.tables[0]
+    assert [t.rows[r].cells[c_].text.strip() for r, c_ in
+            ((1, 0), (1, 1), (3, 0), (3, 1), (5, 0), (5, 1))] == \
+           [f"View of test subject {i}" for i in range(6)]

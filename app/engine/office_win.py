@@ -263,6 +263,42 @@ def _ps_docx_to_pdf(docx: Path, out_pdf: Path, work: Path) -> None:
 
 
 # ----------------------------------------------------------- the library ---
+# How many times to look for the pasted picture, and how long to wait between
+# looks. Measured 2026-09-07 on the virtual machine.
+PASTE_TRIES = 10
+PASTE_WAIT = 0.3
+
+
+def _pasted_picture(chart):
+    """The picture that Paste just put in the chart, waited for.
+
+    Two faults, one line. Measured 2026-09-07 on the virtual machine, where
+    `pywin32` failed with "The index into the specified collection is out of
+    bounds" while PowerShell doing the same thing worked.
+
+    First, asking for shape one by calling the collection makes Python reach
+    for its default member, and through COM that is not reliably `Item`. Saying
+    `Item` outright is what the PowerShell version says and what worked.
+
+    Second, the clipboard is not ready the instant `CopyPicture` returns. The
+    PowerShell route works partly because starting a whole process is slow
+    enough to hide that. Doing it in the same process is fast enough to lose
+    the race, so this waits and looks again.
+    """
+    import time
+    last = None
+    for _ in range(PASTE_TRIES):
+        try:
+            if int(chart.Shapes.Count) >= 1:
+                return chart.Shapes.Item(1)
+        except Exception as exc:
+            last = exc
+        time.sleep(PASTE_WAIT)
+    raise office.OfficeRefused(
+        "Excel copied the grid but nothing arrived to be exported.%s%s"
+        % (STUCK, "" if last is None else "\n\nIt said:\n    %s" % last))
+
+
 def _com_render_grid(client, little: Path, out_png: Path, across: str) -> None:
     """A new hidden Excel, so a workbook Mark has open is never disturbed."""
     excel = client.DispatchEx("Excel.Application")
@@ -286,7 +322,7 @@ def _com_render_grid(client, little: Path, out_png: Path, across: str) -> None:
                 except Exception:
                     pass
             chart.Paste()
-            picture = chart.Shapes(1)
+            picture = _pasted_picture(chart)
             picture.LockAspectRatio = False
             picture.Left = 0
             picture.Top = 0

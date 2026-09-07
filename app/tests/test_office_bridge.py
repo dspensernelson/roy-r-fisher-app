@@ -758,3 +758,63 @@ def test_the_chart_panel_and_border_are_hidden(monkeypatch, tmp_path):
     office_win.render_grid(tmp_path / "grid.xlsx", tmp_path / "out.png")
     assert "$chart.ChartArea.Format.Fill.Visible = $false" in scripts[0]
     assert "$chart.ChartArea.Format.Line.Visible = $false" in scripts[0]
+
+
+def test_the_pasted_picture_is_asked_for_by_name_and_waited_for():
+    """Measured on the virtual machine, 2026-09-07. pywin32 failed with "the
+    index into the specified collection is out of bounds" while PowerShell
+    doing the same thing worked.
+
+    Two causes. `Shapes(1)` asks Python to call the collection and what that
+    reaches through COM is not reliably `Item`. And the clipboard is not ready
+    the instant CopyPicture returns, which PowerShell hides by being slow to
+    start."""
+    class Shapes:
+        def __init__(self, appears_after):
+            self.looks = 0
+            self.appears_after = appears_after
+
+        @property
+        def Count(self):
+            self.looks += 1
+            return 1 if self.looks > self.appears_after else 0
+
+        def Item(self, index):
+            assert index == 1
+            return "the picture"
+
+    class Chart:
+        def __init__(self, appears_after):
+            self.Shapes = Shapes(appears_after)
+
+    ready = Chart(appears_after=0)
+    assert office_win._pasted_picture(ready) == "the picture"
+
+    slow = Chart(appears_after=3)
+    assert office_win._pasted_picture(slow) == "the picture", \
+        "it gave up before the clipboard was ready"
+
+
+def test_a_picture_that_never_arrives_is_a_sentence(monkeypatch):
+    """Rather than an index error nobody can act on, which is what the log
+    from the virtual machine actually held."""
+    monkeypatch.setattr(office_win, "PASTE_TRIES", 2)
+    monkeypatch.setattr(office_win, "PASTE_WAIT", 0)
+
+    class Empty:
+        Count = 0
+
+    class Chart:
+        Shapes = Empty()
+
+    with pytest.raises(office.OfficeRefused) as caught:
+        office_win._pasted_picture(Chart())
+    assert "nothing arrived" in caught.value.message
+
+
+def test_the_windows_backend_never_calls_a_collection_as_a_function():
+    """The exact shape of the fault. `Shapes(1)` reached the wrong thing
+    through COM; `Shapes.Item(1)` says what it means."""
+    source = Path(office_win.__file__).read_text()
+    assert "chart.Shapes(1)" not in source
+    assert "chart.Shapes.Item(1)" in source

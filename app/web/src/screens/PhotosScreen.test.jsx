@@ -459,15 +459,15 @@ describe("bands", () => {
     await show();
     expect(await screen.findAllByRole("button", { name: /^Mark reviewed$/ }))
       .toHaveLength(3);
-    expect(screen.queryAllByRole("button", { name: /^Band / })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0);
   });
 
   it("gives every photograph one dot per band once the switch is on", async () => {
     api.getManifest.mockResolvedValue(banded());
     await show();
     // three photographs, three bands
-    expect(await screen.findAllByRole("button", { name: "Band A" })).toHaveLength(3);
-    expect(screen.getAllByRole("button", { name: "Band C" })).toHaveLength(3);
+    expect(await screen.findAllByRole("button", { name: "Put in band A" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Put in band C" })).toHaveLength(3);
     // and the tick has not gone anywhere
     expect(screen.getAllByRole("button", { name: /^Mark reviewed$/ })).toHaveLength(3);
   });
@@ -479,7 +479,7 @@ describe("bands", () => {
                         { file: "photo-02.jpg", caption: "" },
                         { file: "photo-03.jpg", caption: "" }] }));
     await show();
-    await userEvent.click((await screen.findAllByRole("button", { name: "Band A" }))[0]);
+    await userEvent.click((await screen.findAllByRole("button", { name: "Put in band A" }))[0]);
     expect(set).toHaveBeenCalledWith(JOB, "photo-01.jpg", "A");
   });
 
@@ -516,5 +516,53 @@ describe("bands", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
     expect(screen.queryByText(/waiting for a band/)).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The switch. Bands are off until Mark turns them on, and 0.6.7 shipped with
+// no way to do it. Spenser's design, 2026-09-07: a pill reading Bands On or
+// Off, and once it is on, the chips A, B and C to the right of it.
+// ---------------------------------------------------------------------------
+
+describe("the bands switch", () => {
+  it("starts off, with no chips, on a job that has never used bands", async () => {
+    await show();
+    expect(await screen.findByRole("button", { name: "Off" })).toHaveAttribute(
+      "aria-pressed", "true");
+    expect(screen.queryAllByRole("button", { name: /^Band [ABC]$/ })).toHaveLength(0);
+  });
+
+  it("asks the server to turn them on, and shows what comes back", async () => {
+    const put = vi.spyOn(api, "putBands").mockResolvedValue(banded());
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    expect(put).toHaveBeenCalledWith(JOB, { bands_on: true });
+    expect(await screen.findByRole("button", { name: "Band A" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Band B" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Band C" })).toBeInTheDocument();
+  });
+
+  it("asks the server to turn them off, and the dots go", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    const put = vi.spyOn(api, "putBands").mockResolvedValue(
+      manifest({ bands_on: false, bands: BANDS }));
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Off" }));
+    expect(put).toHaveBeenCalledWith(JOB, { bands_on: false });
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0));
+  });
+
+  it("moves no photograph of its own accord", async () => {
+    // Constraint 1. The screen redraws from what the server sent back and
+    // sorts nothing itself.
+    const order = ["photo-01.jpg", "photo-02.jpg", "photo-03.jpg"];
+    vi.spyOn(api, "putBands").mockResolvedValue(banded());
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    await screen.findByRole("button", { name: "Band A" });
+    const captions = screen.getAllByRole("textbox");
+    expect(captions).toHaveLength(order.length);
   });
 });

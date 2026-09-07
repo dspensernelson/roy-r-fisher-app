@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, jobFacts, putJobFacts, reveal,
+         captionEstimate, captionProgress, markReviewed, markUnreviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
 
 export default function PhotosScreen({ job }) {
@@ -158,6 +158,15 @@ export default function PhotosScreen({ job }) {
     try {
       setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
     } catch (e) { setError(e.message); }
+  }
+
+  // The switch, and later the list behind it. Whatever comes back is what the
+  // screen draws: it never sorts or seeds anything itself, because the server
+  // is the one that decides what a band list looks like.
+  async function onBands(body) {
+    setError(null);
+    try { setManifest(await putBands(job, body)); }
+    catch (e) { setError(e.message); }
   }
 
   // One click, one photograph, one band. Clicking the band it is already in
@@ -489,6 +498,27 @@ export default function PhotosScreen({ job }) {
             <input ref={filePicker} type="file" multiple accept="image/*,.heic" style={{ display: "none" }}
               onChange={(e) => onFiles(e.target.files)} />
           </div>
+          {/* The switch, and the bands it brings. Off is where every job
+              starts. Turning it off keeps every band and every click, so it
+              is never a thing he is afraid to press. Spenser, 2026-09-07. */}
+          <div className="action-row band-row">
+            <div className="bands-pill" role="group" aria-label="Bands">
+              <span className="bands-label">Bands</span>
+              <button className={`pill-opt${bandsOn ? " is-on" : ""}`}
+                      aria-pressed={bandsOn} disabled={!!busy}
+                      onClick={() => onBands({ bands_on: true })}>On</button>
+              <button className={`pill-opt${bandsOn ? "" : " is-on"}`}
+                      aria-pressed={!bandsOn} disabled={!!busy}
+                      onClick={() => onBands({ bands_on: false })}>Off</button>
+            </div>
+            {bands.map((b) => (
+              <button key={b.letter} className="band-chip"
+                      aria-label={`Band ${b.letter}`}
+                      title={b.name === b.letter ? `Band ${b.letter}` : b.name}>
+                {b.letter}
+              </button>
+            ))}
+          </div>
           {/* Something has to move while the model is looking at the photos.
               Writing a dozen captions takes real seconds, and a screen that
               sits still reads as broken. */}
@@ -733,7 +763,7 @@ export default function PhotosScreen({ job }) {
                 {bands.map((b) => (
                   <button key={b.letter}
                           className={`dot band-dot${p.band === b.letter ? " is-on" : ""}`}
-                          aria-label={`Band ${b.letter}`}
+                          aria-label={`Put in band ${b.letter}`}
                           title={b.name === b.letter ? `Band ${b.letter}` : b.name}
                           onClick={() => onBand(p.file, p.band === b.letter ? null : b.letter)}>
                     <span aria-hidden="true">{b.letter}</span>

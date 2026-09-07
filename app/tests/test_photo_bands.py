@@ -399,6 +399,17 @@ def test_the_switch_moves_no_photograph(plain, plain_home):
         ["a.jpg", "b.jpg", "c.jpg"]
 
 
+def test_the_switch_puts_no_photograph_in_a_band(plain, plain_home):
+    """The switch brings the bands and nothing else.
+
+    Written after 2026-09-07, when four photographs in the test job turned out
+    to be in bands and only one click could be accounted for. The switch was
+    not the cause, and this is what says so from now on.
+    """
+    plain.put("/api/jobs/A job/bands", json={"bands_on": True})
+    assert [e.get("band") for e in on_disk(plain_home)["photos"]] == [None, None, None]
+
+
 def test_the_switch_off_keeps_what_he_already_clicked(plain, plain_home):
     """Turning it off is not throwing it away. He can put it back on and find
     his work."""

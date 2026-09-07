@@ -112,13 +112,13 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 2, a band click resorts the list itself
 
-- [ ] Add the failing cases to `app/tests/test_photo_bands.py`
-- [ ] Add `sort_by_band(manifest)`, with constraint 2 in its docstring
-- [ ] Add `POST /api/jobs/{name}/photos/{file}/band`, taking a letter or null
-- [ ] A cut photograph keeps its band and sorts with it, so uncutting restores its place
-- [ ] Prove `included()` returns the same list it does today when bands are off
-- [ ] Prove a build after a band click produces the same document as the same order reached by dragging
-- [ ] The whole suite passes and nothing skips
+- [x] Add the failing cases to `app/tests/test_photo_bands.py`
+- [x] Add `sort_by_band(manifest)`, with constraint 2 in its docstring
+- [x] Add `POST /api/jobs/{name}/photos/{file}/band`, taking a letter or null
+- [x] A cut photograph keeps its band and sorts with it, so uncutting restores its place
+- [x] Prove `included()` returns the same list it does today when bands are off
+- [x] Prove a build after a band click produces the same document as the same order reached by dragging
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `a-band-click-sorts-the-list`, and Spenser says yes
 
 ### Slice 3, the band list and the toggle, per job

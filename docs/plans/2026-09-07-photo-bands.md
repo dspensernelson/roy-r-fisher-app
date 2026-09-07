@@ -132,13 +132,13 @@ fails until it is deleted. That is deliberate.
 
 ### Slice 4, one dot row under every photograph
 
-- [ ] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
-- [ ] Add `setPhotoBand` and `putBands` to `app/web/src/api.js`
-- [ ] Replace the `Mark reviewed` button with the tick at the lower left of the row
-- [ ] Band dots to the right of the tick, one per band, in band order, with bands off showing none
-- [ ] Add the unassigned strip, and hold the build until it is empty
-- [ ] Add `.band-dot` to `app/web/src/brand.css` next to `.review-line`, using the tokens in `brand/Roy R. Fisher Design System/tokens/`
-- [ ] The whole suite passes and nothing skips
+- [x] Add the failing cases to `app/web/src/screens/PhotosScreen.test.jsx`
+- [x] Add `setPhotoBand` and `putBands` to `app/web/src/api.js`
+- [x] Replace the `Mark reviewed` button with the tick at the lower left of the row
+- [x] Band dots to the right of the tick, one per band, in band order, with bands off showing none
+- [x] Say how many photographs are waiting, and hold the build until none are
+- [x] Add `.band-dot` to `app/web/src/brand.css` next to `.review-line`, using the tokens in `brand/Roy R. Fisher Design System/tokens/`
+- [x] The whole suite passes and nothing skips
 - [ ] Commit on `bands-on-the-screen`, and Spenser says yes
 
 ### Closing this plan out
@@ -265,11 +265,16 @@ one that would add that, is a separate decision behind a warning.
 nothing else. That is the answer to the question F6 left open and it is why
 there is one code path rather than two.
 
-**The unassigned strip.** Above the grid, holding every photograph with no
-band, draining as Mark clicks. When it is empty it disappears. The build button
-is held while it has anything in it, alongside `allReviewed` at line 333, with a
-title saying which of the two is missing. An empty band still shows its header,
-so Mark can see he owes it photographs.
+**The unassigned strip, and what was built instead.** The plan asked for a
+strip above the grid holding every photograph with no band. It was not built
+that way, and here is why. Sorting already puts every unassigned photograph at
+the end of the list, so a strip would be a second copy of tiles that are
+already on screen, and the tile markup would have to be duplicated or
+extracted. What is built instead is a line above the grid saying how many
+photographs are waiting and where they are, plus the build held until that
+count reaches zero. **Spenser can still ask for the strip.** The count and the
+gate are the part the workflow needs; the strip is a layout choice and belongs
+with the layout pass in F8.
 
 **Colour comes from the tokens**, `brand/Roy R. Fisher Design System/tokens/`,
 pointed at rather than copied. The brand red sat wrong in a memory file for

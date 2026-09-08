@@ -380,6 +380,39 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }
 .button.secondary { background: var(--link); }
+/* Cannot be undone, and not why he came to this screen. It carries the red so
+   he knows it is one-way, and it is not filled, so it never competes with the
+   one thing the screen exists to do. Clear captions, Forget it, Close the app.
+   See the colour law in docs/ROADMAP.md, 2026-09-08. */
+.button.final {
+  background: transparent; color: var(--brand);
+  border: 1.5px solid var(--line-strong);
+}
+.button.final:hover { border-color: var(--brand); background: #FBEAEA; }
+.button.final:active { background: #F6DADA; transform: translateY(1px); }
+
+/* A way out of a job that reads as a way out, not as a word in a trail. */
+.bar-inner .crumb-back {
+  border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 4px;
+  padding: 3px 10px; opacity: 1;
+}
+.bar-inner .crumb-back:hover {
+  background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+}
+
+/* The x that clears a message. The boxes it sits in have to hold it, so they
+   get position and room on the right for it. */
+.done, .error, .outcome { position: relative; padding-right: 44px; }
+.note-x {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: none; cursor: pointer;
+  font: inherit; font-size: 20px; line-height: 1;
+  padding: 2px 8px; border-radius: 4px;
+  color: var(--ink-muted);
+}
+.note-x:hover { color: var(--ink); background: rgba(35, 31, 32, 0.07); }
+.note-x:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
 .button.secondary:hover { background: var(--link-hover); }
 
 /* Something moves while the model is looking at the photos. */

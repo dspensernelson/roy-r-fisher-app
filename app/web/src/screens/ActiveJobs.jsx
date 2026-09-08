@@ -57,7 +57,7 @@ export default function ActiveJobs({ first, onDone, onCancel }) {
               it produced a Jobs screen with nothing on it and no explanation
               of why. Nothing starts selected, which is unchanged: he says
               what he is working on and the app never assumes. */}
-          <button className={`button${chosen.size === 0 ? " is-off" : ""}`}
+          <button className={`button secondary${chosen.size === 0 ? " is-off" : ""}`}
                   onClick={save} disabled={!!busy || chosen.size === 0}
                   title={chosen.size === 0 ? "Pick at least one job to work on" : ""}>
             Use these active jobs

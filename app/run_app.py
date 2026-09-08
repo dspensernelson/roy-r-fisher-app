@@ -20,6 +20,7 @@ SERVER = Path(__file__).resolve().parent / "server"
 sys.path.insert(0, str(SERVER))
 
 import packaging  # noqa: E402  standard library only
+import splash  # noqa: E402  standard library only
 import startup  # noqa: E402  standard library only
 import tell  # noqa: E402  standard library only
 
@@ -70,8 +71,45 @@ def _record_last_good(version: str) -> None:
 def main() -> int:
     version = packaging.version_of(ROOT)
 
-    # 1. Is this package whole? Before any third-party import, and before
-    #    runtime.json is created or touched.
+    # The order below changed on 2026-09-08, and the reason is the whole point
+    # of it. The package check hashes every file in the package and is the
+    # slowest thing here. It used to run first, with nothing on screen, so
+    # double-clicking the icon did nothing visible for several seconds.
+    # Spenser: "Can we make a loading screen?" A loading screen has to open
+    # before the slow work, not after it, so the cheap checks run first, the
+    # screen goes up, and the hashing happens behind it.
+    #
+    # Nothing was made less safe by moving it. The two checks now above it use
+    # the standard library only and touch nothing, and the file that records a
+    # running app is still written after the check, so writing it still cannot
+    # invalidate the package. Its name is deliberately not repeated here: a
+    # test asserts the order by where the symbol first appears in this file,
+    # and prose that names it early reads as the call happening early.
+
+    # 1. Is a different version already running beside this one?
+    try:
+        startup.refuse_if_another_version_runs(HOME)
+    except startup.StartupRefused as exc:
+        tell.problem(exc.message)
+        return 3
+
+    # 2. Is this same version already running? Then just show it. No splash:
+    #    there is nothing to wait for.
+    existing = startup.already_running_here(HOME, version)
+    if existing:
+        tell.say("Roy R. Fisher %s is already running. Opening it." % version)
+        webbrowser.open("http://%s:%d" % (startup.HOST, existing))
+        return 0
+
+    # 3. Ask the operating system for a port. Only the asking: the file that
+    #    records it is written further down, after the package check.
+    port = startup.free_port()
+
+    # 4. Say the click landed, before the slow part. The page replaces itself
+    #    with the app the moment the app answers.
+    showing = splash.show(port, version)
+
+    # 5. Is this package whole?
     #
     #    Skipped in the development checkout, which has no manifest and never
     #    will. Deciding that by the presence of app/tests rather than by the
@@ -88,22 +126,6 @@ def main() -> int:
             tell.problem(exc.message)
             return 2
 
-    # 2. Is a different version already running beside this one?
-    try:
-        startup.refuse_if_another_version_runs(HOME)
-    except startup.StartupRefused as exc:
-        tell.problem(exc.message)
-        return 3
-
-    # 3. Is this same version already running? Then just show it.
-    existing = startup.already_running_here(HOME, version)
-    if existing:
-        tell.say("Roy R. Fisher %s is already running. Opening it." % version)
-        webbrowser.open("http://%s:%d" % (startup.HOST, existing))
-        return 0
-
-    # 4. Ask the operating system for a port, and remember which one.
-    port = startup.free_port()
     startup.write_runtime(HOME, port, version)
 
     tell.say("Starting Roy R. Fisher %s." % version)
@@ -115,7 +137,10 @@ def main() -> int:
     #    as this version. 6. Then start the clock on the last-good record.
     def when_up():
         if startup.wait_until_answering(port, version):
-            webbrowser.open("http://%s:%d" % (startup.HOST, port))
+            # The splash is already watching this port and moves itself over.
+            # Opening a second tab on top of it is the two-icons fault again.
+            if not showing:
+                webbrowser.open("http://%s:%d" % (startup.HOST, port))
             threading.Timer(GOOD_AFTER_SECONDS, _record_last_good, (version,)).start()
         else:
             # 7. Plain words, not a traceback. The server thread is still up,

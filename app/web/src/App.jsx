@@ -8,6 +8,7 @@ import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
 import UpdateStep from "./screens/UpdateStep.jsx";
+import CloseX from "./CloseX.jsx";
 import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
@@ -176,7 +177,7 @@ export default function App() {
         touched, and nothing outside the demo folder is either.
       </p>
       <div className="setting-actions">
-        <button className="button" onClick={runReset}>Reset demo</button>
+        <button className="button final" onClick={runReset}>Reset demo</button>
         <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
       </div>
     </div>
@@ -190,7 +191,12 @@ export default function App() {
           <span className="working-text">{resetting}</span>
         </div>
       )}
-      {resetError && <div className="error">{resetError}</div>}
+      {resetError && (
+        <div className="error">
+          <CloseX onClose={() => setResetError(null)} what="this message" />
+          {resetError}
+        </div>
+      )}
     </>
   );
 
@@ -225,8 +231,17 @@ export default function App() {
     );
   }
 
+  // Inside a job, the first crumb stops being a word and becomes a way out.
+  // Spenser, 2026-09-04: *"there should be a Back to Jobs at the very top. We
+  // need to make it obvious these are not computer people."* A crumb trail is
+  // a thing computer people read. On the jobs screen it stays a plain word,
+  // because he is already there.
+  const inside = !!view.job || view.screen === "settings";
   const crumbs = [
-    <button key="jobs" onClick={() => setView({ screen: "jobs", job: null })}>Jobs</button>,
+    <button key="jobs" className={inside ? "crumb-back" : ""}
+            onClick={() => setView({ screen: "jobs", job: null })}>
+      {inside ? "\u2039 Back to Jobs" : "Jobs"}
+    </button>,
   ];
   if (view.job) crumbs.push(<span key="s1">›</span>,
     <button key="job" onClick={() => setView({ screen: "job", job: view.job })}>{view.job}</button>);

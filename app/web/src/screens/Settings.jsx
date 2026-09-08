@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog, closeTheApp } from "../api.js";
+import CloseX from "../CloseX.jsx";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
   const [state, setState] = useState(null);
@@ -55,7 +56,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           This computer is running <strong>version {version || "unknown"}</strong>.
         </p>
         <div className="setting-actions">
-          <button className="button" disabled={looking} onClick={async () => {
+          <button className="button secondary" disabled={looking} onClick={async () => {
             setLooking(true); setLooked(null);
             try {
               const found = await checkForUpdate();
@@ -104,7 +105,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
               you to choose the folder again.
             </p>
             <div className="setting-actions">
-              <button className="button" disabled={!!busy} onClick={async () => {
+              <button className="button final" disabled={!!busy} onClick={async () => {
                 setBusy("Forgetting..."); setError(null);
                 try { onWorkspaceChanged(await forgetWorkspace()); }
                 catch (e) { setError(e.message); setBusy(""); setForgetting(false); }
@@ -116,7 +117,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           </>
         ) : (
           <div className="setting-actions">
-            <button className="button" onClick={onChangeFolder}>Change jobs folder</button>
+            <button className="linky" onClick={onChangeFolder}>Change jobs folder</button>
             <button className="linky" onClick={() => { setForgetting(true); setNote(null); }}>
               Start setup over
             </button>
@@ -144,10 +145,10 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
               A key is saved on this computer. It ends in <strong>{state.ends_with}</strong>.
             </p>
             <div className="setting-actions">
-              <button className="button" onClick={() => { setReplacing(true); setNote(null); }}>
+              <button className="button secondary" onClick={() => { setReplacing(true); setNote(null); }}>
                 Replace it
               </button>
-              <button className="linky" onClick={onRemove} disabled={!!busy}>Remove it</button>
+              <button className="button final" onClick={onRemove} disabled={!!busy}>Remove it</button>
             </div>
           </>
         )}
@@ -161,7 +162,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
                 onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) onSave(); }} />
             </label>
             <div className="setting-actions">
-              <button className="button" onClick={onSave} disabled={!typed.trim() || !!busy}>
+              <button className="button secondary" onClick={onSave} disabled={!typed.trim() || !!busy}>
                 Check and save
               </button>
               {replacing && (
@@ -184,8 +185,18 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           </>
         )}
 
-        {note && <div className="done">{note}</div>}
-        {error && <div className="error">{error}</div>}
+        {note && (
+          <div className="done">
+            <CloseX onClose={() => setNote(null)} what="this message" />
+            {note}
+          </div>
+        )}
+        {error && (
+          <div className="error">
+            <CloseX onClose={() => setError(null)} what="this message" />
+            {error}
+          </div>
+        )}
 
         <p className="setting-fine">
           Your key is kept in a file in your own user folder, outside this program, and it is
@@ -200,7 +211,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           sits without answering, this is what Spenser needs to see.
         </p>
         <div className="setting-actions">
-          <button className="button" onClick={async () => {
+          <button className="linky" onClick={async () => {
             setLogNote(null);
             try { await showTheLog(); }
             catch (e) { setLogNote(e.message); }
@@ -225,7 +236,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
               when you have finished for the day.
             </p>
             <div className="setting-actions">
-              <button className="button" onClick={async () => {
+              <button className="button final" onClick={async () => {
                 setClosing(true);
                 try { await closeTheApp(); } catch { /* it is going away */ }
               }}>

@@ -68,7 +68,7 @@ export default function SectionPicker({ job, onDone }) {
       </div>
 
       <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-        <button className="button" onClick={save} disabled={!!busy}>Save these sections</button>
+        <button className="button secondary" onClick={save} disabled={!!busy}>Save these sections</button>
         <span className="sub" style={{ margin: 0 }}>
           {busy || `${count} ${count === 1 ? "section" : "sections"} checked`}
         </span>

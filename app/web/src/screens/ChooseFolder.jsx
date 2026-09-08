@@ -105,11 +105,11 @@ export default function ChooseFolder({ first, current, missing, onSaved, onCance
                   "Use this folder". The reason is already in the note beside
                   it, where it can be read rather than hovered for. */}
               {isEmpty ? (
-                <button className="button" onClick={() => use(true)} disabled={!!busy}>
+                <button className="button secondary" onClick={() => use(true)} disabled={!!busy}>
                   Use as new jobs folder
                 </button>
               ) : (
-                <button className={`button${canUse ? "" : " is-off"}`}
+                <button className={`button secondary${canUse ? "" : " is-off"}`}
                         onClick={() => use(false)} disabled={!canUse || !!busy}>
                   Use this folder
                 </button>

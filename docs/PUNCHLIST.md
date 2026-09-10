@@ -48,6 +48,21 @@ case is still there.
 
 **Not decided. Nothing is built to this yet.**
 
+## P4. Which job produced the 700 KB photographs?
+
+Spenser, 2026-09-10: a document his dad built came out with photographs over
+700 KB each. Nobody can look at it until he names the job.
+
+**What is already measured, so nobody measures it twice.** Sixty photographs
+from `TEST JOBS` were put through the exact step the build uses, which makes a
+JPEG copy capped at 1600 pixels on the longest edge at quality 85. None reached
+700 KB. The biggest was 600 KB from a 2400 by 1800 source and the middle of the
+pack was 269 KB. Nothing passes through unconverted, so a large result means
+either a busy picture or a path nobody has looked at yet.
+
+**Needs the job name from Spenser.** Then the folder can be measured directly
+and this becomes a bug or a nothing.
+
 ## P3. What does Reset put back?
 
 Spenser, 2026-09-03, thinking aloud and saying so: keep the captions, put

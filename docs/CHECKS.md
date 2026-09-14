@@ -69,9 +69,10 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > **Wrong if:** a black window is in front of it, or instead of it.
 
 > ### Check 9. `Show the log` shows you the log
-> Open Settings, click **`Show the log`**.
+> Open Settings and find **`Show the log`**. It is blue writing with no box
+> round it, not a button. Click it.
 > **Should:** you can read the log and copy it, without hunting for a file.
-> **Wrong if:** nothing appears to happen.
+> **Wrong if:** nothing appears to happen, or it is a coloured button.
 
 ## Updating
 
@@ -110,3 +111,117 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > borders and its money, and nothing is cut off at the edge.
 > **Wrong if:** any column is clipped, colours are wrong, or the grid is
 > missing.
+
+## Starting the app, new in 0.7.0
+
+Version 0.7.0 shows a loading page while the app gets going. The page is a file
+on the computer and the app is a program on the same computer, and the page has
+to reach the program for any of this to work. Nobody has yet watched that happen
+on Windows. Check 15 is the one that finds out.
+
+> ### Check 15. The loading page turns into the app. **Read this one twice.**
+> Start the app the way Mark starts it. A page opens saying
+> `Starting version 0.7.0`. Watch it and touch nothing.
+> **Should:** within about ten seconds that same page becomes the app, in the
+> same tab. No second tab and no second window.
+> **Wrong if:** it is still saying `Starting` after half a minute. If it is,
+> **do not sit and wait.** Double-click the icon again while the first page is
+> still saying `Starting`. If the app opens now, then the app had been running
+> the whole time and the loading page could not reach it. **That is the worst
+> fault in this version. Stop there and tell Spenser.** Left alone, the page
+> waits two and a half minutes and then says the app did not start, which is
+> not true, and nothing on screen would ever tell you otherwise.
+
+> ### Check 16. Starting it twice does not give you two of it
+> With the app already open and working, double-click the icon again.
+> **Should:** you are put back in front of the app you already had. No loading
+> page this time, because there is nothing to wait for.
+> **Wrong if:** a loading page appears, or a second copy starts, or you are told
+> another version is running.
+
+> ### Check 17. A damaged copy still stops you
+> Copy the whole version folder to the Desktop. In the copy only, open
+> `program\app\web\dist\index.html` in Notepad, type a word into it, save, and
+> start that copy. Throw the copy away afterwards.
+> **Should:** a box says the program is damaged, and the app does not open.
+> **Wrong if:** it opens anyway, or the loading page sits there for two and a
+> half minutes and no box ever appears.
+
+## The captions you type
+
+> ### Check 18. A caption you have just typed is not thrown away
+> Open a job's photographs. Type a caption into one. Without clicking anywhere
+> else first, click the tick underneath that same photograph.
+> **Should:** the tick goes on and your words are still in the box. Leave the
+> job, come back, and they are still there.
+> **Wrong if:** the box goes back to what it said before, or goes empty.
+
+> ### Check 19. Typing a caption does not reach across the network
+> On a job that lives on the office network disk, type a long caption quickly.
+> **Should:** the letters keep up with your fingers, and nothing else on the
+> screen moves while you type. The number on `Generate captions` sits still.
+> **Wrong if:** the letters lag behind, or that number flickers or changes as
+> you type.
+
+> ### Check 20. The price you agree to is the price of what is there now
+> Open a job's photographs, add two more photographs, then click
+> `Generate captions` and read the figure on the step that asks you to agree.
+> **Should:** the figure counts the ones you just added, because it is worked
+> out again at that moment.
+> **Wrong if:** it shows a price from before you added them, or shows no price.
+
+## Colour
+
+Colour now answers one question only: can he take it back? It says nothing about
+how important a control is. The full rule is in `docs/ROADMAP.md`, 2026-09-08.
+
+> ### Check 21. One solid red button on a screen, at most
+> Walk through Jobs, a job, its Photographs, its Sections, and Settings. Count
+> the solid red buttons on each screen.
+> **Should:** never more than one, and it is the thing you came to that screen
+> to do. In the whole app there are three: `Build photo pages`, `Make the job`,
+> `Update now`.
+> **Wrong if:** two solid red buttons share a screen, or a solid red button only
+> cancels, closes, or goes back. Red lines are not buttons: the band across the
+> top of the screen and the line along the top of a card are meant to be red.
+
+> ### Check 22. The way out is never the loudest thing
+> On every screen that offers them, look at `Cancel`, `Not now`,
+> `‹ Back to Jobs`, `Show in folder` and `Change jobs folder`.
+> **Should:** blue writing, no box round it. Nothing that only moves you, shows
+> you something, or backs you out is ever a coloured button.
+> **Wrong if:** any of them is filled with colour, or shouts louder than the
+> thing the screen is for.
+
+> ### Check 23. One-way things are written in red
+> Find `Clear captions`, `Remove it`, `Forget it`, `Close the app`, and
+> `Reset demo` if this machine has it.
+> **Should:** a plain button with a line round it and red writing inside. Red
+> says you cannot take it back. Not filled says it is not why you came here.
+> **Wrong if:** any of them is solid red, or is plain blue writing like a
+> cancel.
+
+> ### Check 24. A button you cannot use yet says why
+> On a job's photographs, before every caption is ticked, look at
+> `Build photo pages` and rest the pointer on it.
+> **Should:** grey, still readable, still saying what it is, and a few words
+> appear telling you what has to happen first.
+> **Wrong if:** it is hidden, or it still looks like something you could press,
+> or resting on it says nothing.
+
+## The small x on a message
+
+> ### Check 25. The x clears a message
+> Put a message on screen: build, or clear captions, or read the
+> `Will be saved as` line on the photographs screen. Click the small x in its
+> corner.
+> **Should:** that message goes, and stays gone while you are on that screen.
+> Nothing else changes.
+> **Wrong if:** it comes straight back, or the x undoes the thing the message
+> was telling you about.
+
+> ### Check 26. A question never has an x
+> Open the step that asks you to agree to a cost, the one that asks before
+> clearing captions, and the one that asks before resetting the demo.
+> **Should:** none of them has an x. The only ways out are the buttons on it.
+> **Wrong if:** any question can be closed with an x instead of answered.

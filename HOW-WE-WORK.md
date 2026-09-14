@@ -75,6 +75,14 @@ No shell script, no Node, no Mac-only call. Every extra thing the app needs is
 another thing that can break on his computer and another thing somebody has to
 install for him. It has to keep running on Spenser's Mac too.
 
+**Three words, not ten.** Every word on screen earns its place or goes.
+Spenser, 2026-09-14: *"DONT USE 10 WORDS WHEN 3 WILL DO"*. A cost was showing
+as three stacked lines where one would do, and two sentences said the same
+thing about his money in different words. He reads every screen and he is
+fast; padding costs him time on every visit, forever. Reassurance is the worst
+offender, because it feels kind and it is just noise the tenth time he sees it.
+Say it once, in the fewest words that are still true, or do not say it.
+
 **A click leads to a step.** A choice that shapes an action lives inside that
 action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see

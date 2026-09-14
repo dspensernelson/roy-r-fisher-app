@@ -65,6 +65,11 @@ export default function PhotosScreen({ job }) {
   // photograph files across the office network. A caption he has not finished
   // is not yet a fact about the job, so it waits here until he leaves the box.
   const [typing, setTyping] = useState({});
+  // The caption save that is still in the air, if there is one. `Mark
+  // reviewed` reads the job's list on the server and answers with what it
+  // read, so a caption sent a moment before and still travelling comes back
+  // as the old one, and the old one lands on his screen. B13.
+  const saving = useRef(Promise.resolve());
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
@@ -193,6 +198,10 @@ export default function PhotosScreen({ job }) {
   async function onReview(file, already) {
     setError(null);
     try {
+      // Leaving the box saved the caption. That save has to reach the server
+      // before the tick does, or the tick is answered out of the caption the
+      // server still holds and throws away what he just typed.
+      await saving.current;
       setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
     } catch (e) { setError(e.message); }
   }
@@ -301,7 +310,7 @@ export default function PhotosScreen({ job }) {
     if (caption === manifest.photos[i].caption) return;   // nothing changed
     const next = structuredClone(manifest);
     next.photos[i].caption = caption;
-    save(next);
+    saving.current = save(next);
   }
 
   function drop(i) {

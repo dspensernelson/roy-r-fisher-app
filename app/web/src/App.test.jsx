@@ -83,3 +83,43 @@ describe("the notice in the masthead", () => {
     expect(look).not.toHaveBeenCalled();
   });
 });
+
+describe("the bar at the top", () => {
+  const JOB = "DAVENPORT_2840 Brady Street - 2026 Tax";
+
+  // Opened the way he opens it: from the Jobs screen.
+  async function insideAJob() {
+    quiet();
+    api.listJobs.mockResolvedValue([{ name: JOB, photo_count: 12 }]);
+    vi.spyOn(api, "jobDetail").mockResolvedValue({
+      name: JOB, photo_count: 12, context: "", engagement: "", sections: [] });
+    vi.spyOn(api, "jobFolders").mockResolvedValue({
+      typical: [], other: [], root_files: [], missing_classifications: [] });
+    vi.spyOn(api, "classificationLabels").mockResolvedValue({ labels: [] });
+    vi.spyOn(api, "getSettings").mockResolvedValue({
+      key_set: false, key_tail: "", workspace: "/jobs", demo_mode: false });
+    render(<App />);
+    await userEvent.click(await screen.findByText(JOB));
+    await screen.findByRole("heading", { name: JOB });
+  }
+
+  // Spenser, 2026-09-04: "we need to make it obvious these are not computer
+  // people." The job's own name is the crumb he needs most on the photos
+  // screen, and it was plain white text that only underlined on hover.
+  it("draws the way back to the job as a chip, the same as the way back to Jobs", async () => {
+    await insideAJob();
+    const crumb = screen.getByRole("button", { name: JOB });
+    expect(crumb).toHaveClass("crumb-chip");
+    expect(screen.getByRole("button", { name: /Back to Jobs/ })).toHaveClass("crumb-chip");
+  });
+
+  // Opening Settings threw the job away, so the only way back into it was
+  // Jobs and then opening it again.
+  it("keeps the job he was in when he opens Settings", async () => {
+    await insideAJob();
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await screen.findByRole("heading", { name: "Settings" });
+    await userEvent.click(screen.getByRole("button", { name: JOB }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: JOB })).toBeInTheDocument());
+  });
+});

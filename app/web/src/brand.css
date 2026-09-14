@@ -40,6 +40,11 @@
   --needs-ink: #8A5200;       /* amber, not red: nothing is wrong yet */
   --shadow-raised: 0 1px 3px rgba(35,31,32,0.12);
 
+  /* How tall the nav bar is: 11px of padding above and below a 14px crumb
+     chip. It is stuck to the top of the window, so anything else that parks
+     at the top has to start below it, and both need the same number. */
+  --bar-height: 52px;
+
   /* A folder holding something stays dark, and is one step lighter than the
      nav bar so it reads as a filled thing rather than as more chrome.
      Spenser, 2026-09-04: he wants what is in a folder to stay highlighted.
@@ -59,7 +64,12 @@ body {
 .masthead { max-width: 1200px; margin: 0 auto; padding: 20px 24px 14px; display: flex; align-items: center; gap: 14px; }
 .wordmark { font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 600; letter-spacing: 0.22em; }
 .tagline { font-size: 11.5px; font-style: italic; color: var(--ink-muted); margin-top: 2px; }
-.bar { background: var(--box); }
+/* The only way out of a job is in this bar, and a job with thirty
+   photographs is several screens tall. Scrolling down to caption photograph
+   twelve took every exit off the screen with it, so the bar stays at the top
+   of the window. Sticky rather than fixed: the masthead above it still
+   scrolls away, and the page below it keeps its own flow. */
+.bar { background: var(--box); position: sticky; top: 0; z-index: 10; }
 .bar-inner { max-width: 1200px; margin: 0 auto; padding: 11px 24px; display: flex; gap: 8px; color: var(--box-ink); font-size: 14px; font-weight: 500; }
 .bar-inner button { background: none; border: none; color: var(--box-ink); font: inherit; opacity: 0.85; cursor: pointer; padding: 0 4px; }
 .bar-inner button:hover { opacity: 1; text-decoration: underline; }
@@ -125,6 +135,10 @@ body {
 /* Search and the running count stay put while the list scrolls under them. */
 .picker-head { display: flex; align-items: center; gap: 14px; max-width: 720px;
   position: sticky; top: 0; background: var(--ground); padding: 10px 0; z-index: 2; }
+/* Once the bar is stuck to the top, anything else at top: 0 parks behind it.
+   This row stops at the bar's lower edge instead. The first-run screens have
+   no bar, so there it keeps the top of the window. */
+body:has(.bar) .picker-head { top: var(--bar-height); }
 .find { flex: 1 1 auto; font: inherit; font-size: 14px; padding: 8px 11px;
   border: 1.5px solid var(--line); border-radius: 4px; background: #FFFFFF; color: var(--ink); }
 .find:focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
@@ -180,7 +194,11 @@ body {
 .found-list li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
 /* Settings: one card per thing you can set, plainly labelled on or off. */
-.setting { background: #FFFFFF; border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; max-width: 720px; }
+/* Five of these in a row with no space between them: the borders touched and
+   the whole screen read as one grey slab of text. The margin is what makes
+   them five things. Only Settings uses this card, so nothing else moves. */
+.setting { background: #FFFFFF; border: 1px solid var(--line); border-radius: 6px;
+  padding: 20px 22px; max-width: 720px; margin-bottom: 16px; }
 .setting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
 .setting-head h2 { font-size: 17px; font-weight: 700; margin: 0; }
 .lamp { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700;
@@ -391,12 +409,15 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .button.final:hover { border-color: var(--brand); background: #FBEAEA; }
 .button.final:active { background: #F6DADA; transform: translateY(1px); }
 
-/* A way out of a job that reads as a way out, not as a word in a trail. */
-.bar-inner .crumb-back {
+/* A way out that reads as a way out, not as a word in a trail. Both crumbs
+   wear it: the way back to Jobs, and the job's own name, which is the one he
+   needs most while he is on the photographs screen. Spenser, 2026-09-04:
+   "we need to make it obvious these are not computer people." */
+.bar-inner .crumb-chip {
   border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 4px;
   padding: 3px 10px; opacity: 1;
 }
-.bar-inner .crumb-back:hover {
+.bar-inner .crumb-chip:hover {
   background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
 }

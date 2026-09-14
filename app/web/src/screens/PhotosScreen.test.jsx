@@ -342,6 +342,18 @@ describe("which folder holds the report photographs", () => {
     expect(screen.getAllByPlaceholderText("Caption...")).toHaveLength(3);
   });
 
+  // "" and null are different answers. "" is the top of Photos and is a
+  // decision; null means he has never been asked. A screen that tests the
+  // name for letters reads his decision as no decision and then shows him
+  // no way back to the question.
+  it("still offers the way back when he chose the top of Photos", async () => {
+    api.photoGroups.mockResolvedValue({
+      ...TWO_PLACES, chosen: "", needs_choice: false });
+    await show();
+    expect(await screen.findByText(/Use a different folder/)).toBeInTheDocument();
+    expect(screen.getByText("the Photos folder itself")).toBeInTheDocument();
+  });
+
   it("lets him ask again without losing what he already chose", async () => {
     api.photoGroups.mockResolvedValue({
       ...TWO_PLACES, chosen: "Report Photos_X", needs_choice: false });

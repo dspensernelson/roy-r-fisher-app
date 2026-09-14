@@ -238,13 +238,17 @@ export default function App() {
   // because he is already there.
   const inside = !!view.job || view.screen === "settings";
   const crumbs = [
-    <button key="jobs" className={inside ? "crumb-back" : ""}
+    <button key="jobs" className={inside ? "crumb-chip" : ""}
             onClick={() => setView({ screen: "jobs", job: null })}>
       {inside ? "\u2039 Back to Jobs" : "Jobs"}
     </button>,
   ];
+  // The job's own name is a chip too. On the photographs screen it is the
+  // crumb he needs most, and it was plain white text that did nothing until
+  // the pointer was on it.
   if (view.job) crumbs.push(<span key="s1">›</span>,
-    <button key="job" onClick={() => setView({ screen: "job", job: view.job })}>{view.job}</button>);
+    <button key="job" className="crumb-chip"
+            onClick={() => setView({ screen: "job", job: view.job })}>{view.job}</button>);
   if (TRAIL[view.screen]) crumbs.push(<span key="s2">›</span>, <span key="tail">{TRAIL[view.screen]}</span>);
 
   const toJobs = () => setView({ screen: "jobs", job: null });
@@ -255,8 +259,12 @@ export default function App() {
       <div className="bar">
         <nav className="bar-inner">
           {crumbs}
+          {/* The job comes with him. Settings used to drop it, so the only
+              way back into the job he was working on was Jobs and then
+              opening it again. Nothing on Settings is about a job, so
+              carrying it changes nothing except the way back. */}
           <button className={`bar-right ${view.screen === "settings" ? "here" : ""}`}
-                  onClick={() => setView({ screen: "settings", job: null })}>
+                  onClick={() => setView({ screen: "settings", job: view.job })}>
             Settings
           </button>
         </nav>

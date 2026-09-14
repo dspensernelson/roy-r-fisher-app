@@ -802,8 +802,13 @@ export default function PhotosScreen({ job }) {
 
       {/* Where the report photographs came from, said once and quietly. He
           chose it, so it is a reminder rather than an announcement, and the
-          link is how he changes his mind. */}
-      {where && where.chosen && (
+          link is how he changes his mind.
+
+          The test is whether an answer was RECORDED, not whether the recorded
+          name has letters in it. The top of Photos is recorded as an empty
+          name, and that is a decision, so it has to draw this line too or he
+          has no way back to the question. */}
+      {where && where.chosen != null && (
         <p className="sub photo-from" style={{ margin: "0 0 16px" }}>
           From <strong>{where.chosen || "the Photos folder itself"}</strong>.
           <button className="linky" onClick={() => setAsked(true)}>Use a different folder</button>

@@ -106,8 +106,10 @@ def main() -> int:
     port = startup.free_port()
 
     # 4. Say the click landed, before the slow part. The page replaces itself
-    #    with the app the moment the app answers.
-    showing = splash.show(port, version)
+    #    with the app the moment the app answers, when the browser lets it.
+    #    Whether it managed to is deliberately not recorded: the answer is not
+    #    knowable from here, and step 5 below no longer asks.
+    splash.show(port, version)
 
     # 5. Is this package whole?
     #
@@ -137,10 +139,19 @@ def main() -> int:
     #    as this version. 6. Then start the clock on the last-good record.
     def when_up():
         if startup.wait_until_answering(port, version):
-            # The splash is already watching this port and moves itself over.
-            # Opening a second tab on top of it is the two-icons fault again.
-            if not showing:
-                webbrowser.open("http://%s:%d" % (startup.HOST, port))
+            # Always. This used to be skipped when the loading page had been
+            # drawn, on the reasoning that the page was already watching this
+            # port and would move itself over, so opening here would leave a
+            # second tab. On Mark's Windows machine on 2026-09-14 it did not
+            # move itself over: a page loaded from a file on disk may be barred
+            # from asking a server on the same computer anything, and Edge bars
+            # it. The app was running and nobody was looking at it.
+            #
+            # From here there is no way to find out whether the page managed
+            # the handover, so the browser is opened either way. The cost when
+            # the handover did work is one stale tab. The cost when it did not
+            # is the whole app.
+            webbrowser.open("http://%s:%d" % (startup.HOST, port))
             threading.Timer(GOOD_AFTER_SECONDS, _record_last_good, (version,)).start()
         else:
             # 7. Plain words, not a traceback. The server thread is still up,

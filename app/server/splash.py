@@ -11,6 +11,13 @@ This is that screen. It is a plain file on disk, opened in the browser before
 the slow work starts, and it replaces itself with the app the moment the app
 answers.
 
+It is a courtesy and nothing rests on it. A page loaded from a file on disk may
+be barred by the browser from asking a server on the same computer anything,
+which is what Edge did on Mark's machine on 2026-09-14, and from inside the
+page that is indistinguishable from the app being dead. So the app opens itself
+in its own tab as soon as it answers, whatever this page manages, and this page
+never claims the app failed.
+
 **It is written to the app's own cache folder, never into a job folder.**
 
 Standard library only, like everything else that runs before uvicorn is
@@ -21,11 +28,28 @@ import os
 import tempfile
 from pathlib import Path
 
-# How long the page waits before it stops saying "starting" and starts saying
-# something went wrong. Longer than the longest good start measured, and short
-# enough that nobody sits in front of a lie. The app's own start timeout is 30
-# seconds after the server is told to run; this covers the package check too.
-GIVE_UP_SECONDS = 150
+# How long the page waits before it stops saying "starting" and starts
+# pointing somewhere else.
+#
+# It was 150 seconds, on the reasoning that the wait had to cover the slowest
+# possible good start. That reasoning fell on 2026-09-14: on Mark's Windows
+# machine this page could not reach the app at all, so the wait was not a wait
+# for a slow start, it was two and a half minutes of a sweeping bar leading to
+# a sentence that was false. The app opens itself in its own tab the moment it
+# answers now, so this page no longer has to carry anybody anywhere, and being
+# early costs nothing.
+#
+# 20 seconds: shorter than the 30 the app itself waits for its own server, so
+# in the bad case nobody is left staring, and long enough that a normal start,
+# which is a few seconds, hands over first and this is never seen. It keeps
+# looking after it says this, so a genuinely slow start is still carried over.
+GIVE_UP_SECONDS = 20
+
+# How often it asks, before and after it has given up. It slows down once it
+# has said its piece, because a tab somebody forgot to close should not sit
+# there asking twice a second all afternoon.
+LOOK_EVERY_MS = 500
+LOOK_EVERY_LATE_MS = 2000
 
 # The mark, traced from the firm's logo files. Written out rather than read from
 # a file, because this page has to render before anything is served and a
@@ -59,7 +83,9 @@ def page(port: int, version: str) -> str:
     return TEMPLATE.replace("{{MARK}}", MARK) \
                    .replace("{{VERSION}}", version or "") \
                    .replace("{{URL}}", url) \
-                   .replace("{{SECONDS}}", str(GIVE_UP_SECONDS))
+                   .replace("{{SECONDS}}", str(GIVE_UP_SECONDS)) \
+                   .replace("{{EVERY}}", str(LOOK_EVERY_MS)) \
+                   .replace("{{LATE}}", str(LOOK_EVERY_LATE_MS))
 
 
 TEMPLATE = """<!doctype html>
@@ -100,22 +126,30 @@ TEMPLATE = """<!doctype html>
   <p class="say">Starting version {{VERSION}}. This takes a few seconds.</p>
   <div class="bar"><span></span></div>
   <div class="late">
-    <p><strong>It has not started.</strong></p>
-    <p>Close this tab and double-click the Roy R. Fisher icon on your Desktop
-       again. If it happens twice, send Spenser this whole window.</p>
+    <p><strong>Roy R. Fisher has probably opened in another tab.</strong></p>
+    <p>This window could not reach it, which on some computers is just how the
+       browser is set up. Look along the top of your browser for the other tab
+       and carry on there. You can close this one.</p>
+    <p>If there is no other tab, double-click the Roy R. Fisher icon on your
+       Desktop again. If that does not work either, send Spenser this whole
+       window.</p>
   </div>
 </div>
 <script>
 (function () {
   var url = "{{URL}}";
   var stop = Date.now() + {{SECONDS}} * 1000;
+  var wait = {{EVERY}};
   function look() {
-    if (Date.now() > stop) { document.body.className = "is-late"; return; }
+    // Giving up changes what this says, not what it is doing. It keeps
+    // asking, more slowly, so a start that was merely slow still lands here
+    // rather than leaving the person to find the other tab by hand.
+    if (Date.now() > stop) { document.body.className = "is-late"; wait = {{LATE}}; }
     // no-cors, because this page is a file on disk and the app is a server.
     // The answer is opaque and that is fine: reaching it at all is the news.
     fetch(url, { mode: "no-cors", cache: "no-store" })
       .then(function () { window.location.replace(url); })
-      .catch(function () { setTimeout(look, 500); });
+      .catch(function () { setTimeout(look, wait); });
   }
   look();
 })();

@@ -39,11 +39,56 @@ def test_it_replaces_itself_rather_than_opening_a_second_tab():
     assert "window.open" not in page
 
 
+# Superseded on 2026-09-14 by what happened on the Windows machine. This used
+# to require the page to say "It has not started" when it gave up. On Edge the
+# page could not reach the app at all, so it said that while the app was
+# running perfectly well behind it, and it said it after 150 seconds of
+# watching a sweeping bar. What it gives up into is now a pointer to the other
+# tab, and the wait is short.
 def test_it_gives_up_and_says_so_rather_than_spinning_for_ever():
     page = splash.page(51234, "0.6.8")
     assert "is-late" in page
-    assert "It has not started" in page
     assert str(splash.GIVE_UP_SECONDS) in page
+
+
+def test_it_gives_up_quickly_rather_than_after_two_and_a_half_minutes():
+    """150 seconds is a long time to sit in front of a sentence that is wrong.
+
+    The app itself waits 30 seconds for its own server to answer, and the
+    browser is now opened on the app the moment it does, so nothing is lost by
+    this page stepping aside early.
+    """
+    assert 0 < splash.GIVE_UP_SECONDS <= 30
+
+
+def test_giving_up_never_claims_the_app_did_not_start():
+    """On the Windows machine the app was running and the page said it was not.
+
+    A page loaded from a file on disk may be blocked from asking a server on
+    the same computer anything at all, which is indistinguishable from the app
+    being dead. So this page may not say which it was.
+    """
+    page = splash.page(51234, "0.6.8").lower()
+    late = page[page.index('class="late"'):]
+    for lie in ("has not started", "did not start", "failed to start",
+                "could not start", "something went wrong"):
+        assert lie not in late, lie
+
+
+def test_giving_up_points_at_the_tab_the_app_opened_for_itself():
+    page = splash.page(51234, "0.6.8").lower()
+    late = page[page.index('class="late"'):]
+    assert "another tab" in late or "other tab" in late
+
+
+def test_it_keeps_looking_even_after_it_has_given_up():
+    """Giving up changes what it says, not what it is doing. If the app does
+    answer later, this page still hands over rather than sitting there."""
+    page = splash.page(51234, "0.6.8")
+    script = page[page.index("<script>"):]
+    said_late = script.index("is-late")
+    assert "return" not in script[said_late:script.index("\n", said_late)], \
+        "it stops watching the moment it gives up"
 
 
 def test_it_asks_for_nothing_off_this_machine():
@@ -115,10 +160,18 @@ def test_the_record_of_a_running_app_is_still_written_after_the_check():
     assert source.index("packaging.verify(ROOT)") < source.index("startup.write_runtime(")
 
 
-def test_no_second_tab_is_opened_when_the_screen_is_up():
+# Superseded on 2026-09-14 by what happened on the Windows machine. This used
+# to require that the browser was NOT opened on the app when the loading page
+# had been drawn, so as to avoid a second tab. On that machine Edge blocked the
+# page from reaching the app, the handover never happened, and the app was left
+# running with nobody looking at it. A stale second tab is a small cost. A
+# person sitting in front of a false sentence is not.
+def test_the_app_is_opened_even_when_the_loading_page_was_drawn():
     source = (APP / "run_app.py").read_text(encoding="utf-8")
     body = source[source.index("def when_up():"):source.index("def tidy_cache():")]
-    assert "if not showing:" in body, "it opens the app on top of the loading screen"
+    assert "webbrowser.open(" in body, "nothing opens the app once it answers"
+    assert "if not showing" not in body, \
+        "the browser is still skipped when the loading page was drawn"
 
 
 def test_the_splash_ships_inside_the_package():

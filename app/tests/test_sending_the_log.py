@@ -302,6 +302,84 @@ def test_no_password_key_or_token_lives_in_the_sender():
     assert "re_" not in source
 
 
+# --- the button -------------------------------------------------------------
+def test_the_button_sends_what_the_screen_showed_and_says_it_went(client, service,
+                                                                  log_path):
+    import sendlog
+
+    log_path.write_text(recent_line("something worth reading"))
+    shown = client.get("/api/log/recent").json()["text"]
+    answer = client.post("/api/log/send")
+
+    assert answer.status_code == 200
+    body = answer.json()
+    assert body["sent"] is True
+    assert body["message"] == sendlog.SENT
+
+    # Every log line she was shown is in what went, in the order she saw it.
+    # Not byte for byte: reading the preview is itself a request and the app
+    # writes a line for it, so the send is the same log a moment later, one
+    # line longer, and its header counts that line. Byte equality would be a
+    # test of the clock rather than of the feature.
+    went = service.seen[-1]["body"].decode("utf-8").split("\n\n", 1)[1]
+    at = -1
+    for line in shown.split("\n\n", 1)[1].splitlines():
+        found = went.find(line, at + 1)
+        assert found > at, line
+        at = found
+    assert went.splitlines()[0].endswith("something worth reading")
+
+
+def test_the_success_sentence_is_the_one_the_owner_approved(client, service, log_path):
+    log_path.write_text(recent_line("anything at all"))
+    message = client.post("/api/log/send").json()["message"]
+    assert message == ("Sent. Spenser has the last two days of the log. "
+                       "You can carry on.")
+
+
+def test_a_service_that_cannot_be_reached_still_answers_with_a_way_through(
+        client, log_path, monkeypatch):
+    log_path.write_text(recent_line("anything at all"))
+    monkeypatch.setenv("RRF_LOG_ENDPOINT", "http://127.0.0.1:1")
+
+    body = client.post("/api/log/send").json()
+    assert body["sent"] is False
+    assert "internet" in body["message"].lower()
+    assert "try again in a minute" in body["message"].lower()
+    assert "Show what will be sent" in body["message"]
+    assert "Copy" in body["message"]
+    assert "d.spensernelson@gmail.com" in body["message"]
+
+
+def test_too_often_names_the_hour_and_the_same_way_through(client, log_path,
+                                                           refusing_service):
+    log_path.write_text(recent_line("anything at all"))
+    body = client.post("/api/log/send").json()
+    assert body["sent"] is False
+    assert "hour" in body["message"].lower()
+    assert "Show what will be sent" in body["message"]
+    assert "d.spensernelson@gmail.com" in body["message"]
+
+
+def test_no_log_at_all_says_so_and_posts_nothing(client, service, log_path):
+    body = client.post("/api/log/send").json()
+    assert body["sent"] is False
+    assert "nothing has been written" in body["message"].lower()
+    assert service.seen == []
+
+
+def test_every_refusal_offers_something_to_do(client, log_path, monkeypatch):
+    """There must be no dead end, ever. Each of these is a sentence she can
+    act on without asking anybody what it means."""
+    import sendlog
+
+    for message in (sendlog.CANNOT_REACH, sendlog.TOO_OFTEN,
+                    sendlog.NO_ADDRESS, sendlog.TOO_BIG,
+                    sendlog.NOTHING_TO_SEND):
+        assert message.strip().endswith(".")
+        assert len(message.split()) > 8
+
+
 def test_the_update_path_only_ever_fetches_and_never_sends(fake_bucket, tmp_path):
     """The update bucket is read from and never written to. Adding a sender
     to this app must not quietly give the updater one."""

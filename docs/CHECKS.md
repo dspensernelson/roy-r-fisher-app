@@ -113,3 +113,21 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > borders and its money, and nothing is cut off at the edge.
 > **Wrong if:** any column is clipped, colours are wrong, or the grid is
 > missing.
+
+## Sending the log
+
+> ### Check 15. `Send the log to Spenser` sends it, once
+> Open Settings, click **`Send the log to Spenser`**, wait for the answer, then
+> click it again.
+> **Should:** the first says it was sent, the button says `Sending...` while it
+> goes and cannot be clicked twice, and the second says one already arrived from
+> this computer in the last hour.
+> **Wrong if:** nothing on the screen changes, or a failure leaves you with
+> nothing to do about it.
+
+> ### Check 16. A log still reaches him with the internet off
+> Turn the network off. Click **`Send the log to Spenser`**.
+> **Should:** it says the internet may be off, says to try again in a minute,
+> and tells you to press `Show what will be sent`, press `Copy`, and paste it
+> into an email to the address it names.
+> **Wrong if:** it says it was sent, or the message gives you no way through.

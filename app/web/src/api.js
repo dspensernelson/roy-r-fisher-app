@@ -85,6 +85,10 @@ export const removeKey = () => fetch("/api/settings/key", { method: "DELETE" }).
 // the call that opened a folder window, which revealed one of the two files
 // the log actually lives in. That one is gone rather than kept beside this.
 export const logRecent = () => fetch("/api/log/recent").then(j);
+// One press and the last two days reach Spenser. It answers 200 whether it
+// went or not, and the sentence to show is in the body, because there is no
+// failure here she can do anything different about.
+export const logSend = () => fetch("/api/log/send", { method: "POST" }).then(j);
 export const closeTheApp = () => fetch("/api/close", { method: "POST" }).then(j);
 export const readingProgress = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/reading`).then(j);

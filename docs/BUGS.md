@@ -122,6 +122,12 @@ thirty-seven seconds, each one slower than the last:
 **How bad.** Medium. It is also the exact fault this button existed to prevent:
 the app does something and says nothing.
 
+**Fixed on branch `send-the-log-to-spenser`, 2026-09-14. Not yet shipped.** The
+folder window is gone entirely rather than improved. `Show what will be sent`
+puts the text on the screen with a `Copy` button, and `Send the log to Spenser`
+sends it. The button that goes says `Sending...` and cannot be pressed twice,
+which is the half of this that made thirteen clicks possible.
+
 ## B8. The app opens behind the black window
 
 **What happens.** The console window is in front when the app starts. Spenser's

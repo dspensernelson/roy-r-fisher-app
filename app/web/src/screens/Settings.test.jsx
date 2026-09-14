@@ -93,3 +93,56 @@ describe("Show what will be sent", () => {
     expect(await screen.findByText(/nothing has been written/i)).toBeInTheDocument();
   });
 });
+
+describe("Send the log to Spenser", () => {
+  const SENT = "Sent. Spenser has the last two days of the log. You can carry on.";
+
+  it("says it went, in the words the owner approved", async () => {
+    vi.spyOn(api, "logSend").mockResolvedValue({ sent: true, message: SENT });
+    settings();
+    await userEvent.click(await screen.findByRole("button", { name: "Send the log to Spenser" }));
+    expect(await screen.findByText(SENT)).toBeInTheDocument();
+  });
+
+  it("cannot be pressed twice while it is going", async () => {
+    // She pressed the old log button thirteen times in thirty-seven seconds
+    // because nothing on screen changed. B7, from the log of 2026-09-02.
+    let release;
+    vi.spyOn(api, "logSend").mockReturnValue(
+      new Promise((resolve) => { release = () => resolve({ sent: true, message: SENT }); }));
+
+    settings();
+    await userEvent.click(await screen.findByRole("button", { name: "Send the log to Spenser" }));
+
+    const going = await screen.findByRole("button", { name: "Sending..." });
+    expect(going).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Send the log to Spenser" })).toBeNull();
+
+    release();
+    expect(await screen.findByText(SENT)).toBeInTheDocument();
+  });
+
+  it("shows the server's sentence when it did not go", async () => {
+    const refusal = "The log could not be sent. The internet may be off.\n"
+      + "You can still get it to him yourself: press Show what will be sent, "
+      + "press Copy, and paste it into an email to d.spensernelson@gmail.com.";
+    vi.spyOn(api, "logSend").mockResolvedValue({ sent: false, message: refusal });
+
+    settings();
+    await userEvent.click(await screen.findByRole("button", { name: "Send the log to Spenser" }));
+    expect(await screen.findByText(/paste it into an email/)).toBeInTheDocument();
+    // And it can be pressed again. A refusal that leaves the button dead
+    // would be the dead end this whole feature exists to remove.
+    expect(await screen.findByRole("button", { name: "Send the log to Spenser" }))
+      .not.toBeDisabled();
+  });
+
+  it("still answers when the app's own server is not there", async () => {
+    // The one failure the server cannot word for itself, because it is the
+    // server that is missing. Still not a dead end.
+    vi.spyOn(api, "logSend").mockRejectedValue(new Error("Failed to fetch"));
+    settings();
+    await userEvent.click(await screen.findByRole("button", { name: "Send the log to Spenser" }));
+    expect(await screen.findByText(/did not answer/)).toBeInTheDocument();
+  });
+});

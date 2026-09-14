@@ -30,6 +30,7 @@ import usage as usage_store
 import jobs
 import packaging
 import sections
+import sendlog
 import settings
 import state
 import updates
@@ -621,6 +622,23 @@ def create_app() -> FastAPI:
         that expression is the defect this project keeps repeating.
         """
         return logwindow.recent(version=packaging.version_of(PROGRAM))
+
+    @app.post("/api/log/send")
+    def send_the_log():
+        """Send the last two days to Spenser. One press, nothing to choose.
+
+        **Always 200, even when it did not go.** Every other refusal in this
+        app raises an HTTPException, and this one deliberately does not: the
+        person pressing this button already has a problem, and there is no
+        failure here that she can do anything different about. The answer is
+        always the same two facts, whether it went and what to read, so the
+        screen has one thing to draw and no error shape to tell apart.
+
+        The sentences live in `sendlog`, not here and not in JavaScript, so
+        the words she reads exist in one place.
+        """
+        return sendlog.send_the_recent_log(
+            version=packaging.version_of(PROGRAM))
 
     @app.get("/api/caption-styles")
     def caption_styles():

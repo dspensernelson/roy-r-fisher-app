@@ -60,6 +60,14 @@ quietly lies. The brand red sat wrong in a memory file for months because it
 was written out instead of pointed at. Brand facts live in
 `brand/Roy R. Fisher Design System/tokens/` and nowhere else.
 
+Ask how often a rule can fire before you attach work to it. A rule that says
+"when this changes, do that" is cheap while the thing changes a few times an
+hour. It is ruinous when something starts changing it five times a second. The
+photo screen asked the server for the caption price every time the app's note
+changed, and then a caption box started changing that note on every keystroke.
+On Colleen's machine that is one read across the office network per letter she
+types. Both rules were correct on the day each was written.
+
 ## The app itself
 
 **It must run on Mark's Windows PC.** On his machine, nothing but Python runs.

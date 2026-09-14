@@ -59,6 +59,17 @@ export default function PhotosScreen({ job }) {
   const [running, setRunning] = useState(null);   // which request the run is on
   const [where, setWhere] = useState(null);   // which folder holds the report photographs
   const [asked, setAsked] = useState(false);  // he re-opened the question himself
+  // What he is typing right now, by file name, before it is saved. It is
+  // deliberately not in the manifest. Everything that watches the manifest
+  // reacts to every change of it, including the price question, which opens
+  // photograph files across the office network. A caption he has not finished
+  // is not yet a fact about the job, so it waits here until he leaves the box.
+  const [typing, setTyping] = useState({});
+  // The caption save that is still in the air, if there is one. `Mark
+  // reviewed` reads the job's list on the server and answers with what it
+  // read, so a caption sent a moment before and still travelling comes back
+  // as the old one, and the old one lands on his screen. B13.
+  const saving = useRef(Promise.resolve());
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
@@ -187,6 +198,10 @@ export default function PhotosScreen({ job }) {
   async function onReview(file, already) {
     setError(null);
     try {
+      // Leaving the box saved the caption. That save has to reach the server
+      // before the tick does, or the tick is answered out of the caption the
+      // server still holds and throws away what he just typed.
+      await saving.current;
       setManifest(already ? await markUnreviewed(job, file) : await markReviewed(job, file));
     } catch (e) { setError(e.message); }
   }
@@ -277,9 +292,25 @@ export default function PhotosScreen({ job }) {
   }
 
   function setCaption(i, caption) {
+    const file = manifest.photos[i].file;
+    setTyping((held) => ({ ...held, [file]: caption }));
+  }
+
+  // He left the box. Only now does what he typed become part of the job, and
+  // only now does anything that watches the manifest hear about it.
+  function commitCaption(i) {
+    const file = manifest.photos[i].file;
+    if (!(file in typing)) return;          // he typed nothing in this one
+    const caption = typing[file];
+    setTyping((held) => {
+      const rest = { ...held };
+      delete rest[file];
+      return rest;
+    });
+    if (caption === manifest.photos[i].caption) return;   // nothing changed
     const next = structuredClone(manifest);
     next.photos[i].caption = caption;
-    setManifest(next);
+    saving.current = save(next);
   }
 
   function drop(i) {
@@ -846,9 +877,10 @@ export default function PhotosScreen({ job }) {
               )}
               {/* A box, not a line: captions run four to twelve words and he
                   has to be able to read the whole thing without clicking in. */}
-              <textarea value={p.caption} placeholder="Caption..." rows={2}
+              <textarea placeholder="Caption..." rows={2}
+                value={p.file in typing ? typing[p.file] : p.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
-                onBlur={() => save(manifest)} />
+                onBlur={() => commitCaption(i)} />
               {/* Directly under the caption, and a real target rather than a
                   tick in a corner. It is not called Approve. Marking them all
                   at once exists as of 2026-09-07, above, and only behind a

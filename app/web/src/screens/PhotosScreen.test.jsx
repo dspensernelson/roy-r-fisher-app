@@ -711,3 +711,89 @@ describe("the caption chooser's page preview", () => {
       .toEqual(["cell-photo", "cell-photo", "cell-caption", "cell-caption"]);
   });
 });
+
+// Colleen's office keeps its jobs on a disk across the network. Every price
+// question opens photograph files on that disk, so a question per letter typed
+// is a network read per letter typed. On 2026-09-14 that stopped her screen
+// answering. The price counts photographs that still need a caption, and that
+// count cannot change until the caption is saved, so the question belongs on
+// the save and not on the keystroke.
+describe("typing a caption", () => {
+  it("asks the server for the price no more while she types", async () => {
+    await show();
+    const boxes = await screen.findAllByPlaceholderText("Caption...");
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.type(boxes[0], "View of the front entrance");
+
+    expect(api.captionEstimate).not.toHaveBeenCalled();
+  });
+
+  it("asks the server for the price once when she leaves the box", async () => {
+    await show();
+    const boxes = await screen.findAllByPlaceholderText("Caption...");
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.type(boxes[0], "View of the front entrance");
+    await userEvent.tab();
+
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
+  });
+});
+
+// B13. He types a caption and reaches straight for the tick, with no click in
+// between. `Mark reviewed` reads the job's list on the server, ticks the
+// photograph and answers with what it read, and that answer is what the
+// screen draws. Saving the caption is a separate round trip, and nothing
+// orders the two, so the tick can be answered from the caption the server
+// still has. Found by Spenser, 2026-09-07.
+describe("ticking a caption he has just typed", () => {
+  // The server, in the small, with the one property that matters here: a save
+  // is in the air for a while, and until it lands the server still holds the
+  // old caption. `landSave` is the save arriving. Anything the screen sends
+  // before that is answered out of the old caption.
+  let held = null;
+  let landSave = null;
+
+  function fakeServer(start) {
+    held = structuredClone(start);
+    landSave = null;
+    api.getManifest.mockResolvedValue(structuredClone(held));
+    api.putManifest.mockImplementation((_job, sent) => {
+      const written = structuredClone(sent);
+      return new Promise((resolve) => {
+        landSave = () => { held = written; resolve({ ok: true }); };
+      });
+    });
+    vi.spyOn(api, "markReviewed").mockImplementation((_job, file) => {
+      const answer = structuredClone(held);
+      answer.photos.find((p) => p.file === file).reviewed = true;
+      held = structuredClone(answer);
+      return Promise.resolve(answer);
+    });
+  }
+
+  it("keeps what he typed", async () => {
+    fakeServer(manifest({ photos: [
+      { file: "photo-01.jpg", caption: "View of the front" },
+      { file: "photo-02.jpg", caption: "View of the rear" },
+    ] }));
+    await show();
+    const boxes = await screen.findAllByPlaceholderText("Caption...");
+
+    await userEvent.type(boxes[0], " entrance");
+    // straight from the box to the tick, with nothing clicked in between
+    await userEvent.click(
+      screen.getAllByRole("button", { name: /^Mark reviewed$/ })[0]);
+    // the caption reaches the server, some time after he clicked
+    landSave();
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Reviewed" })).toHaveLength(1));
+    expect(api.markReviewed).toHaveBeenCalledWith(JOB, "photo-01.jpg");
+    expect(screen.getAllByPlaceholderText("Caption...")[0])
+      .toHaveValue("View of the front entrance");
+  });
+});

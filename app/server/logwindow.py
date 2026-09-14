@@ -62,6 +62,12 @@ STAMP_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 ROTATED_SUFFIX = ".1"
 
+# The first line of every send. It is how the receiving service tells one of
+# our logs from a stray POST from somewhere else, so it is written once here
+# and pointed at by `sendlog`. The Worker keeps its own copy, because it is a
+# different language and cannot import this; a test checks the two agree.
+FIRST_LINE = "Roy R. Fisher, the last %d days of the log" % DAYS
+
 
 def files_in_order():
     """The log files that exist, oldest first, rotated half before current.
@@ -173,7 +179,7 @@ def header(version, now, read, count, first, last, note) -> str:
     answers was a missing second file that nothing on screen mentioned.
     """
     lines = [
-        "Roy R. Fisher, the last %d days of the log" % DAYS,
+        FIRST_LINE,
         "App version: %s" % (version or "unknown"),
         "Operating system: %s" % platform.system(),
         "This computer's clock: %s" % _stamp_text(now),

@@ -140,12 +140,18 @@ class FakeBucket:
         # what it calls itself is a real failure mode: Cloudflare answers 403
         # to the default Python-urllib name, measured 2026-09-02.
         self.seen = []
+        # And every request's method, in order. Added 2026-09-14 with the
+        # log sender, so a test can hold the updater to reading only. The app
+        # now has code that posts, and the bucket is a place it must never
+        # post to.
+        self.methods = []
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 from urllib.parse import unquote
                 outer.seen.append(dict(self.headers))
+                outer.methods.append(self.command)
                 body = outer.files.get(unquote(self.path.lstrip("/")))
                 if body is None:
                     self.send_response(404)
@@ -155,6 +161,14 @@ class FakeBucket:
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+
+            def do_POST(self):
+                """Recorded and refused. Nothing in the update path may write
+                to the bucket, and a silent 501 from the default handler
+                would not say which route tried."""
+                outer.methods.append(self.command)
+                self.send_response(405)
+                self.end_headers()
 
             def log_message(self, *_args):
                 pass

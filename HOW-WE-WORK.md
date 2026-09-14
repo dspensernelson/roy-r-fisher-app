@@ -115,6 +115,15 @@ delivered without Spenser seeing the change and saying yes.
 While a slice is still being understood there is no plan document, because we
 are finding the edges. Once its shape is known, write one.
 
+Write down what he decides on the day he decides it. A decision spoken in a
+session lives only in that session. On 2026-09-04 Spenser walked every screen
+and marked each click Fine or Not fine. Nobody wrote it down, so the work that
+followed has four commits and no document, and every session after it read the
+commits and concluded it was a colour pass. His complaint about the Settings
+layout was written up as a complaint about red buttons and closed by a colour
+rule. Recovering the real list cost an evening on 2026-09-14. It is now in
+`docs/THE-WALK-2026-09-04.md`, which does not delete itself.
+
 Every plan destroys itself. A plan is a work list, and a finished work list is
 clutter that the next session reads as current. The last task in any plan is to
 fold what was learned into these files and then delete the plan. What is worth

@@ -730,7 +730,11 @@ describe("typing a caption", () => {
     expect(api.captionEstimate).not.toHaveBeenCalled();
   });
 
-  it("asks the server for the price once when she leaves the box", async () => {
+  // Superseded on 2026-09-14. This used to assert that leaving the box asked
+  // the server for the price. Spenser's rule now is that the price is asked
+  // for twice and only twice, on opening the screen and on opening the step
+  // that spends the money. What leaving the box must still do is save.
+  it("saves what she typed when she leaves the box, and asks no price", async () => {
     await show();
     const boxes = await screen.findAllByPlaceholderText("Caption...");
     await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
@@ -739,7 +743,10 @@ describe("typing a caption", () => {
     await userEvent.type(boxes[0], "View of the front entrance");
     await userEvent.tab();
 
-    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(api.putManifest).toHaveBeenCalledTimes(1));
+    expect(api.putManifest.mock.calls[0][1].photos[0].caption)
+      .toBe("View of the front entrance");
+    expect(api.captionEstimate).not.toHaveBeenCalled();
   });
 });
 
@@ -795,5 +802,52 @@ describe("ticking a caption he has just typed", () => {
     expect(api.markReviewed).toHaveBeenCalledWith(JOB, "photo-01.jpg");
     expect(screen.getAllByPlaceholderText("Caption...")[0])
       .toHaveValue("View of the front entrance");
+  });
+});
+
+// The price is what a captioning run would cost. Spenser, 2026-09-14: it is an
+// approximate number, it belongs on the button and inside the step that spends
+// the money, and nothing else he does should make the app work it out again.
+// Each time it does, the server counts photographs without captions, and
+// counting them opens files on the office network disk.
+describe("asking the server what a run would cost", () => {
+  it("asks once when the screen opens", async () => {
+    await show();
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not ask again when a photograph is ticked", async () => {
+    // Captions already written, because the tick refuses until one exists.
+    const written = manifest({ photos: [
+      { file: "photo-01.jpg", caption: "View of the front" },
+      { file: "photo-02.jpg", caption: "View of the rear" },
+    ] });
+    api.getManifest.mockResolvedValue(structuredClone(written));
+    vi.spyOn(api, "markReviewed").mockImplementation((_job, file) => {
+      const answer = structuredClone(written);
+      answer.photos.find((p) => p.file === file).reviewed = true;
+      return Promise.resolve(answer);
+    });
+    await show();
+    await screen.findAllByPlaceholderText("Caption...");
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.click(
+      screen.getAllByRole("button", { name: /^Mark reviewed$/ })[0]);
+
+    await waitFor(() => expect(api.markReviewed).toHaveBeenCalled());
+    expect(api.captionEstimate).not.toHaveBeenCalled();
+  });
+
+  it("asks again when the step that spends the money opens", async () => {
+    await show();
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Generate captions/ }));
+
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
   });
 });

@@ -103,12 +103,19 @@ export default function PhotosScreen({ job }) {
     } catch (e) { setError(e.message); }
   }
 
-  // Refreshed whenever the photos change, so the number he is shown before
-  // spending money is the number for what is actually there now.
+  // The price a run would cost. It is an approximate number and it is only
+  // ever read in two places: the count on the button, and the step that spends
+  // the money. So it is asked for in two places and nowhere else.
+  //
+  // It used to be asked for every time the manifest changed, and twelve things
+  // change the manifest. Working it out means counting photographs without
+  // captions on the server, and counting them opens photograph files. Mark's
+  // jobs sit on the office network disk, so each of those was a trip across
+  // the network for a number that had not moved. Spenser, 2026-09-14.
   const refreshQuote = React.useCallback(() => {
     captionEstimate(job).then(setQuote).catch(() => {});
   }, [job]);
-  useEffect(() => { if (manifest) refreshQuote(); }, [manifest, refreshQuote]);
+  useEffect(() => { refreshQuote(); }, [refreshQuote]);
   useEffect(() => {
     captionStyles()
       .then((r) => { setStyles(r.styles); setAiOn(r.ai_available); })
@@ -140,6 +147,10 @@ export default function PhotosScreen({ job }) {
   // to caption three of his photos both ways, which meant two paid requests
   // fired before he had seen a price or agreed to anything.
   function openChooser() {
+    // The second and last place the price is asked for. He is about to be
+    // shown a figure and asked to agree to it, so it is worked out again here
+    // against whatever is in the job now.
+    refreshQuote();
     setShowing(manifest.caption_style || "view");
     setAsking(true);
   }

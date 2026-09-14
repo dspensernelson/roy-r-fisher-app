@@ -1,32 +1,46 @@
 import React, { useEffect, useRef, useState } from "react";
 import CloseX from "../CloseX.jsx";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
-         captionEstimate, captionProgress, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
+         captionEstimate, captionProgress, captionSamples, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
 
 // One page of the caption chooser's preview, in the shape the engine builds.
 // Three-up pairs each photograph with the caption beside it. Six-up puts two
 // photographs in a row and their two captions in the row beneath, which is
 // the reading order Spenser chose on 2026-09-07.
-function previewRows(samples, perPage) {
+//
+// It draws one of two things and never a mixture of them. `shots` is his own
+// photographs with captions actually written from them, which is what the
+// money in this window buys. Without it the rows are written specimens of a
+// style beside a blank frame: a specimen says nothing about any photograph,
+// so it must never sit next to one, or it reads as a caption of it.
+function previewRows(samples, perPage, shots) {
+  const cells = shots
+    ? shots.map((s) => ({ caption: s.caption, src: s.src }))
+    : samples.map((line) => ({ caption: line, src: null }));
+
+  const photoCell = (cell, key) => (cell.src
+    ? (<div className="cell-photo" key={key}>
+         <img src={cell.src} alt="" draggable={false} />
+       </div>)
+    : <div className="cell-photo is-example" key={key} aria-hidden="true" />);
+
   if (perPage !== 6) {
-    return samples.map((line, n) => (
+    return cells.map((cell, n) => (
       <React.Fragment key={`three-${n}`}>
-        <div className="cell-photo is-example" aria-hidden="true" />
-        <div className="cell-caption">{line}</div>
+        {photoCell(cell, `p${n}`)}
+        <div className="cell-caption">{cell.caption}</div>
       </React.Fragment>
     ));
   }
   const rows = [];
-  for (let i = 0; i < samples.length; i += 2) {
-    const pair = samples.slice(i, i + 2);
+  for (let i = 0; i < cells.length; i += 2) {
+    const pair = cells.slice(i, i + 2);
     rows.push(
       <React.Fragment key={`six-${i}`}>
-        {pair.map((_, n) => (
-          <div key={`p${n}`} className="cell-photo is-example" aria-hidden="true" />
-        ))}
-        {pair.map((line, n) => (
-          <div key={`c${n}`} className="cell-caption">{line}</div>
+        {pair.map((cell, n) => photoCell(cell, `p${n}`))}
+        {pair.map((cell, n) => (
+          <div key={`c${n}`} className="cell-caption">{cell.caption}</div>
         ))}
       </React.Fragment>
     );
@@ -39,6 +53,12 @@ export default function PhotosScreen({ job }) {
   const [styles, setStyles] = useState([]);
   const [asking, setAsking] = useState(false);   // the caption style step
   const [showing, setShowing] = useState(null);  // which style the examples are toggled to
+  // His own photographs captioned in both styles, once he has pressed for
+  // them. Money bought these, so they are kept for as long as he is on this
+  // job: closing the window and opening it again must never buy them twice.
+  const [shots, setShots] = useState(null);
+  const [shotsBusy, setShotsBusy] = useState(false);
+  const [shotsError, setShotsError] = useState("");
   const [busy, setBusy] = useState("");
   const [done, setDone] = useState(null);
   const [error, setError] = useState(null);
@@ -80,6 +100,9 @@ export default function PhotosScreen({ job }) {
 
   useEffect(() => {
     setManifest(null); setError(null); setReading(null);
+    // A different job's photographs, so what was bought for the last one is
+    // not his any more.
+    setShots(null); setShotsError("");
     // Polls alongside the call rather than after it. Nothing was watching at
     // mount, which is exactly when the waiting happens.
     let alive = true;
@@ -158,6 +181,25 @@ export default function PhotosScreen({ job }) {
     refreshQuote();
     setShowing(manifest.caption_style || "view");
     setAsking(true);
+  }
+
+  // The one press in the style window that spends money. Nothing else in that
+  // window calls anybody: not opening it, not switching styles, not closing
+  // it. The figure is on the button before it is pressed, which is the whole
+  // reason this is a press and not something the window does for him.
+  async function onAskForSamples() {
+    setShotsBusy(true); setShotsError("");
+    try {
+      const got = await captionSamples(job);
+      if (!got.ai_available || !Object.keys(got.samples || {}).length) {
+        setShotsError("Captions could not be written for these photographs. "
+                      + "The written examples are below.");
+      } else {
+        setShots(got);
+      }
+    } catch (e) { setShotsError(e.message); }
+    setShotsBusy(false);
+    refreshQuote();
   }
 
   // Above thirty photographs he sees the number in a window of its own before
@@ -497,6 +539,20 @@ export default function PhotosScreen({ job }) {
   const chosen = manifest.caption_style || "view";
   // The one this job starts on is shown first, whichever it is.
   const ordered = [...styles].sort((a, b) => (b.key === chosen) - (a.key === chosen));
+
+  // His own photographs with the captions written from them, for the style he
+  // is looking at right now. Null means the style window has nothing bought
+  // for this style and draws the written specimens instead, which is what it
+  // does before he presses, when there is no key, and when a demo job refuses.
+  const shownShots = (shots && shots.samples && shots.samples[showing])
+    ? shots.samples[showing].map((line) => ({ caption: line.caption,
+                                              src: thumbUrl(job, line.file) }))
+    : null;
+  // The press is offered only while it has something to buy and somewhere to
+  // send it. Once bought, it is gone: the same six captions are never paid
+  // for twice.
+  const canSample = !shots && aiOn && !blockedBecause
+                    && !!(quote && quote.samples && quote.samples.photos > 0);
 
   return (
     <div
@@ -1043,81 +1099,82 @@ export default function PhotosScreen({ job }) {
       {asking && (
         <div className="sheet-back" onClick={(e) => { if (e.target === e.currentTarget) setAsking(false); }}>
           <div className="sheet" role="dialog" aria-modal="true" aria-label="How should the captions read?">
-            <h2>How should the captions read?</h2>
-            <p className="sub" style={{ margin: "0 0 16px" }}>
-              Two examples of each style, and how the printed page is laid out.
-              Nothing is sent and nothing is charged for until you confirm.
-            </p>
+            {/* The title, and the money in the top right corner. Spenser asked
+                for that twice, on 2026-09-04 and again on 2026-09-07: *"The
+                estimated maximum cost for 4 photos should go in the upper
+                right"*. It used to be a boxed callout with a red bar down its
+                side, sitting above everything in the middle of the window. It
+                is a number he glances at, not a warning. */}
+            <div className="sheet-head">
+              <h2>How should the captions read?</h2>
+              {quote && quote.estimate && toSend > 0 && (
+                <p className="sheet-cost">
+                  <span>Est. max</span>
+                  <strong>${quote.estimate.total.toFixed(2)}</strong>
+                  <span>{toSend} {toSend === 1 ? "photo" : "photos"}</span>
+                </p>
+              )}
+            </div>
 
-            {/* The money, before the button that spends it, and shown as the
-                arithmetic rather than as a total he has to take on trust. It
-                is a maximum: the rounding only ever goes up, and the rate
-                starts high and comes down as real runs are measured. */}
-            {quote && quote.estimate && toSend > 0 && (
-              <div className="confirm" style={{ margin: "0 0 16px" }}>
-                <p className="cost-line" style={{ margin: "0 0 8px" }}>
-                  <strong>{quote.estimate.label}</strong> for{" "}
-                  {toSend} {toSend === 1 ? "photo" : "photos"}:
-                </p>
-                <div className="cost-arith">{quote.estimate.arithmetic}</div>
-                <p className="setting-fine" style={{ margin: "10px 0 0" }}>
-                  An estimate, rounded up. The real cost is measured from what
-                  Anthropic reports and shown here afterwards. Photos that already
-                  have a caption are not sent and are not charged for again.
-                </p>
-              </div>
-            )}
+            {/* Two styles, and the lit half is the one this job is on. It used
+                to carry the word "suggested" over that half. Spenser,
+                2026-09-04: *"Who's suggesting it, right? Pull off the
+                suggestion."* */}
+            <div className="toggle">
+              {ordered.map((s) => (
+                <button key={s.key} className={showing === s.key ? "on" : ""}
+                  onClick={() => setShowing(s.key)}>
+                  <span className="toggle-label">{s.label}</span>
+                </button>
+              ))}
+            </div>
 
             {/* One page, as a table: photo cells on the left, caption cells on
                 the right with a rule between them, exactly the way
-                photo_pages.py builds the real thing. The toggle sits at the
-                head of the caption column, because that is the column it
-                changes. */}
+                photo_pages.py builds the real thing.
+                Three-up is one photograph beside its caption. Six-up is two
+                photographs above their two captions, which is what
+                photo_pages.py builds and therefore what this has to draw.
+                The comment above is a promise that this grid matches the
+                engine, and a promise like that has to survive a second
+                layout. */}
             <div className={`page-preview${perPage === 6 ? " is-six" : ""}`}
                  data-testid="page-preview">
-              {perPage === 3 && <div className="cell-photo head" />}
-              <div className={`cell-caption head${perPage === 6 ? " spans" : ""}`}>
-                {/* The recommendation is a flag above the option it names,
-                    following the design system's segmented control, rather
-                    than a second word sitting inside the label. Which option
-                    carries it is unchanged: still the job's own caption
-                    style, defaulting to View of. */}
-                <div className="toggle">
-                  {ordered.map((s) => (
-                    <button key={s.key} className={showing === s.key ? "on" : ""}
-                      onClick={() => setShowing(s.key)}>
-                      {s.key === (manifest.caption_style || "view") && (
-                        <span className="toggle-flag">suggested</span>
-                      )}
-                      <span className="toggle-label">{s.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Written examples beside an empty frame, never beside one of
-                  his photographs. A line of text sitting next to a real photo
-                  reads as a caption OF that photo, and the app has not looked
-                  at it and cannot say. The frame is deliberately blank. */}
-              {/* Three-up is one photograph beside its caption. Six-up is two
-                  photographs above their two captions, which is what
-                  photo_pages.py builds and therefore what this has to draw.
-                  The comment above is a promise that this grid matches the
-                  engine, and a promise like that has to survive a second
-                  layout. */}
-              {previewRows(styles.find((s) => s.key === showing)?.samples || [], perPage)}
+              {previewRows(styles.find((s) => s.key === showing)?.samples || [],
+                           perPage, shownShots)}
             </div>
 
-            <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-              Examples of the writing style, not captions of your photographs.
-            </p>
+            {!shownShots && (
+              <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+                Examples of the writing style, not captions of your photographs.
+              </p>
+            )}
+
+            {/* The second thing in this window that can spend money, and the
+                only one that spends it here. Its own figure is on it, because
+                pressing it is the moment he agrees to that figure. Opening
+                this window still sends nothing and calls nobody. */}
+            {canSample && (
+              <button className="button final sample-press"
+                      disabled={shotsBusy} onClick={onAskForSamples}>
+                {shotsBusy
+                  ? "Writing them..."
+                  : `Show these on my photographs  $${quote.samples.estimate.total.toFixed(2)}`}
+              </button>
+            )}
+            {shotsError && (
+              <p className="sub sample-trouble" style={{ margin: "10px 0 0" }}>{shotsError}</p>
+            )}
 
             <div className="sheet-foot">
-              <p className="keep-note">Captions you have already typed are never changed.</p>
+              <p className="keep-note">
+                Captions you have already typed are never changed. Photos that
+                already have a caption are not sent and are not charged for again.
+              </p>
+              <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
               <button className="button secondary" onClick={() => beginCaptions(showing)}>
                 Use this style
               </button>
-              <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
             </div>
           </div>
         </div>

@@ -459,52 +459,75 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   max-width: 840px; width: 100%; box-shadow: 0 18px 60px rgba(0,0,0,0.3);
   max-height: calc(100vh - 48px); overflow-y: auto;
 }
-.sheet h2 { font-size: 21px; font-weight: 700; margin: 0 0 4px; }
+.sheet h2 { font-size: 21px; font-weight: 700; margin: 0; }
+/* The title on the left, the money on the right. Spenser asked for the cost in
+   the upper right twice, on 2026-09-04 and 2026-09-07. */
+.sheet-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 20px; margin: 0 0 16px;
+}
+/* Small on purpose. It is a figure he glances at on the way past, not a
+   warning, so it carries no box, no rule and no colour of its own. */
+.sheet-cost {
+  margin: 0; flex: 0 0 auto; text-align: right; white-space: nowrap;
+  font-size: 12px; color: var(--ink-muted); line-height: 1.3;
+}
+.sheet-cost span { display: block; }
+.sheet-cost strong { display: block; font-size: 17px; color: var(--ink); font-weight: 700; }
+
 /* Stays put while the page preview scrolls behind it, so the button he came
-   here to press is never below the fold. */
+   here to press is never below the fold. The thing that finishes the window
+   sits at the right-hand end of it, where a person expects it, with the way
+   out beside it. */
 .sheet-foot {
   display: flex; align-items: center; gap: 16px; margin-top: 18px;
   position: sticky; bottom: -20px; background: var(--ground);
   padding: 14px 0 16px; border-top: 1px solid var(--line);
 }
+.sheet-foot .linky { margin-left: 0; }
+/* It finishes a window, so it sits at the end of the row and stays on one
+   line. Blue, because it spends nothing by itself and he can back out of it:
+   the colour law of 2026-09-08 in docs/ROADMAP.md. */
+.sheet-foot .button { white-space: nowrap; padding: 13px 22px; font-size: 15px; }
 
-/* Two named styles. The label on top, the badge under it in green so it
-   reads as a note about the button rather than part of the button's name. */
-/* A segmented control across the whole caption column: two equal halves,
-   short, the way a control in an app looks rather than a pair of buttons. */
-.toggle { display: flex; width: 100%; background: #EDEAE3; border-radius: 6px; padding: 3px; gap: 3px; }
-/* Headroom for the recommendation caption, reserved by the control itself so
-   nothing above it has to know. The design system's segmented control does
-   the same, at the same 20px. */
-.toggle:has(.toggle-flag) { margin-top: 20px; }
+/* The one press in this window that spends money. Its own figure is on it.
+   Plain button with red text, which the colour law of 2026-09-08 gives to a
+   thing that cannot be taken back and is not why he came to the window. He
+   came to pick a style. Money spent cannot be unspent. */
+.sample-press { margin-top: 14px; font-size: 14px; padding: 11px 20px; }
+.sample-trouble { color: var(--ink-muted); font-size: 12.5px; }
+
+/* A segmented control across the top of the page preview: two equal halves,
+   short, the way a control in an app looks rather than a pair of buttons.
+   Which half is lit is the only thing that says which style this job is on.
+   It used to say so a second time, in a flag reading "suggested". */
+.toggle { display: flex; width: 100%; background: #EDEAE3; border-radius: 6px; padding: 3px; gap: 3px; margin-bottom: 12px; }
 .toggle button {
-  position: relative;
   flex: 1 1 0; min-width: 0;
   font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-muted);
-  background: none; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;
+  background: none; border: none; border-radius: 4px; padding: 7px 10px; cursor: pointer;
   display: flex; align-items: baseline; justify-content: center; gap: 7px; line-height: 1.2;
 }
 .toggle button:hover { color: var(--ink); }
 .toggle button.on { background: #FFFFFF; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-/* The recommendation sits ABOVE the option it names, as a ruled caption over
-   the box, not as a second word inside the label. Lifted out of the flow so it
-   cannot widen the button or push the label off centre. The design system's
-   .rrf-seg__flag is the same treatment; this is the app's copy of it until the
-   design system is adopted wholesale. */
-.toggle-flag {
-  position: absolute; left: 0; right: 0; top: -19px;
-  display: flex; align-items: center; gap: 5px;
-  font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--ok-ink); font-weight: 700; pointer-events: none;
-}
-.toggle-flag::before, .toggle-flag::after {
-  content: ""; flex: 1 1 auto; height: 1px; background: var(--ok-ink); opacity: 0.45;
-}
 
 /* One printed page as a real table: photo cells, a rule, caption cells. */
 .page-preview {
-  display: grid; grid-template-columns: 230px 1fr;
+  /* The printed page's own proportion, not a pixel width. Three-up gives the
+     photograph four inches of a 6.70 inch table and the caption the 2.70 that
+     is left, so the photograph is the wider half. This used to be `230px 1fr`,
+     which was the other way round, and it is why one short caption sat alone
+     in a wide white field. The four inches live in `THREE_UP.width_in` in
+     app/engine/photo_pages.py; a stylesheet cannot read it, so a test holds
+     the two in step. */
+  display: grid; grid-template-columns: 4fr 2.7fr;
   background: #FFFFFF; border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+  /* A page shown at a readable size rather than at the size of a page. The
+     window is 840 wide and the sheet of paper is not, so the preview is
+     centred and capped: full width made a single short caption sit in the
+     middle of an enormous white rectangle, which is what Spenser was looking
+     at on 2026-09-14. */
+  max-width: 470px; margin: 0 auto;
 }
 .cell-photo { padding: 12px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid #F0EDE6; }
 .cell-caption {
@@ -512,17 +535,13 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; font-size: 15px; color: var(--ink); line-height: 1.45;
 }
-.cell-photo.head, .cell-caption.head { background: #FAF8F4; padding-top: 7px; padding-bottom: 7px; }
-.cell-caption.head { padding-left: 12px; padding-right: 12px; }
 .page-preview > :nth-last-child(-n+2) { border-bottom: none; }
 /* Six to a page: two equal columns, photographs above their captions, which
-   is what app/engine/photo_pages.py builds. The caption-style toggle heads
-   the whole grid here rather than one column, because at six-up both columns
-   carry captions. */
+   is what app/engine/photo_pages.py builds. The style control sits above the
+   whole preview in both layouts, so no row of this grid is a heading. */
 .page-preview.is-six { grid-template-columns: 1fr 1fr; }
 .page-preview.is-six .cell-photo { border-right: 1px solid var(--line); }
 .page-preview.is-six .cell-photo:nth-child(odd) { border-right: 1px solid var(--line); }
-.cell-caption.head.spans { grid-column: 1 / -1; }
 .cell-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; display: block; }
 .cell-caption em { color: var(--ink-muted); font-style: italic; }
 /* An empty frame where a photograph sits on the printed page. Blank on
@@ -534,8 +553,12 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   border: 1px dashed var(--line); border-radius: 3px; background: #FAF8F4;
 }
 
+/* A promise about his money and his own typing. It has to be there, and it
+   has to be quiet: he asked for fewer things shouting at him on this window,
+   and a red sentence beside the button he came to press is one of them. */
 .keep-note {
-  margin: 0 auto 0 0; font-size: 12.5px; font-weight: 600; color: var(--brand);
+  margin: 0 auto 0 0; max-width: 46ch;
+  font-size: 12px; line-height: 1.45; color: var(--ink-muted);
 }
 
 /* Two ways into a new job. Pick the road first, then get the form. */
@@ -745,18 +768,10 @@ input::placeholder, textarea::placeholder {
 .review-progress { font-size: 13px; color: #6b6b6b; }
 .review-progress.is-done { color: #2f5d33; font-weight: 600; }
 
-/* The cost step. Arithmetic on its own line, big enough to read before
-   spending money. */
-.cost-line { font-size: 15px; margin: 0 0 6px; }
-.cost-arith {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 16px;
-  background: #f6f4f0;
-  border: 1px solid #e6e3de;
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: inline-block;
-}
+/* What a run turned out to cost, after it has run. The arithmetic before the
+   run used to sit in a boxed callout in the middle of the style window; on
+   2026-09-14 that became a small figure in its top right corner, `.sheet-cost`,
+   and the rules that drew the box went with it. */
 .cost-after { font-size: 13px; color: #5a5a5a; margin-top: 8px; }
 .cost-after code { background: #f6f4f0; padding: 1px 5px; border-radius: 4px; }
 .cost-unavailable { color: #8a5a1a; }

@@ -27,7 +27,14 @@ function estimate(over = {}) {
     estimate: { label: "Estimated maximum cost", photos: 3, rate: 0.05,
                 total: 0.15, arithmetic: "3 x $0.0500 = $0.15", is_estimate: true },
     ai_available: true, policy: "not_demo", may_send: true,
-    blocked_because: "", ...over,
+    blocked_because: "",
+    // The first three photographs, captioned in both styles, which is what
+    // the chooser offers to show him. Six photographs are paid for.
+    samples: { photos: 3, styles: 2,
+               estimate: { label: "Estimated maximum cost", photos: 6, rate: 0.05,
+                           total: 0.30, arithmetic: "6 x $0.0500 = $0.30",
+                           is_estimate: true } },
+    ...over,
   };
 }
 
@@ -861,5 +868,117 @@ describe("asking the server what a run would cost", () => {
       await screen.findByRole("button", { name: /Generate captions/ }));
 
     await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
+  });
+});
+
+// Spenser looked at the caption style chooser on 2026-09-14 and said it is
+// ugly as fuck. These hold the five things he asked for on 2026-09-04, which
+// are written down in docs/THE-WALK-2026-09-04.md under click 8.
+describe("the caption style chooser he complained about", () => {
+  const SAMPLES = {
+    ai_available: true,
+    photos: [{ file: "photo-01.jpg" }, { file: "photo-02.jpg" }, { file: "photo-03.jpg" }],
+    samples: {
+      view: [
+        { file: "photo-01.jpg", caption: "View of the north elevation" },
+        { file: "photo-02.jpg", caption: "View of the entry lobby" },
+        { file: "photo-03.jpg", caption: "View of the rear yard" },
+      ],
+      category: [
+        { file: "photo-01.jpg", caption: "Building exterior – north elevation" },
+        { file: "photo-02.jpg", caption: "Common area – entry lobby" },
+        { file: "photo-03.jpg", caption: "Site – rear yard" },
+      ],
+    },
+    measured: { label: "Calculated API cost from measured usage",
+                calculated_cost: 0.0211, tokens: { input: 1, output: 1 } },
+  };
+
+  async function openIt() {
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
+    return screen.findByRole("dialog", { name: "How should the captions read?" });
+  }
+
+  it("puts the estimated maximum cost in the upper right, small", async () => {
+    const sheet = await openIt();
+    const head = sheet.querySelector(".sheet-head");
+    const cost = head.querySelector(".sheet-cost");
+    expect(cost).not.toBeNull();
+    expect(cost.textContent).toContain("$0.15");
+    // It is a number he glances at. Not the boxed callout with the red bar.
+    expect(cost.closest(".confirm")).toBeNull();
+    // Last in the head row, which is what puts it on the right.
+    expect(head.lastElementChild).toBe(cost);
+  });
+
+  it("never calls anything suggested", async () => {
+    const sheet = await openIt();
+    expect(sheet.textContent).not.toMatch(/suggested/i);
+    expect(sheet.querySelector(".toggle-flag")).toBeNull();
+  });
+
+  it("drops the callout naming Anthropic and keeps the money promises", async () => {
+    const sheet = await openIt();
+    expect(sheet.textContent).not.toMatch(/Anthropic/);
+    expect(sheet.textContent).toMatch(/Captions you have already typed are never changed/);
+    expect(sheet.textContent).toMatch(/already have a caption are not sent/);
+  });
+
+  it("finishes the window from the bottom right, with Cancel to its left", async () => {
+    const sheet = await openIt();
+    const foot = sheet.querySelector(".sheet-foot");
+    const buttons = [...foot.querySelectorAll("button")];
+    const use = buttons.find((b) => b.textContent === "Use this style");
+    const cancel = buttons.find((b) => b.textContent === "Cancel");
+    expect(buttons.indexOf(cancel)).toBeLessThan(buttons.indexOf(use));
+    expect(foot.lastElementChild).toBe(use);
+    // It spends nothing by itself and can be backed out of, so it is not red.
+    // docs/ROADMAP.md, the colour law of 2026-09-08.
+    expect(use).toHaveClass("secondary");
+  });
+
+  it("shows his own photographs once he presses for them, and not before", async () => {
+    const ask = vi.spyOn(api, "captionSamples").mockResolvedValue(SAMPLES);
+    const sheet = await openIt();
+    expect(ask).not.toHaveBeenCalled();
+    expect(sheet.querySelectorAll(".cell-photo img")).toHaveLength(0);
+
+    const press = screen.getByRole("button", { name: /Show these on my photographs/ });
+    // The press carries its own price, because pressing it spends money.
+    expect(press.textContent).toContain("$0.30");
+    // Money spent cannot be unspent, and he came here to pick a style rather
+    // than to buy samples, so it is the plain button with red text and not a
+    // filled one. docs/ROADMAP.md, the colour law of 2026-09-08.
+    expect(press).toHaveClass("final");
+    expect(press).not.toHaveClass("secondary");
+    await userEvent.click(press);
+
+    await waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("View of the north elevation")).toBeInTheDocument();
+    expect(sheet.querySelectorAll(".cell-photo img").length).toBe(3);
+  });
+
+  it("switches to the other style's captions of the same photographs", async () => {
+    vi.spyOn(api, "captionSamples").mockResolvedValue(SAMPLES);
+    await openIt();
+    await userEvent.click(screen.getByRole("button", { name: /Show these on my photographs/ }));
+    await screen.findByText("View of the north elevation");
+
+    await userEvent.click(screen.getByRole("button", { name: /Location first/ }));
+    expect(await screen.findByText("Building exterior – north elevation")).toBeInTheDocument();
+    expect(screen.queryByText("View of the north elevation")).toBeNull();
+  });
+
+  it("keeps the written examples when the press cannot produce captions", async () => {
+    // No key on the machine, or a demo job. The window still has to work.
+    vi.spyOn(api, "captionSamples").mockRejectedValue(
+      new Error("Demo photographs stay on this computer."));
+    const sheet = await openIt();
+    await userEvent.click(screen.getByRole("button", { name: /Show these on my photographs/ }));
+
+    expect(await screen.findByText("View of the front entrance")).toBeInTheDocument();
+    expect(sheet.querySelectorAll(".cell-photo img")).toHaveLength(0);
+    expect(sheet.textContent).toMatch(/Demo photographs stay on this computer/);
   });
 });

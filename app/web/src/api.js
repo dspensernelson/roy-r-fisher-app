@@ -41,6 +41,12 @@ export const captionStyles = () => fetch("/api/caption-styles").then(j);
 export const appVersion = () => fetch("/api/version").then(j);
 export const captionEstimate = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/caption-estimate`).then(j);
+// His first few photographs, captioned in both styles, for the style window.
+// It spends money, so it is only ever called from a press he makes and it
+// refuses without the confirmation that press carries.
+export const captionSamples = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/caption-samples?confirmed=true`,
+        { method: "POST" }).then(j);
 export const captionProgress = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/caption-progress`).then(j);
 export const markReviewed = (name, file) =>

@@ -172,6 +172,12 @@ MAX_PER_TRANCHE = 60
 # spend before anything is sent. It informs; it never refuses.
 CONFIRM_ABOVE = 30
 
+# How many of his own photographs the style chooser captions, in each style,
+# so he can see the two forms on his own work instead of on invented sentences.
+# Spenser chose the number on 2026-09-04: *"It should be the first 3 photos."*
+# Three photographs in two styles is six captions, which is what he priced.
+SAMPLE_PHOTOS = 3
+
 # How much encoded image one request may carry. Sixty thumbnails do not fit in
 # a single request at any realistic size, so a full run always splits. This is
 # deliberately well under the provider's own limit: the cost of one extra

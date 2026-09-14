@@ -767,6 +767,16 @@ def create_app() -> FastAPI:
         it", so it must never be reached by failing to look in the right
         place.
         """
+        return [path for _entry, path in _uncaptioned_entries(job, manifest)]
+
+    def _uncaptioned_entries(job: Path, manifest: dict) -> list:
+        """The same list, paired with the manifest entry each path came from.
+
+        The style samples need the entry as well as the path, because the
+        screen asks for a thumbnail by the entry's `file` and the path is what
+        goes to the model. Both come from one walk so the two can never
+        disagree about which photograph is which.
+        """
         photos_dir = jobs.photos_dir(job)
         waiting = []
         for entry in photos_routes.included(manifest):
@@ -775,7 +785,7 @@ def create_app() -> FastAPI:
             resolved = photos_routes._resolve_confined(
                 jobs.photo_path(job, entry), photos_dir)
             if resolved is not None and resolved.is_file():
-                waiting.append(resolved)
+                waiting.append((entry, resolved))
         return waiting
 
     def _image_settings_version() -> str:
@@ -809,6 +819,16 @@ def create_app() -> FastAPI:
             "needs_confirmation": len(waiting) > captions.CONFIRM_ABOVE,
             "confirm_above": captions.CONFIRM_ABOVE,
             "estimate": cost.estimate(len(waiting), _bucket()),
+            # The other thing on that window that can spend. He is shown the
+            # first few photographs captioned in both styles, so the figure is
+            # photographs times styles, and it is quoted on the press itself.
+            "samples": {
+                "photos": min(captions.SAMPLE_PHOTOS, len(waiting)),
+                "styles": len(captions.STYLES),
+                "estimate": cost.estimate(
+                    min(captions.SAMPLE_PHOTOS, len(waiting)) * len(captions.STYLES),
+                    _bucket()),
+            },
             "ai_available": captions.ai_available(),
             "policy": allowed,
             "may_send": allowed != aipolicy.LOCAL_ONLY,
@@ -816,6 +836,117 @@ def create_app() -> FastAPI:
             "blocked_because": blocked,
             "review": photos_routes.review_progress(manifest),
         }
+
+    @app.post("/api/jobs/{name}/caption-samples")
+    def caption_samples(name: str, confirmed: bool = False):
+        """Caption his first few photographs in both styles, for the chooser.
+
+        Spenser authorised this money on 2026-09-04 and it is written down in
+        `docs/THE-WALK-2026-09-04.md`: *"we're going to spend the 3 pennies to
+        generate the 6 suggestions. It should be the first 3 photos."*
+
+        Three things make it safe to spend here, and they are the three the
+        audit found missing the last time this window spent money.
+
+        1. It never fires by itself. `confirmed` has no default that works:
+           without the press this refuses, so opening the window still costs
+           nothing and still calls nobody.
+        2. The figure is on the press. `GET /caption-estimate` carries a
+           `samples` block, so he reads the price on the button he is about to
+           push.
+        3. A caption he has typed is not sent and not paid for again. The
+           photographs come from the uncaptioned list, the same one the run
+           itself uses.
+
+        Nothing is written into the job. These are specimens of two styles,
+        not the job's captions, and saving them would silently caption three
+        photographs he had not asked to have captioned.
+        """
+        job = photos_routes._job_or_404(name)
+        manifest = photos_routes.load_manifest(job)
+
+        # The same order as the run, and for the same reason: a refusal has to
+        # cost nothing, so the policy is asked before a client can exist.
+        try:
+            verdict = aipolicy.classify_job(job)
+        except state.StateUnreadable:
+            raise HTTPException(409, aipolicy.UNREADABLE_MESSAGE)
+        if verdict == aipolicy.LOCAL_ONLY:
+            raise HTTPException(403, aipolicy.LOCAL_ONLY_MESSAGE)
+
+        if not confirmed:
+            raise HTTPException(
+                409, "Press the button on the style window to confirm this "
+                     "spend first. Nothing has been sent.")
+
+        if not captions.ai_available():
+            return {"ai_available": False, "photos": [], "samples": {}}
+
+        waiting = _uncaptioned_entries(job, manifest)[:captions.SAMPLE_PHOTOS]
+        if not waiting:
+            return {"ai_available": True, "photos": [], "samples": {}}
+
+        batch = [path for _entry, path in waiting]
+        shown = cost.estimate(len(batch) * len(captions.STYLES), _bucket())
+
+        written, usages = {}, []
+        for style in captions.STYLES:
+            try:
+                drafted, used = captions.draft_captions(
+                    manifest.get("context", ""), batch, style=style)
+            except captions.CaptionError as exc:
+                # One style in hand is still worth showing. What did not come
+                # back simply is not offered, and he is told which.
+                applog.note("style samples failed", job=name, style=style,
+                            error=exc.message)
+                continue
+            usages.append(used)
+            lines = [{"file": entry["file"],
+                      "caption": drafted.get(path.name, "")}
+                     for entry, path in waiting]
+            if any(line["caption"].strip() for line in lines):
+                written[style] = lines
+
+        measured = cost.measured(captions.MODEL, usages)
+        captioned = sum(1 for lines in written.values()
+                        for line in lines if line["caption"].strip())
+
+        # Recorded the same way a run is. Money he has spent belongs in the
+        # history he can read, and the rate learns from it like any other
+        # measurement of what a photograph actually costs.
+        try:
+            usage_store.open_bucket(_bucket())
+            usage_store.record_run({
+                "run_id": "%s-%d" % (_bucket().split("/")[0],
+                                     len(usage_store.runs()) + 1),
+                "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+                "model": captions.MODEL,
+                "pricing_version": measured["pricing_version"],
+                "pricing_rates": pricing.rates_for(captions.MODEL) or {},
+                "image_settings_version": _image_settings_version(),
+                "purpose": "style samples",
+                "photos_requested": len(batch) * len(captions.STYLES),
+                "photos_captioned": captioned,
+                "photos_remaining": 0,
+                "api_requests": len(usages),
+                "status": ("completed" if len(written) == len(captions.STYLES)
+                           else "failed" if not written else "partial")
+                          if measured["calculated_cost"] is not None
+                          else usage_store.COST_UNAVAILABLE,
+                "estimate": shown["total"],
+                "token_usage": usages,
+                "calculated_cost": measured["calculated_cost"],
+                "learned_rate": round(cost.rate_including(
+                    _bucket(), measured["calculated_cost"], captioned), 6),
+            })
+        except Exception as exc:
+            applog.note("usage bookkeeping failed", job=name, error=str(exc))
+
+        return {"ai_available": True,
+                "photos": [{"file": entry["file"]} for entry, _path in waiting],
+                "samples": written,
+                "estimate_shown": shown,
+                "measured": measured}
 
     @app.post("/api/jobs/{name}/captions")
     def draft_job_captions(name: str, confirmed: bool = False):

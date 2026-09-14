@@ -92,3 +92,21 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > as open. If the new version never starts, it says so instead and puts
 > `Go back to the last version` on the Desktop.
 > **Wrong if:** it says the update worked while the app is not running.
+
+## Excel and Word
+
+> ### Check 13. The app can drive Excel and Word on this computer
+> Open a Command Prompt in the app's folder and run:
+> `program\python\python.exe program\app\engine\office_check.py`
+> **Should:** it prints five numbered steps and ends with "Everything worked".
+> **Wrong if:** it stops at a step, or nothing happens for minutes with no
+> message. If nothing happens, look at Excel and Word: one of them is showing
+> a box waiting for you.
+
+> ### Check 14. A real grid comes out looking like his report
+> Run the same line again with one of Mark's workbooks, a sheet name and a
+> range after it, then open the PDF it made.
+> **Should:** the grid is in the PDF, with its heading, its shading, its
+> borders and its money, and nothing is cut off at the edge.
+> **Wrong if:** any column is clipped, colours are wrong, or the grid is
+> missing.

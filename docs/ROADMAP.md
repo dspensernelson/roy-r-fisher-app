@@ -486,6 +486,56 @@ right version. It knows nothing about whether the photo screen works. That is
 what `docs/CHECKS.md` is for. The two do different jobs and neither replaces
 the other.
 
+### The Office bridge works on Windows, 2026-09-04
+
+**The Phase 1 gate is met for the mechanism.** The app drove Excel and Word on
+the Windows virtual machine, through `pywin32`, and produced a grid picture and
+a PDF. Nothing had ever done this on Windows before.
+
+**What ran, in order.** Read a range with no Excel involved. Excel copied it as
+a picture. That went into a Word file. Word made a PDF. Spenser ran it; the
+files came back to the Mac and were looked at, not taken on trust.
+
+**Three things this found that no test could have.**
+
+1. **`pywin32` loads.** This was the real risk. The package installs libraries
+   with pip's `--target`, which runs no setup steps, so `pywin32.pth` is copied
+   in and never read. `office_win._wake_pywin32` does that work by hand, and
+   the run reported "through pywin32", so it worked. The PowerShell fallback
+   was not needed and stays for the machine where it is.
+
+2. **The first Windows grid was too small to use.** 3.7 KB against the Mac's
+   30.6 KB for the same grid, because Excel exports a chart at screen
+   resolution and offers no way to ask for more. Fixed by making the chart
+   larger and stretching the copied picture to fill it, which costs no
+   sharpness because the copy is a drawing rather than dots. 21.9 KB after.
+
+3. **"Everything worked" and "this is good enough" are different questions.**
+   The check tool reported success on the soft picture, correctly: every step
+   finished and every file appeared. Judging the picture needs a person, which
+   is why `docs/CHECKS.md` Check 14 asks somebody to open the PDF and look.
+
+**Then one of Mark's real grids ran on Windows too**, the Utica Ridge
+assessment block, twelve columns wide. It came out with his grey banner, his
+wrapped headings, currency, percentages and row rules, and nothing clipped. The
+workbook was not changed.
+
+**That run found a fourth thing, and it is the best argument in this whole
+file for the fallback.** The sharpness fix above broke `pywin32`: it asked for
+the pasted picture by calling the collection rather than by naming `Item`, and
+it did not wait for the clipboard. Excel answered "the index into the specified
+collection is out of bounds". PowerShell did the work instead and the grid came
+out correct, so the run reported success and nobody would have known.
+
+Two things caught it. The log line `_note` writes when the first way fails, and
+the `office.ps1` the fallback leaves behind. **Spenser asked for that log after
+being talked out of it once.** Without it this would have shipped as a machine
+that quietly pays for a failed attempt on every grid.
+
+Fixed by naming `Item` and by looking up to ten times over three seconds. Proven
+on 2026-09-07: the real grid ran again, no `office.ps1` was left, so `pywin32`
+did it.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not

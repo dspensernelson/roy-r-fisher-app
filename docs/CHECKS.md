@@ -68,10 +68,13 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > **Should:** the app is the thing you are looking at.
 > **Wrong if:** a black window is in front of it, or instead of it.
 
-> ### Check 9. `Show the log` shows you the log
-> Open Settings, click **`Show the log`**.
-> **Should:** you can read the log and copy it, without hunting for a file.
-> **Wrong if:** nothing appears to happen.
+> ### Check 9. `Show what will be sent` puts the log on the screen
+> Open Settings, click **`Show what will be sent`**, read it, then click
+> **`Copy`** and paste it into anything.
+> **Should:** the log text appears on the screen, it names both log files when
+> the log has rotated, and what you paste is what you read.
+> **Wrong if:** nothing appears to happen, a folder window opens instead, or
+> the pasted text is shorter than what is on screen.
 
 ## Updating
 

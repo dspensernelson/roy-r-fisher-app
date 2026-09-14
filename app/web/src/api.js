@@ -81,7 +81,10 @@ export const getSettings = () => fetch("/api/settings").then(j);
 export const saveKey = (key) =>
   fetch("/api/settings/key", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }).then(j);
 export const removeKey = () => fetch("/api/settings/key", { method: "DELETE" }).then(j);
-export const showTheLog = () => fetch("/api/log/show", { method: "POST" }).then(j);
+// The last two days of the log, as the text that would be sent. It replaced
+// the call that opened a folder window, which revealed one of the two files
+// the log actually lives in. That one is gone rather than kept beside this.
+export const logRecent = () => fetch("/api/log/recent").then(j);
 export const closeTheApp = () => fetch("/api/close", { method: "POST" }).then(j);
 export const readingProgress = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/reading`).then(j);

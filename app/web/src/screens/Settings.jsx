@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog, closeTheApp } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, closeTheApp } from "../api.js";
 import CloseX from "../CloseX.jsx";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
@@ -15,6 +15,11 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   const [looking, setLooking] = useState(false);
   const [looked, setLooked] = useState(null);
   const [logNote, setLogNote] = useState(null);
+  // What the server says would be sent, once she has asked to see it. Never
+  // fetched at load: reading the log costs two file reads and she has not
+  // asked for it.
+  const [log, setLog] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
@@ -211,14 +216,56 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
           sits without answering, this is what Spenser needs to see.
         </p>
         <div className="setting-actions">
-          <button className="linky" onClick={async () => {
-            setLogNote(null);
-            try { await showTheLog(); }
-            catch (e) { setLogNote(e.message); }
+          {/* Blue text, no box. The colour law of 2026-09-08: this shows her
+              something and changes nothing, which is exactly `.linky`. */}
+          <button className="linky" disabled={loading} onClick={async () => {
+            setLogNote(null); setLoading(true);
+            try { setLog(await logRecent()); }
+            catch (e) { setLog(null); setLogNote(e.message); }
+            setLoading(false);
           }}>
-            Show the log
+            Show what will be sent
           </button>
+          {loading && (
+            <span className="working">
+              <span className="loading-bar"><span /></span>
+              <span className="working-text">Reading the log...</span>
+            </span>
+          )}
         </div>
+
+        {log && log.empty && (
+          <p className="setting-body">
+            Nothing has been written yet. There is no log on this computer to show
+            or to send.
+          </p>
+        )}
+
+        {log && !log.empty && (
+          <>
+            <div className="setting-actions">
+              <button className="linky" onClick={async () => {
+                setLogNote(null);
+                try {
+                  await navigator.clipboard.writeText(log.text);
+                  setLogNote("Copied. You can paste it into an email.");
+                } catch {
+                  // Never a dead end. The text is on the screen either way,
+                  // so the way through is always to select it by hand.
+                  setLogNote("This browser would not copy it. Select the text below "
+                             + "and press Ctrl and C.");
+                }
+              }}>
+                Copy
+              </button>
+              <button className="linky" onClick={() => { setLog(null); setLogNote(null); }}>
+                Hide it
+              </button>
+            </div>
+            <pre className="logtext">{log.text}</pre>
+          </>
+        )}
+
         {logNote && <p className="setting-fine">{logNote}</p>}
       </div>
 

@@ -21,6 +21,7 @@ import classify
 import cost
 import inventory
 import jobfacts
+import logwindow
 import naming
 import pricing
 import progress
@@ -602,22 +603,24 @@ def create_app() -> FastAPI:
         threading.Thread(target=run, daemon=True).start()
         return {"closing": True}
 
-    @app.post("/api/log/show")
-    def show_the_log():
-        """Open the folder holding the app's written record of what it did.
+    @app.get("/api/log/recent")
+    def recent_log():
+        """The last two days of the log, as the text that would be sent.
 
-        One click, so he never has to type or hunt a path. The log itself is
-        outside every job folder, in the app's own home-folder files, so this
-        is its own route rather than a reuse of the job-scoped reveal one.
+        This replaced `POST /api/log/show`, which opened a folder window
+        behind the browser and revealed exactly one file. On 2026-09-14 the
+        log had rotated into a second file that nothing on screen mentioned,
+        and the half without the fault in it was what reached Spenser.
+
+        The old route is gone rather than kept beside this one. Two ways to
+        look at the log, one of them showing half of it, is the fault itself
+        dressed as a choice.
+
+        `version` is handed in rather than worked out inside `logwindow`,
+        because PROGRAM is already computed once here and a second copy of
+        that expression is the defect this project keeps repeating.
         """
-        path = applog.log_file()
-        if not path.is_file():
-            raise HTTPException(404, "Nothing has been written to the log yet.")
-        try:
-            reveal.show_in_folder(path)
-        except reveal.RevealFailed as exc:
-            raise HTTPException(409, exc.message)
-        return {"opened": True}
+        return logwindow.recent(version=packaging.version_of(PROGRAM))
 
     @app.get("/api/caption-styles")
     def caption_styles():

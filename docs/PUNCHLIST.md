@@ -30,6 +30,39 @@ in `docs/FUTURES.md` under F13.
 
 ## Open
 
+## P5. Nobody reads the black window after an update
+
+Spenser, 2026-09-14, installing 0.7.0 on the virtual machine: *"this message
+sucks.. nobody reads these screens"*.
+
+**What he saw.** Eight lines in a black window. It said which version was
+installed, the folder it went into, the shortcut to start it from, that the old
+version still works, the full path of a file to run if the new one misbehaves,
+and that he can delete the folder he ran it from. Then: press any key.
+
+**Why it is wrong.** The whole point of the update button was that Mark presses
+one thing and the app looks after itself. This puts a wall of text and a
+technical path in front of him at the end of it, in the one window the app
+otherwise works hard to keep hidden. A person who reads none of it is the
+normal case, not the careless one.
+
+**The tension, which is why this needs him and not a builder.** The way back to
+the old version is genuinely useful and it cost an evening on 2026-09-03 to
+learn that it must be findable. Taking the message away takes that with it.
+
+**Three shapes, none chosen:**
+
+1. **No window at all.** The update finishes and the new app opens. The way
+   back lives on the Desktop, where it already is, and is only mentioned if
+   something fails.
+2. **One line.** "Updated to 0.7.0. Starting it now." Everything else goes into
+   the log and onto the Desktop shortcut.
+3. **A real window, not a console.** The same words in a proper dialog with a
+   button, so it does not look like a programmer's screen.
+
+**Needs Spenser. Do not build it.**
+
+
 ## P2. How far back should the log go?
 
 Spenser's instinct: 24 hours as standard, because problems surface straight

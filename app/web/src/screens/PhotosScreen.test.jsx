@@ -711,3 +711,34 @@ describe("the caption chooser's page preview", () => {
       .toEqual(["cell-photo", "cell-photo", "cell-caption", "cell-caption"]);
   });
 });
+
+// Colleen's office keeps its jobs on a disk across the network. Every price
+// question opens photograph files on that disk, so a question per letter typed
+// is a network read per letter typed. On 2026-09-14 that stopped her screen
+// answering. The price counts photographs that still need a caption, and that
+// count cannot change until the caption is saved, so the question belongs on
+// the save and not on the keystroke.
+describe("typing a caption", () => {
+  it("asks the server for the price no more while she types", async () => {
+    await show();
+    const boxes = await screen.findAllByPlaceholderText("Caption...");
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.type(boxes[0], "View of the front entrance");
+
+    expect(api.captionEstimate).not.toHaveBeenCalled();
+  });
+
+  it("asks the server for the price once when she leaves the box", async () => {
+    await show();
+    const boxes = await screen.findAllByPlaceholderText("Caption...");
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalled());
+    api.captionEstimate.mockClear();
+
+    await userEvent.type(boxes[0], "View of the front entrance");
+    await userEvent.tab();
+
+    await waitFor(() => expect(api.captionEstimate).toHaveBeenCalledTimes(1));
+  });
+});

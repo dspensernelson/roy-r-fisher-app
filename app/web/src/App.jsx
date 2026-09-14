@@ -8,6 +8,7 @@ import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
 import UpdateStep from "./screens/UpdateStep.jsx";
+import CloseX from "./CloseX.jsx";
 import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
@@ -121,12 +122,24 @@ export default function App() {
                 onClose={() => setUpdating(false)} />
   );
 
+  // The band and the mark travel together, inside one constant, because the
+  // masthead is rendered from five places below and a band added at each of
+  // them is a band that will one day be missing from one of them.
   const masthead = (
+    <>
+    <div className="topline" />
     <header className="masthead">
-      <svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true">
-        <rect x="2" y="12" width="6" height="28" fill="#782028" />
-        <rect x="10" y="2" width="7" height="38" fill="#782028" />
-        <rect x="19" y="8" width="6" height="32" fill="#343538" />
+      {/* The firm's mark: three columns with an angled cut on the taller
+          centre one. These points are traced from the logo files by measuring
+          the raster's own pixel edges, and the colours are written out rather
+          than taken from the tokens, so that changing a token can never
+          redraw the mark. The three plain bars this replaces were drawn from
+          memory, in a red the firm does not use, with no cut at all. */}
+      <svg width="15" height="40" viewBox="0 0 80 215" role="img"
+           aria-label="Roy R. Fisher">
+        <polygon fill="#231F20" points="21,55 21,195 1,195 1,77" />
+        <polygon fill="#8C0C04" points="54,2 54,214 26,214 26,26" />
+        <polygon fill="#231F20" points="59,55 79,76 79,195 59,195" />
       </svg>
       <div>
         <div className="wordmark">ROY R. FISHER</div>
@@ -151,6 +164,7 @@ export default function App() {
         </button>
       )}
     </header>
+    </>
   );
 
   const resetStep = asking && (
@@ -163,7 +177,7 @@ export default function App() {
         touched, and nothing outside the demo folder is either.
       </p>
       <div className="setting-actions">
-        <button className="button" onClick={runReset}>Reset demo</button>
+        <button className="button final" onClick={runReset}>Reset demo</button>
         <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
       </div>
     </div>
@@ -177,7 +191,12 @@ export default function App() {
           <span className="working-text">{resetting}</span>
         </div>
       )}
-      {resetError && <div className="error">{resetError}</div>}
+      {resetError && (
+        <div className="error">
+          <CloseX onClose={() => setResetError(null)} what="this message" />
+          {resetError}
+        </div>
+      )}
     </>
   );
 
@@ -212,8 +231,17 @@ export default function App() {
     );
   }
 
+  // Inside a job, the first crumb stops being a word and becomes a way out.
+  // Spenser, 2026-09-04: *"there should be a Back to Jobs at the very top. We
+  // need to make it obvious these are not computer people."* A crumb trail is
+  // a thing computer people read. On the jobs screen it stays a plain word,
+  // because he is already there.
+  const inside = !!view.job || view.screen === "settings";
   const crumbs = [
-    <button key="jobs" onClick={() => setView({ screen: "jobs", job: null })}>Jobs</button>,
+    <button key="jobs" className={inside ? "crumb-back" : ""}
+            onClick={() => setView({ screen: "jobs", job: null })}>
+      {inside ? "\u2039 Back to Jobs" : "Jobs"}
+    </button>,
   ];
   if (view.job) crumbs.push(<span key="s1">›</span>,
     <button key="job" onClick={() => setView({ screen: "job", job: view.job })}>{view.job}</button>);

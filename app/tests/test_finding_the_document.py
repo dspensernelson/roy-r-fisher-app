@@ -203,6 +203,15 @@ def test_the_screen_offers_both_actions_and_calls_neither_on_its_own():
 
 
 def test_the_two_success_boxes_are_not_both_on_screen():
-    """`Will be saved as` disappears once the file actually exists."""
+    """`Will be saved as` disappears once the file actually exists.
+
+    Written against the condition rather than the whole line. The line held
+    the exact string this used to assert until 2026-09-08, when a way to close
+    the box was added to it, and the test failed while the thing it protects
+    was never in danger. What matters is that the name box is gated on `facts`
+    and on there being no `done`, not what else is on the line with them.
+    """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
-    assert "{facts && inPhotos.length > 0 && !done && (" in screen
+    start = screen.index("{facts && inPhotos.length > 0")
+    condition = screen[start:screen.index("(", start)]
+    assert "!done" in condition, "both boxes can be on screen at once"

@@ -535,6 +535,40 @@ that quietly pays for a failed attempt on every grid.
 Fixed by naming `Item` and by looking up to ten times over three seconds. Proven
 on 2026-09-07: the real grid ran again, no `office.ps1` was left, so `pywin32`
 did it.
+### The colour law, 2026-09-08
+
+**Colour answers one question: can he take it back?** Decided by Spenser on
+2026-09-08. Not how important a control is. Position and size already say that.
+
+**Why it was needed.** Eighteen buttons in the app were brand red, including
+`Cancel` and `Not now`. The loudest thing on several screens was the way out.
+Settings carried five red buttons and no way to tell which one mattered.
+Counted on 2026-09-08, not estimated.
+
+**The five states.**
+
+| Looks like | Means |
+|---|---|
+| Filled red | Cannot be undone, and it is why he came to this screen. **One per screen at most.** |
+| Filled blue | It does work for him, and he can undo it or ignore it |
+| Plain button, red text (`.button.final`) | Cannot be undone, but it is not why he came |
+| Blue text, no box (`.linky`) | Moves him, shows him, or backs him out. Nothing changes |
+| Grey, still labelled, with a reason (`.is-off`) | Cannot be used yet. Never hidden, never silent |
+
+**The whole app carries three filled red buttons**: `Build photo pages`,
+`Make the job`, `Update now`. Each one writes something into a folder Mark
+keeps, or replaces the program.
+
+**Why `Generate captions` is blue and `Build photo pages` is red**, which is
+the pair that made Spenser ask for a rule. Generating spends money, which feels
+like the serious one. Money is not the axis. Captions are a draft he can
+retype, clear, or run again. Building puts a Word document in the client's
+folder. Only one of those is stuck.
+
+**Red also draws things that are not controls**: the letterhead band, the line
+on top of a card, the rule on the live row. Those are identity and selection.
+**A red rule is never a control. A red fill always is.** The shape tells them
+apart, so the two uses of red do not fight.
 
 ### Still owed out of that work
 

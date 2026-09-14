@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import CloseX from "../CloseX.jsx";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, captionProgress, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress } from "../api.js";
@@ -54,6 +55,10 @@ export default function PhotosScreen({ job }) {
   const [quote, setQuote] = useState(null);   // what a run would send and cost
   const [spent, setSpent] = useState(null);   // what the last run did cost
   const [facts, setFacts] = useState(null);   // city and address for the filename
+  // Spenser, 2026-09-04: *"that green box is stupid as shit"*. It says the same
+  // thing every time the screen draws, whether or not he has already decided to
+  // deal with the name later. Closing it is remembered until he leaves.
+  const [hideName, setHideName] = useState(false);
   const [fixing, setFixing] = useState(false);
   const [confirming, setConfirming] = useState(null);  // the spend confirmation
   const [running, setRunning] = useState(null);   // which request the run is on
@@ -425,7 +430,12 @@ export default function PhotosScreen({ job }) {
             </div>
           )}
         </div>
-        {error && <div className="error" style={{ marginTop: 16 }}>{error}</div>}
+        {error && (
+          <div className="error" style={{ marginTop: 16 }}>
+            <CloseX onClose={() => setError(null)} what="this message" />
+            {error}
+          </div>
+        )}
       </div>
     );
   }
@@ -671,7 +681,7 @@ export default function PhotosScreen({ job }) {
             cannot be recovered. Generate captions can write new ones afterwards.
           </p>
           <div className="setting-actions">
-            <button className="button" onClick={onClearCaptions} disabled={!!busy}>
+            <button className="button final" onClick={onClearCaptions} disabled={!!busy}>
               Clear {written} {written === 1 ? "caption" : "captions"}
             </button>
             <button className="linky" onClick={() => setClearing(false)}>Cancel</button>
@@ -692,6 +702,7 @@ export default function PhotosScreen({ job }) {
                           : spent.calculated_cost === null || spent.calculated_cost === undefined
                             ? "unknown" : "done"}`}
              style={{ marginTop: 0, marginBottom: 16 }}>
+          <CloseX onClose={() => setSpent(null)} what="what the last run cost" />
           {spent.summary && <p className="outcome-said">{spent.summary}</p>}
           <strong>{spent.label}</strong>
           {spent.calculated_cost !== null && spent.calculated_cost !== undefined ? (
@@ -733,8 +744,9 @@ export default function PhotosScreen({ job }) {
       {/* Where it will be saved, until it is saved. Once the document exists
           the completion message below says the same thing about a real file,
           so keeping both on screen was one fact told twice. */}
-      {facts && inPhotos.length > 0 && !done && (
+      {facts && inPhotos.length > 0 && !done && !hideName && (
         <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+          <CloseX onClose={() => setHideName(true)} what="this message" />
           {facts.ready ? (
             <>Will be saved as <strong>{facts.filename}</strong>.</>
           ) : (
@@ -756,7 +768,7 @@ export default function PhotosScreen({ job }) {
               <label className="setting-fine">Street address
                 <input defaultValue={facts.address} id="fix-address" style={{ marginLeft: 6 }} />
               </label>
-              <button className="button" onClick={() => onFixFacts(
+              <button className="button secondary" onClick={() => onFixFacts(
                 document.getElementById("fix-city").value,
                 document.getElementById("fix-address").value)}>Save</button>
               <button className="linky" onClick={() => setFixing(false)}>Cancel</button>
@@ -798,12 +810,20 @@ export default function PhotosScreen({ job }) {
         </p>
       )}
 
-      {cutNote && <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{cutNote}</div>}
+      {cutNote && (
+        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+          <CloseX onClose={() => setCutNote("")} what="this message" />
+          {cutNote}
+        </div>
+      )}
 
       {/* Clearing captions reports itself here too, as a plain sentence. Only
           a build carries a file, and only a file gets the two actions. */}
       {done && typeof done === "string" && (
-        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>{done}</div>
+        <div className="done" style={{ marginTop: 0, marginBottom: 16 }}>
+          <CloseX onClose={() => setDone(null)} what="this message" />
+          {done}
+        </div>
       )}
 
       {done && done.created && (
@@ -815,8 +835,8 @@ export default function PhotosScreen({ job }) {
           {/* Offered, never done for him. Opening a client's document without
               being asked is not the app's decision to make. */}
           <div className="finished-acts">
-            <button className="button" onClick={() => onReveal("document")}>Open document</button>
-            <button className="button secondary" onClick={() => onReveal("folder")}>Show in folder</button>
+            <button className="button secondary" onClick={() => onReveal("document")}>Open document</button>
+            <button className="linky" onClick={() => onReveal("folder")}>Show in folder</button>
           </div>
         </div>
       )}
@@ -832,11 +852,16 @@ export default function PhotosScreen({ job }) {
             This removes the human check on what the model wrote. Only do it if
             you have read them. Captions with nothing written stay unread.
           </p>
-          <button className="button" onClick={onMarkAll}>Mark them all</button>
+          <button className="button secondary" onClick={onMarkAll}>Mark them all</button>
           <button className="linky" onClick={() => setMarkingAll(false)}>Cancel</button>
         </div>
       )}
-      {error && <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>{error}</div>}
+      {error && (
+        <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>
+          <CloseX onClose={() => setError(null)} what="this message" />
+          {error}
+        </div>
+      )}
 
       {count === 0 ? (
         <div className="drop">
@@ -1002,7 +1027,7 @@ export default function PhotosScreen({ job }) {
 
             <div className="setting-actions" style={{ marginTop: 18 }}>
               <button className="linky" onClick={() => setConfirming(null)}>Cancel</button>
-              <button className="button" onClick={() => runCaptions(confirming.style, true)}>
+              <button className="button secondary" onClick={() => runCaptions(confirming.style, true)}>
                 Generate captions
               </button>
             </div>
@@ -1084,7 +1109,7 @@ export default function PhotosScreen({ job }) {
 
             <div className="sheet-foot">
               <p className="keep-note">Captions you have already typed are never changed.</p>
-              <button className="button" onClick={() => beginCaptions(showing)}>
+              <button className="button secondary" onClick={() => beginCaptions(showing)}>
                 Use this style
               </button>
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>

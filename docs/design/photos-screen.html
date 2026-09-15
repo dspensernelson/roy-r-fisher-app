@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photographs screen</title>
+<style>
+:root{
+  --ground:#FAF8F4; --box:#343538; --box-ink:#FFFFFF;
+  --ink:#231F20; --ink-muted:#6E6E73; --line:#E3E0D8;
+  --brand:#8C0C04; --brand-hover:#B30F05; --brand-press:#6E0903;
+  --link:#1B6C99; --link-hover:#14536F;
+  --ok-ink:#1E7A3C; --needs-ink:#8A5200;
+  --paper:#FFFFFF; --paper-sunk:#F4F1EA; --line-strong:#D4CFC3;
+  --quiet-bg:#EFEDE7; --ink-on-quiet:#4E4E53;
+  --shadow-raised:0 1px 3px rgba(35,31,32,0.12);
+}
+*{box-sizing:border-box;}
+[hidden]{display:none!important;}
+html,body{margin:0;}
+body{
+  background:#EDEAE3; color:var(--ink);
+  font:16px/1.55 "Helvetica Neue",Helvetica,Arial,-apple-system,"Segoe UI",sans-serif;
+  padding:20px 20px 60px;
+}
+
+/* ---- the page's own words. one line, then the state buttons. ---- */
+.page-note{max-width:1240px;margin:0 auto 10px;font-size:13px;color:#5b5b60;}
+.states{max-width:1240px;margin:0 auto 16px;display:flex;flex-wrap:wrap;gap:7px;}
+.states button{
+  font:inherit;font-size:12.5px;line-height:1;padding:8px 12px;cursor:pointer;
+  background:#FFFFFF;color:#3a3a3e;border:1px solid #CFCBC2;border-radius:999px;
+}
+.states button:hover{border-color:#8f8b82;color:var(--ink);}
+.states button.on{background:var(--box);border-color:var(--box);color:#fff;}
+
+/* ---- the app itself ---- */
+.frame{
+  max-width:1240px;margin:0 auto;background:var(--ground);border-radius:8px;
+  overflow:hidden;box-shadow:0 10px 40px rgba(35,31,32,.18);position:relative;
+}
+.topline{height:3px;background:var(--brand);}
+.masthead{max-width:1200px;margin:0 auto;padding:16px 24px 12px;display:flex;align-items:center;}
+.wordmark{font-family:Georgia,"Times New Roman",serif;font-size:19px;font-weight:600;letter-spacing:.22em;}
+.tagline{font-size:11px;font-style:italic;color:var(--ink-muted);margin-top:2px;}
+.bar{background:var(--box);}
+.bar-inner{max-width:1200px;margin:0 auto;padding:11px 24px;display:flex;align-items:center;
+  gap:8px;color:var(--box-ink);font-size:14px;font-weight:500;}
+.bar-inner>*{line-height:1.55;}
+.crumb-chip{border:1px solid rgba(255,255,255,.28);border-radius:4px;padding:3px 10px;}
+.crumb-sep{opacity:.5;}
+.bar-right{margin-left:auto;opacity:.85;}
+.app{max-width:1200px;margin:0 auto;padding:0 24px 32px;}
+
+/* ================= THE HEADER. Two things, one row, fixed height. =========
+   Left: what is being made, its numbers, and the quiet line.
+   Right: the widget.
+   The row's height is set here and never read from its contents, so nothing
+   inside it can push the photographs down.
+   ========================================================================= */
+.head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+  height:76px;margin:12px 0 12px;
+}
+
+/* ---- left: what is being made ---- */
+.made{min-width:0;flex:1 1 auto;}
+.nameline{display:flex;align-items:baseline;gap:9px;min-width:0;}
+.made h1{
+  margin:0;font-size:19px;line-height:1.2;font-weight:700;letter-spacing:-.15px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+}
+.made h1.unknown{color:var(--ink-muted);font-weight:600;}
+.figures{
+  margin:2px 0 0;font-size:12.5px;line-height:1.3;color:var(--ink-muted);
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---- left: the quiet line. One line. Always there. Never taller. ---- */
+.quiet{
+  display:flex;align-items:center;gap:7px;
+  height:20px;margin-top:5px;font-size:12.5px;line-height:20px;
+  color:var(--ink-on-quiet);white-space:nowrap;overflow:hidden;
+}
+.quiet .mark{flex:none;width:7px;height:7px;border-radius:999px;background:#c2beb6;}
+.quiet .said{overflow:hidden;text-overflow:ellipsis;}
+.quiet.k-run .mark{background:var(--link);}
+.quiet.k-done .mark{background:var(--ok-ink);} .quiet.k-done .said{color:var(--ok-ink);}
+.quiet.k-wrong .mark{background:var(--brand);} .quiet.k-wrong .said{color:var(--brand);}
+.quiet.k-standing .mark{background:var(--needs-ink);} .quiet.k-standing .said{color:var(--needs-ink);}
+.thread{flex:none;display:inline-block;width:54px;height:3px;border-radius:2px;
+  background:var(--line);overflow:hidden;}
+.thread span{display:block;height:100%;border-radius:2px;background:var(--link);}
+.linky{background:none;border:none;color:var(--link);font:inherit;font-size:12.5px;
+  cursor:pointer;padding:0;white-space:nowrap;}
+.linky:hover{text-decoration:underline;}
+.quiet .note-x{background:none;border:none;cursor:pointer;font:inherit;font-size:15px;
+  line-height:1;padding:0 2px;color:inherit;opacity:.55;}
+.quiet .note-x:hover{opacity:1;}
+.quiet .more{background:none;border:none;font:inherit;font-size:12.5px;color:var(--ink-muted);
+  cursor:pointer;padding:0;}
+.quiet .more:hover{color:var(--ink);}
+
+/* ================= THE WIDGET. Upper right. One object. =================
+   Build, Generate, Add photos, Bands, Photographs to a page. Its height is
+   set here, so no state inside it can move anything on the screen. The band
+   chips keep their place when bands are off, rather than closing the gap.
+   ======================================================================== */
+.widget{
+  /* Width as well as height. The three buttons set it: the widest state is
+     Generate captions carrying its count, which is 386. Without this the
+     widget moved 25px every time that count came and went. The settings row
+     is 248 wide and sits inside it, so nothing there can move anything. */
+  flex:none;width:386px;height:76px;display:flex;flex-direction:column;justify-content:space-between;
+  padding:7px 9px;border:1px solid var(--line);border-radius:6px;
+  background:var(--paper);box-shadow:var(--shadow-raised);
+}
+.w-row{display:flex;align-items:center;gap:7px;height:30px;}
+.w-row.two{height:24px;gap:6px;}
+.w-sep{width:1px;height:16px;background:var(--line);flex:none;}
+.button{background:var(--brand);color:#fff;border:none;border-radius:5px;
+  font:inherit;font-size:12.5px;font-weight:700;line-height:1;
+  padding:8px 11px;cursor:pointer;white-space:nowrap;}
+.button:hover{background:var(--brand-hover);}
+.button:active{background:var(--brand-press);}
+.button.secondary{background:var(--link);}
+.button.secondary:hover{background:var(--link-hover);}
+.button.is-off,.button.secondary.is-off,.button.is-off:hover{
+  background:var(--quiet-bg);color:var(--ink-on-quiet);cursor:default;}
+.w-add{font-size:12.5px;}
+
+/* what blocks an action is said by the action */
+.act-wrap{position:relative;display:inline-block;}
+.why{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:20;
+  background:var(--box);color:#fff;font-size:12px;line-height:1.35;
+  padding:7px 9px;border-radius:5px;width:max-content;max-width:230px;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);display:none;text-align:left;font-weight:400;
+}
+.act-wrap:hover .why[data-has="yes"]{display:block;}
+
+.w-name{font-size:11px;color:#6b6b6b;}
+/* Bands is on or off: a switch. Per page is a value: a track of values.
+   Two different questions, so two different controls. */
+.switch{
+  position:relative;width:32px;height:18px;flex:none;padding:0;cursor:pointer;
+  border-radius:999px;border:1px solid var(--line-strong);background:var(--paper-sunk);
+  transition:background .12s linear,border-color .12s linear;
+}
+.switch .knob{position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:999px;
+  background:#fff;box-shadow:var(--shadow-raised);transition:left .12s ease;}
+.switch[aria-checked="true"]{background:#2f5d33;border-color:#2f5d33;}
+.switch[aria-checked="true"] .knob{left:15px;}
+.values{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line-strong);
+  border-radius:5px;background:var(--paper-sunk);}
+.values button{font:inherit;font-size:11.5px;font-weight:600;line-height:1;padding:4px 7px;
+  border:none;border-radius:3px;background:none;color:#6b6b6b;cursor:pointer;
+  font-variant-numeric:tabular-nums;}
+.values button.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-raised);}
+.w-chips{display:flex;gap:3px;}
+.w-chips.off{visibility:hidden;}
+.w-chip{font:inherit;font-size:10px;font-weight:600;line-height:1;width:18px;height:18px;
+  padding:0;border-radius:999px;border:1px solid #d7d4cf;background:#fff;color:#4a4a4a;cursor:pointer;}
+.w-chip:hover{border-color:#b9b5ae;}
+
+/* ================= THE PHOTOGRAPHS ================= */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px;}
+.grid figure{margin:0;}
+.photo-frame{position:relative;display:block;}
+.shot{width:100%;aspect-ratio:4/3;border-radius:4px;display:flex;align-items:flex-end;
+  background:#D9D5CD;cursor:grab;}
+.shot span{font-size:10.5px;color:rgba(35,31,32,.42);padding:6px 8px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.shot.gone{background:repeating-linear-gradient(45deg,#F3EFE8,#F3EFE8 8px,#EAE4DA 8px,#EAE4DA 16px);
+  border:1px dashed var(--brand);align-items:center;justify-content:center;cursor:default;}
+.shot.gone span{color:var(--brand);font-family:inherit;font-size:12px;font-weight:600;}
+.cut-dot{position:absolute;right:8px;bottom:8px;width:26px;height:26px;padding:0;
+  border-radius:999px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.88);
+  color:var(--brand);font:inherit;font-size:15px;line-height:1;cursor:pointer;}
+.cut-dot:hover{background:var(--brand);border-color:var(--brand);color:#fff;}
+.grid textarea{width:100%;margin-top:8px;color:var(--ink);font-family:inherit;font-size:14px;
+  line-height:1.45;border:none;border-bottom:1px solid var(--line);background:none;
+  padding:4px 2px;resize:vertical;min-height:44px;}
+.grid textarea:focus{outline:none;border-bottom-color:var(--link);}
+.review-line{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.dot{flex:none;font:inherit;font-size:12px;line-height:1;width:26px;height:26px;padding:0;
+  border-radius:999px;border:1px solid #d7d4cf;background:#fff;color:#6b6b6b;cursor:pointer;}
+.dot:hover{border-color:#b9b5ae;}
+.tick-dot.is-reviewed{background:#2f5d33;border-color:#2f5d33;color:#fff;font-weight:700;}
+.band-dot{font-weight:600;}
+.band-dot.is-on{background:var(--brand);border-color:var(--brand);color:#fff;}
+.cut-section{margin-top:30px;border-top:1px solid var(--line);padding-top:12px;}
+.cut-head{background:none;border:none;font:inherit;font-size:14px;font-weight:700;color:var(--ink);
+  cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:8px;}
+.cut-head:hover{color:var(--brand);}
+.cut-caret{color:var(--ink-muted);font-size:11px;width:10px;}
+
+/* ================= WHAT NEEDS HIS ANSWER: a window over the screen =======
+   It stops him, because nothing can go on until he answers. Nothing on the
+   screen behind it moves while it is open.
+   ======================================================================== */
+.sheet-back{position:absolute;inset:0;background:rgba(29,29,31,.55);z-index:50;
+  display:flex;align-items:flex-start;justify-content:center;padding:72px 24px 24px;}
+.sheet{background:var(--ground);border-radius:8px;padding:20px 22px 16px;width:100%;
+  max-width:460px;box-shadow:0 18px 60px rgba(0,0,0,.3);}
+.sheet h2{font-size:17px;font-weight:700;margin:0;line-height:1.25;}
+.sheet .fine{margin:10px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-muted);}
+/* One window: the cost, the two styles, his photographs in the lit style, and
+   the button that spends the money. Nothing opens on top of it.
+   The cost sits in the upper right. Spenser asked for that on 2026-09-04,
+   2026-09-07 and again tonight. Small: a figure he glances at, not a warning. */
+.sheet.wide{max-width:470px;}
+.sheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;}
+.sheet-cost{margin:0;flex:none;font-size:12.5px;color:var(--ink-muted);white-space:nowrap;
+  font-variant-numeric:tabular-nums;}
+.toggle{display:flex;width:100%;background:#EDEAE3;border-radius:6px;padding:3px;gap:3px;
+  margin:10px 0 8px;}
+.toggle button{flex:1;font:inherit;font-size:12.5px;font-weight:600;line-height:1;padding:7px 0;
+  border:none;border-radius:4px;background:none;color:#6b6b6b;cursor:pointer;}
+.toggle button.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-raised);}
+.preview{border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden;}
+.prow{display:flex;align-items:center;gap:11px;padding:6px 9px;border-bottom:1px solid #F0EDE6;}
+.prow:last-child{border-bottom:none;}
+.pshot{flex:none;width:64px;height:48px;border-radius:3px;background:#D9D5CD;}
+.pcap{font-size:12.5px;line-height:1.4;}
+.sheet-acts{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:16px;}
+.sheet-acts .button{padding:10px 15px;font-size:13px;}
+.sheet-acts .button.final{background:transparent;color:var(--brand);border:1.5px solid var(--line-strong);}
+.sheet-acts .button.final:hover{border-color:var(--brand);background:#FBEAEA;}
+
+@media (max-width:900px){
+  .head{height:auto;flex-wrap:wrap;}
+  .widget{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<p class="page-note">The widget is upper right; a message either stops him in a window or sits in the quiet line on the left.</p>
+<div class="states" id="states"></div>
+
+<div class="frame" id="frame">
+  <div class="topline"></div>
+  <div class="masthead">
+    <div>
+      <div class="wordmark">ROY R. FISHER</div>
+      <div class="tagline">Real Estate Appraisers and Consultants</div>
+    </div>
+  </div>
+  <div class="bar">
+    <div class="bar-inner">
+      <span class="crumb-chip">Jobs</span>
+      <span class="crumb-sep">&rsaquo;</span>
+      <span class="crumb-chip">1830 E Kimberly Road</span>
+      <span class="crumb-sep">&rsaquo;</span>
+      <span>Photos</span>
+      <span class="bar-right">Settings</span>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <div class="head" id="head">
+      <!-- what is being made, its numbers, and the quiet line -->
+      <div class="made">
+        <div class="nameline">
+          <h1 id="docname"></h1>
+          <button class="linky" id="rename"></button>
+        </div>
+        <p class="figures" id="figures"></p>
+        <div class="quiet" id="quiet" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- the widget -->
+      <div class="widget" id="widget">
+        <div class="w-row">
+          <span class="act-wrap">
+            <button class="button" id="build">Build photo pages</button>
+            <span class="why" id="build-why"></span>
+          </span>
+          <span class="act-wrap">
+            <button class="button secondary" id="gen">Generate captions</button>
+            <span class="why" id="gen-why"></span>
+          </span>
+          <button class="linky w-add" id="add">Add photos</button>
+        </div>
+        <div class="w-row two">
+          <!-- The caption style is not here. It is picked on the generate
+               window, which shows his photographs in each style, and Spenser,
+               2026-09-14: *"this doesn't need to be here if it's in the
+               generate screen that pops up"*. One home, not two. -->
+          <span class="w-name">Per page</span>
+          <span class="values" id="perpage" role="group" aria-label="Photographs to a page">
+            <button data-n="3">3</button>
+            <button data-n="6">6</button>
+          </span>
+          <span class="w-sep"></span>
+          <!-- Bands, and the bands' own chips beside it. Spenser, 2026-09-14:
+               *"flip the band toggle and the per page so the A,B,C is by the
+               bands toggle"*. -->
+          <span class="w-name">Bands</span>
+          <button class="switch" id="bands" role="switch" aria-checked="false" aria-label="Bands">
+            <span class="knob"></span>
+          </button>
+          <span class="w-chips" id="chips">
+            <button class="w-chip" title="Band A">A</button>
+            <button class="w-chip" title="Band B">B</button>
+            <button class="w-chip" title="Band C">C</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="cut-section">
+      <button class="cut-head" id="cut-head"><span class="cut-caret">&#9656;</span>Taken out (2)</button>
+    </div>
+  </div>
+
+  <!-- what needs his answer -->
+  <div id="sheet"></div>
+</div>
+
+<script>
+"use strict";
+
+var TOTAL = 60;
+var GONE_AT = 22;
+var NAME = "Bettendorf_1830 E Kimberly Road Photos (Complete).docx";
+
+var CAPS = [
+  "View of the subject looking north – 1830 E Kimberly Road",
+  "East elevation of the subject improvement",
+  "Primary entrance and canopy",
+  "Sales floor looking toward the rear wall",
+  "Stock room and receiving door",
+  "Roof-mounted HVAC unit, typical",
+  "Asphalt parking area along the north line",
+  "Streetscape looking east on E Kimberly Road",
+  "Streetscape looking west on E Kimberly Road",
+  "Rear loading dock and service apron",
+  "Interior finish, typical of the sales area",
+  "Restroom, typical"
+];
+
+/* The two caption styles, their labels from the app's own STYLES table. The
+   samples are his first three photographs captioned in each form, which is
+   what the app buys once per job and why this is a window and not a switch. */
+var STYLES = {
+  view: {
+    label: "View of",
+    samples: ["View of the subject looking north",
+              "View of the east elevation",
+              "View of the primary entrance"]
+  },
+  category: {
+    label: "Location first",
+    samples: ["Building exterior \u2013 subject looking north",
+              "Building exterior \u2013 east elevation",
+              "Building exterior \u2013 primary entrance"]
+  }
+};
+
+var S = {};
+
+/* Bands is his own switch, so it survives a change of state. */
+function reset(keepBands) {
+  var b = keepBands ? S.bands : true;
+  var st = keepBands && S.style ? S.style : "view";
+  S = {
+    perPage: 3,
+    style: st,
+    bands: b,
+    waiting: b ? 4 : 0,
+    reviewed: TOTAL,
+    written: 47,
+    missing: false,
+    named: true,
+    run: null,          /* {done, of} */
+    built: false,
+    ask: null,          /* 'cost' | 'markall' | 'nokey' */
+    at: 0
+  };
+}
+
+/* -----------------------------------------------------------------------
+   TWO CLASSES OF MESSAGE.
+
+   Needs his answer  -> a window over the screen. It interrupts because
+                        nothing can go on until he answers.
+   Just telling him  -> one line on the left, under the counts. It never
+                        interrupts and it never moves anything.
+
+   The quiet line shows one message at a time, the one that matters most,
+   and says so when there is nothing to say.
+   ----------------------------------------------------------------------- */
+function quietMessages() {
+  var m = [];
+
+  if (S.missing) m.push({
+    kind: "wrong",
+    said: "Photograph " + (GONE_AT + 1) + " is not in the folder any more",
+    x: true
+  });
+
+  if (S.run) m.push({
+    kind: "run",
+    said: "Writing captions · " + S.run.done + " of " + S.run.of + " written",
+    pct: Math.round((S.run.done / S.run.of) * 100)
+  });
+
+  if (S.built) m.push({
+    kind: "done", said: "Photo pages are ready",
+    act: "Open document", x: true
+  });
+
+  if (S.reviewed < TOTAL) m.push({
+    kind: "standing",
+    said: S.reviewed + " of " + TOTAL + " reviewed",
+    act: "Mark all as reviewed", ask: "markall"
+  });
+
+  if (S.bands && S.waiting > 0) m.push({
+    kind: "standing",
+    said: S.waiting + " photographs are waiting for a band"
+  });
+
+  /* Nothing to say, so nothing is said. The slot stays: it is reserved so the
+     photographs cannot move when a message arrives or goes. */
+  if (!m.length) m.push({ kind: "rest" });
+  return m;
+}
+
+/* what stops an action is said by the action */
+function buildStop() {
+  if (S.run) return "Wait for the captions to finish";
+  if (S.missing) return "Photograph " + (GONE_AT + 1) + " is not in the folder any more";
+  if (S.reviewed < TOTAL) return "Read the captions first. " + (TOTAL - S.reviewed) + " left.";
+  if (S.bands && S.waiting > 0) return S.waiting + " photographs are waiting for a band";
+  if (!S.named) return "The file cannot be named yet";
+  return "";
+}
+function genStop() {
+  if (S.run) return "Already writing captions";
+  if (TOTAL - S.written <= 0) return "Every photo already has a caption";
+  return "";
+}
+
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+function drawHead() {
+  var h = document.getElementById("docname");
+  var r = document.getElementById("rename");
+  if (S.named) {
+    h.textContent = NAME; h.className = ""; r.textContent = "Not right?";
+  } else {
+    h.textContent = "file name here.docx"; h.className = "unknown"; r.textContent = "Enter it";
+  }
+  document.getElementById("figures").textContent =
+    TOTAL + " photographs · " + Math.ceil(TOTAL / S.perPage) + " pages";
+}
+
+function drawQuiet() {
+  var all = quietMessages();
+  if (S.at >= all.length) S.at = 0;
+  var m = all[S.at];
+
+  var line = document.getElementById("quiet");
+  line.className = "quiet k-" + m.kind;
+  line.innerHTML = "";
+  if (m.kind === "rest") return;          /* the empty slot, kept open */
+  line.appendChild(el("span", "mark"));
+  line.appendChild(el("span", "said", m.said));
+
+  if (m.pct !== undefined) {
+    var bar = el("span", "thread");
+    var fill = el("span");
+    fill.style.width = m.pct + "%";
+    bar.appendChild(fill);
+    line.appendChild(bar);
+  }
+  if (m.act) {
+    var a = el("button", "linky", m.act);
+    if (m.ask) a.onclick = function () { S.ask = m.ask; draw(); };
+    line.appendChild(a);
+  }
+  if (all.length > 1) {
+    var more = el("button", "more", "· " + (all.length - 1) + " more");
+    more.onclick = function () { S.at = (S.at + 1) % all.length; drawQuiet(); };
+    line.appendChild(more);
+  }
+  if (m.x) {
+    var x = el("button", "note-x", "×");
+    x.setAttribute("aria-label", "Put this away");
+    x.onclick = function () {
+      if (m.kind === "done") S.built = false; else S.missing = false;
+      S.at = 0; draw();
+    };
+    line.appendChild(x);
+  }
+}
+
+function drawWidget() {
+  var b = document.getElementById("build");
+  var bw = document.getElementById("build-why");
+  var stop = buildStop();
+  b.className = "button" + (stop ? " is-off" : "");
+  bw.textContent = stop; bw.setAttribute("data-has", stop ? "yes" : "no");
+
+  var g = document.getElementById("gen");
+  var gw = document.getElementById("gen-why");
+  var gstop = genStop();
+  var left = TOTAL - S.written;
+  g.className = "button secondary" + (gstop ? " is-off" : "");
+  g.textContent = gstop ? "Generate captions" : "Generate captions (" + left + ")";
+  gw.textContent = gstop; gw.setAttribute("data-has", gstop ? "yes" : "no");
+
+  var sw = document.getElementById("bands");
+  sw.setAttribute("aria-checked", S.bands ? "true" : "false");
+  /* The chips keep their place when bands are off. Nothing closes up. */
+  document.getElementById("chips").className = "w-chips" + (S.bands ? "" : " off");
+
+  var vs = document.getElementById("perpage").children;
+  for (var i = 0; i < vs.length; i++) {
+    vs[i].className = (Number(vs[i].getAttribute("data-n")) === S.perPage) ? "on" : "";
+  }
+}
+
+function drawSheet() {
+  var host = document.getElementById("sheet");
+  host.innerHTML = "";
+  if (!S.ask) return;
+
+  var card = el("div", "sheet");
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+
+  if (S.ask === "cost") {
+    /* One window. The cost upper right, the two styles, his photographs in
+       the lit style, and the button that spends the money. Spenser,
+       2026-09-14: *"I want one screen"*. Nothing opens on top of it.
+       The style is a setting, so the toggle takes effect as he clicks it;
+       Cancel backs out of the spending, not out of the setting. */
+    card.className = "sheet wide";
+
+    var head = el("div", "sheet-head");
+    head.appendChild(el("h2", null, "Generate captions for 13 photos?"));
+    head.appendChild(el("p", "sheet-cost", "$0.19 max"));
+    card.appendChild(head);
+
+    var tog = el("div", "toggle");
+    ["view", "category"].forEach(function (k) {
+      var t = el("button", S.style === k ? "on" : "", STYLES[k].label);
+      t.onclick = function () { S.style = k; draw(); };
+      tog.appendChild(t);
+    });
+    card.appendChild(tog);
+
+    var pv = el("div", "preview");
+    STYLES[S.style].samples.forEach(function (line, i) {
+      var r = el("div", "prow");
+      r.appendChild(el("div", "pshot"));
+      r.appendChild(el("div", "pcap", line));
+      pv.appendChild(r);
+    });
+    card.appendChild(pv);
+
+    /* No sentence under the samples. The one that stood here explained that a
+       long run is split into requests and each is saved as it finishes: a fact
+       about a failure that has not happened, in a word he does not use, on the
+       screen where he is deciding to spend. If a run does stop partway the
+       quiet line says so at the moment it happens. */
+    card.appendChild(acts([
+      { label: "Cancel", cls: "linky" },
+      { label: "Generate captions ($0.19)", cls: "button secondary", go: function () {
+          S.ask = null; S.run = { done: 5, of: 13 }; } }
+    ]));
+  } else if (S.ask === "markall") {
+    card.appendChild(el("h2", null, "Mark every caption as reviewed?"));
+    card.appendChild(el("p", "fine",
+      "This removes the human check on what the model wrote. Captions with nothing written stay unread."));
+    card.appendChild(acts([
+      { label: "Cancel", cls: "linky" },
+      { label: "Mark them all", cls: "button secondary", go: function () {
+          S.ask = null; S.reviewed = TOTAL; } }
+    ]));
+  } else {
+    card.appendChild(el("h2", null, "Writing captions needs a key on this computer"));
+    card.appendChild(el("p", "fine",
+      "Open Settings to add one. You can still type every caption yourself."));
+    card.appendChild(acts([
+      { label: "Close", cls: "linky" },
+      { label: "Open Settings", cls: "button secondary" }
+    ]));
+  }
+
+  var back = el("div", "sheet-back");
+  back.onclick = function (e) { if (e.target === back) { S.ask = null; draw(); } };
+  back.appendChild(card);
+  host.appendChild(back);
+}
+
+function acts(list) {
+  var row = el("div", "sheet-acts");
+  list.forEach(function (a) {
+    var btn = el("button", a.cls, a.label);
+    btn.onclick = function () { if (a.go) a.go(); else S.ask = null; S.at = 0; draw(); };
+    row.appendChild(btn);
+  });
+  return row;
+}
+
+function drawGrid() {
+  var g = document.getElementById("grid");
+  g.innerHTML = "";
+  for (var i = 0; i < TOTAL; i++) {
+    var fig = el("figure");
+    var frame = el("span", "photo-frame");
+    var gone = S.missing && i === GONE_AT;
+    var shot = el("div", "shot" + (gone ? " gone" : ""));
+    shot.draggable = !gone;
+    shot.appendChild(el("span", null, gone ? "not in the folder" : "DSC_0" + (140 + i) + ".JPG"));
+    frame.appendChild(shot);
+    if (!gone) {
+      var cut = el("button", "cut-dot", "×");
+      cut.title = "Take out"; cut.setAttribute("aria-label", "Take out");
+      frame.appendChild(cut);
+    }
+    fig.appendChild(frame);
+
+    var ta = el("textarea");
+    ta.rows = 2; ta.placeholder = "Caption...";
+    ta.value = (gone || i >= S.written) ? "" : CAPS[i % CAPS.length];
+    fig.appendChild(ta);
+
+    var line = el("div", "review-line");
+    var tick = el("button", "dot tick-dot" + (i < S.reviewed && !gone ? " is-reviewed" : ""), "✓");
+    tick.title = i < S.reviewed ? "Reviewed" : "Mark reviewed";
+    line.appendChild(tick);
+    if (S.bands) {
+      ["A", "B", "C"].forEach(function (L, k) {
+        var on = (i % 7) === k && !(S.waiting > 0 && i >= TOTAL - S.waiting);
+        var d = el("button", "dot band-dot" + (on ? " is-on" : ""), L);
+        d.title = "Band " + L;
+        line.appendChild(d);
+      });
+    }
+    fig.appendChild(line);
+    g.appendChild(fig);
+  }
+}
+
+function draw() { drawHead(); drawQuiet(); drawWidget(); drawSheet(); drawGrid(); }
+
+/* ---- the states, in plain words, outside the screen ---- */
+var SCENES = [
+  { label: "Captions being written", go: function () {
+      reset(true); S.written = 47; S.reviewed = 47; S.run = { done: 5, of: 13 }; } },
+  { label: "Nothing happening", go: function () { reset(true); S.waiting = 0; } },
+  { label: "Build finished", go: function () { reset(true); S.waiting = 0; S.built = true; } },
+  { label: "Nothing read yet", go: function () { reset(true); S.reviewed = 0; } },
+  { label: "A photograph is missing", go: function () { reset(true); S.missing = true; } },
+  { label: "Pop-up: the cost", go: function () { reset(true); S.written = 47; S.ask = "cost"; } },
+  { label: "Pop-up: mark all reviewed", go: function () { reset(true); S.reviewed = 47; S.ask = "markall"; } },
+  { label: "Pop-up: no key", go: function () { reset(true); S.ask = "nokey"; } }
+];
+
+reset(false);
+SCENES[0].go();
+
+var row = document.getElementById("states");
+var bandsBtn;
+SCENES.forEach(function (sc, i) {
+  var b = el("button", i === 0 ? "on" : "", sc.label);
+  b.onclick = function () {
+    for (var k = 0; k < row.children.length; k++) {
+      if (row.children[k] !== bandsBtn) row.children[k].className = "";
+    }
+    b.className = "on";
+    sc.go(); S.at = 0; draw();
+  };
+  row.appendChild(b);
+});
+bandsBtn = el("button", "on", "Bands on");
+bandsBtn.onclick = function () { toggleBands(); };
+row.appendChild(bandsBtn);
+
+function toggleBands() {
+  S.bands = !S.bands;
+  S.ask = null;
+  S.waiting = S.bands ? 4 : 0;
+  bandsBtn.textContent = S.bands ? "Bands on" : "Bands off";
+  bandsBtn.className = S.bands ? "on" : "";
+  S.at = 0; draw();
+}
+
+/* the screen's own controls stay live */
+document.getElementById("bands").onclick = toggleBands;
+var vbtns = document.getElementById("perpage").children;
+for (var i = 0; i < vbtns.length; i++) {
+  vbtns[i].onclick = function () {
+    S.perPage = Number(this.getAttribute("data-n")); draw();
+  };
+}
+document.getElementById("gen").onclick = function () {
+  if (genStop()) return; S.ask = "cost"; S.at = 0; draw();
+};
+document.getElementById("cut-head").onclick = function () {
+  var c = this.firstChild;
+  c.textContent = c.textContent === "▸" ? "▾" : "▸";
+};
+
+draw();
+</script>
+</body>
+</html>

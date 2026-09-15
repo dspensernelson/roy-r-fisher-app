@@ -118,6 +118,15 @@ Build button already says why it is off when he hovers it.
 Per page is a value. Today they are identical pills, which is why they read as
 noise rather than as two different questions.
 
+**The photographs screen is the worked example**, and it is saved at
+`docs/design/photos-screen.html`. Open it in any browser. It is built from this
+app's own stylesheet, so its values are this app's values, and the buttons
+along the top put it into every state the real screen can be in. Spenser
+approved it on 2026-09-15 after eight rounds of corrections, every one of them
+his. When it and a builder's judgement disagree, it wins. It does not delete
+itself: the whole of 2026-09-14 was spent recovering a design conversation
+that was never written down.
+
 **A click leads to a step.** A choice that shapes an action lives inside that
 action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see

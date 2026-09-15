@@ -829,8 +829,9 @@ def readme_text() -> str:
         "\"Start previous version.bat\" in the folder the installer named when it\n"
         "finished. Nothing of yours is affected either way.\n"
         "\n"
-        "Only one version can run at a time. If you see a message saying another\n"
-        "version is already running, close its black window first.\n"
+        "Only one version runs at a time. If a copy is already open when you\n"
+        "start this one, it closes that copy for you first and says so on the\n"
+        "loading screen. There is nothing for you to close.\n"
         "\n"
         "The black window says what happened. Send Spenser a photo of it.\n")
 

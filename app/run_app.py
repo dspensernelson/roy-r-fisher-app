@@ -86,30 +86,43 @@ def main() -> int:
     # test asserts the order by where the symbol first appears in this file,
     # and prose that names it early reads as the call happening early.
 
-    # 1. Is a different version already running beside this one?
-    try:
-        startup.refuse_if_another_version_runs(HOME)
-    except startup.StartupRefused as exc:
-        tell.problem(exc.message)
-        return 3
+    # 1. Is anything already running, here or beside us?
+    #
+    #    Both cases are one case, since 0.7.1. A different version beside us
+    #    used to be refused with "close that window first", which is an
+    #    instruction nobody can follow: there has been no window since 0.6.5.
+    #    The same version in this folder used to be opened instead of started,
+    #    which is how Mark spent an evening in front of a two-hour-old build on
+    #    2026-09-14. Four builds that day all called themselves 0.7.0, so
+    #    "it is already running" is not something the version number can
+    #    establish. Whatever is running is stopped, and this copy takes over.
+    running = startup.copies_running(HOME)
 
-    # 2. Is this same version already running? Then just show it. No splash:
-    #    there is nothing to wait for.
-    existing = startup.already_running_here(HOME, version)
-    if existing:
-        tell.say("Roy R. Fisher %s is already running. Opening it." % version)
-        webbrowser.open("http://%s:%d" % (startup.HOST, existing))
-        return 0
-
-    # 3. Ask the operating system for a port. Only the asking: the file that
+    # 2. Ask the operating system for a port. Only the asking: the file that
     #    records it is written further down, after the package check.
     port = startup.free_port()
 
-    # 4. Say the click landed, before the slow part. The page replaces itself
-    #    with the app the moment the app answers, when the browser lets it.
-    #    Whether it managed to is deliberately not recorded: the answer is not
-    #    knowable from here, and step 5 below no longer asks.
-    splash.show(port, version)
+    # 3. Say the click landed, before the slow part, and say which slow part it
+    #    is. The page replaces itself with the app the moment the app answers,
+    #    when the browser lets it. Whether it managed to is deliberately not
+    #    recorded: the answer is not knowable from here, and step 6 below no
+    #    longer asks.
+    saying = None
+    patience = None
+    if running:
+        saying = ("Closing the copy that is already open, then starting "
+                  "version %s." % version)
+        patience = int(splash.GIVE_UP_SECONDS + startup.STOP_TIMEOUT)
+    splash.show(port, version, saying=saying, patience=patience)
+
+    # 4. Stop what is running, then carry on. `tell.say` reaches the console on
+    #    the Mac; on Mark's machine there is none, and the loading page above is
+    #    what he is reading.
+    try:
+        startup.stop_the_running_copies(running, say=tell.say)
+    except startup.StartupRefused as exc:
+        tell.problem(exc.message)
+        return 3
 
     # 5. Is this package whole?
     #
@@ -135,8 +148,8 @@ def main() -> int:
     tell.say(startup.STOP_INSTRUCTION)
     tell.say("")
 
-    # 5. Open the browser only once the app has really answered, and answered
-    #    as this version. 6. Then start the clock on the last-good record.
+    # 6. Open the browser only once the app has really answered, and answered
+    #    as this version. 7. Then start the clock on the last-good record.
     def when_up():
         if startup.wait_until_answering(port, version):
             # Always. This used to be skipped when the loading page had been
@@ -154,7 +167,7 @@ def main() -> int:
             webbrowser.open("http://%s:%d" % (startup.HOST, port))
             threading.Timer(GOOD_AFTER_SECONDS, _record_last_good, (version,)).start()
         else:
-            # 7. Plain words, not a traceback. The server thread is still up,
+            # 8. Plain words, not a traceback. The server thread is still up,
             #    so this cannot exit the process itself; it says what it knows
             #    and closing the window ends it.
             tell.problem(startup.failure_report(HOME, port, version))
@@ -212,7 +225,7 @@ def main() -> int:
         uvicorn.run("main:app", host=startup.BIND_HOST, port=port,
                     log_level="warning", access_log=False)
     finally:
-        # 8. The record of a running app goes when the app stops.
+        # 9. The record of a running app goes when the app stops.
         #
         #    Measured 2026-08-22, and narrower than it first looked. Control-C
         #    reaches here and the file goes. A kill does not, and neither,

@@ -30,6 +30,7 @@ import jobs
 import packaging
 import sections
 import settings
+import startup
 import state
 import updates
 import workspace
@@ -581,9 +582,14 @@ def create_app() -> FastAPI:
         return {**settings.status(),
                 "message": "Removed. You can still type captions in yourself."}
 
-    @app.post("/api/close")
+    @app.post(startup.CLOSE_PATH)
     def close_the_app():
         """Stop the app, because there is no longer a window to close.
+
+        The path is read from `startup` rather than written out here, because
+        the launcher posts to it too: a copy that is already running is asked
+        to stop this way before a new one takes over. Two spellings of one
+        route is exactly how a value drifts and then quietly lies.
 
         Until 2026-09-03 the way to stop it was closing the black console
         window, which is what `startup.STOP_INSTRUCTION` says. That window is
@@ -819,9 +825,11 @@ def create_app() -> FastAPI:
             "needs_confirmation": len(waiting) > captions.CONFIRM_ABOVE,
             "confirm_above": captions.CONFIRM_ABOVE,
             "estimate": cost.estimate(len(waiting), _bucket()),
-            # The other thing on that window that can spend. He is shown the
-            # first few photographs captioned in both styles, so the figure is
-            # photographs times styles, and it is quoted on the press itself.
+            # The other thing on that window that spends. Opening it captions
+            # his first few photographs in both styles, so the figure is
+            # photographs times styles. It is not drawn on the window any
+            # more; it is here because every paid call in this app has to be
+            # in the estimate that describes them.
             "samples": {
                 "photos": min(captions.SAMPLE_PHOTOS, len(waiting)),
                 "styles": len(captions.STYLES),
@@ -845,15 +853,19 @@ def create_app() -> FastAPI:
         `docs/THE-WALK-2026-09-04.md`: *"we're going to spend the 3 pennies to
         generate the 6 suggestions. It should be the first 3 photos."*
 
-        Three things make it safe to spend here, and they are the three the
-        audit found missing the last time this window spent money.
+        The window writes them as it opens. It sat behind a button quoting
+        him the price for one evening and he threw the button out the same
+        evening, 2026-09-14: *"its annoying and not well thought out"*. He had
+        already authorised the spend, and being asked again is a question with
+        one answer.
 
-        1. It never fires by itself. `confirmed` has no default that works:
-           without the press this refuses, so opening the window still costs
-           nothing and still calls nobody.
-        2. The figure is on the press. `GET /caption-estimate` carries a
-           `samples` block, so he reads the price on the button he is about to
-           push.
+        Three things keep that safe, and they are the three the audit found
+        missing the last time this window spent money.
+
+        1. It is fixed, tiny and bounded: three photographs, both styles, once
+           per job. The screen holds the once, `SAMPLE_PHOTOS` holds the three.
+        2. `confirmed` still has no default that works, so nothing wanders in
+           here. A caller has to mean it.
         3. A caption he has typed is not sent and not paid for again. The
            photographs come from the uncaptioned list, the same one the run
            itself uses.

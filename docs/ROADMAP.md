@@ -570,6 +570,15 @@ on top of a card, the rule on the live row. Those are identity and selection.
 **A red rule is never a control. A red fill always is.** The shape tells them
 apart, so the two uses of red do not fight.
 
+**Applied to the two switches, 2026-09-14.** `Bands On/Off` and `Per page
+Three/Six` filled their chosen half with brand red, so the loudest thing on
+the photographs screen was a toggle, and both halves are completely undoable.
+The chosen half is now raised and white out of a sunk track, in full-strength
+ink, which is how the style window's segmented control has always shown
+selection. No new colour was invented and `Build photo pages` keeps the
+screen's one red fill. Held by a test, because a rule nobody is reminded of
+lasts until the first busy session.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not
@@ -652,6 +661,27 @@ the plan that carried out the work has been deleted, and these outlive it.
   the three-up width 73% of what he writes wraps to two lines or more; at the
   six-up width two thirds of it fits on one. A page sized against one short
   caption would have looked right and overflowed in the field.
+
+## Decisions on record (2026-09-14, Spenser, in chat)
+
+Made after the Windows machine refused to start 0.7.0 and told Mark to close a
+window that has not existed since 0.6.5.
+
+- **A refusal with nothing attempted is not a refusal, it is a dead end.** The
+  app may not say no until it has tried the thing it is asking him to do. It
+  now asks the running copy to stop, over the same `Close the app` route the
+  Settings screen uses, waits for it to really stop answering, and only then
+  says anything. When it does say something, it says what it already tried,
+  offers a restart, and names Task Manager on the last line and nowhere else.
+
+- **A version number cannot tell one build from another.** Four builds on
+  2026-09-14 all called themselves 0.7.0, so a newly unpacked copy handed Mark
+  a two-hour-old one and nothing could have noticed. `/api/version` answers
+  with a string that two different builds can share, so "it is already running"
+  is not a fact the app can observe. Whatever is running is stopped and this
+  copy takes over, in both branches. The other half of the answer is procedure:
+  **every build that is handed over gets its own number**, and a number that
+  has been built once is never built again.
 
 ## The punch list
 

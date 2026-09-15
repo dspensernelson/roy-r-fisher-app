@@ -242,10 +242,14 @@ def test_a_second_copy_is_refused_and_names_the_running_one(tmp_path):
 
         second = installs / "Roy R. Fisher v0.3.0 copy"
         second.mkdir()
+        # This stand-in answers its version and nothing else, so it is a copy
+        # too old to have the Close the app route. It cannot be stopped, and
+        # the one thing that must never happen is starting beside it quietly.
         with pytest.raises(startup.StartupRefused) as raised:
-            startup.refuse_if_another_version_runs(second)
+            startup.stop_the_running_copies(
+                startup.copies_running(second), timeout=0.4)
         assert "0.3.0" in raised.value.message
-        assert "Close that window first" in raised.value.message
+        assert "window" not in raised.value.message.lower()
     finally:
         server.shutdown()
         server.server_close()
@@ -262,5 +266,5 @@ def test_closing_releases_the_lock_cleanly(tmp_path):
 
     second = installs / "Roy R. Fisher v0.3.0 copy"
     second.mkdir()
-    startup.refuse_if_another_version_runs(second)      # does not raise
+    assert startup.copies_running(second) == []         # nothing to stop
     assert startup.runtime_file(was_running).is_file(), "the file is still there"

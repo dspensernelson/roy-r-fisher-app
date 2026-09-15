@@ -221,7 +221,7 @@ def test_rollback_and_single_instance_are_different_properties():
     """Recorded so neither is ever presented as evidence for the other."""
     launcher = (Path(__file__).resolve().parents[1] / "server" / "startup.py") \
         .read_text(encoding="utf-8")
-    assert "refuse_if_another_version_runs" in launcher
+    assert "stop_the_running_copies" in launcher
     assert "already_running_here" in launcher
     # This file tests versions; test_launcher.py tests copies.
     here = Path(__file__).read_text(encoding="utf-8")

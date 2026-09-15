@@ -22,8 +22,16 @@ probe now asks `/api/version` and compares the string.
 
 Two versions never run at once. `busy.py` is a threading lock, so it guards
 writes inside one process and nothing across two, and both processes would
-write the same files in the home folder. Before starting, this looks at the
-sibling version folders beside its own and refuses if one of them is alive.
+write the same files in the home folder. Before starting, this looks at this
+folder and at the sibling version folders beside it, and stops whatever is
+alive before carrying on.
+
+It used to refuse instead, and tell Mark to close the running app's window.
+There has been no window since 0.6.5 and the tab it opened may be long gone, so
+that was an instruction he could not follow, with nothing else on offer but
+Task Manager. Stopping the old copy is done over the app's own `Close the app`
+route, the same one the Settings screen posts to, so there is one way to stop
+the app rather than two.
 """
 import json
 import os
@@ -57,6 +65,23 @@ BIND_HOST = "127.0.0.1"
 
 PROBE_TIMEOUT = 1.5
 START_TIMEOUT = 30.0
+
+# The app's own way of being asked to stop. Owned here and read by the route in
+# `main.py`, so the launcher and the server cannot come to disagree about it.
+# The Settings screen posts to the same path from the browser.
+CLOSE_PATH = "/api/close"
+
+# How long a copy gets to go away after it has been asked to.
+#
+# The copy being stopped waits for its own writes to finish first, which is
+# bounded at 30 seconds, and then pauses a moment so its screen can say what
+# happened. 40 leaves room for both and for a slow machine. Those two numbers
+# are deliberately not read from `busy` and `main` here: the copy being stopped
+# is a different process, quite possibly an older build with different numbers,
+# so its constants are not ours to reach into. Waiting a little too long costs
+# seconds in a case that is already going wrong. Giving up too early would call
+# a working close a failure and send him to Task Manager for nothing.
+STOP_TIMEOUT = 40.0
 
 
 class StartupRefused(Exception):
@@ -186,51 +211,160 @@ def sibling_folders(root: Path):
     return [p for p in entries if p.resolve() != root and runtime_file(p).is_file()]
 
 
+def answering_at(folder: Path):
+    """What is alive in this folder right now, as (version, port), or None.
+
+    The one place that asks the question, so nothing else rebuilds it. Both
+    halves matter. A port recorded by a folder is not enough, because something
+    else may have taken it since; and something answering is not enough either,
+    because it may be another program. Only our app's own answer on that
+    folder's own recorded port counts.
+    """
+    recorded = read_runtime(folder)
+    port = recorded.get("port")
+    if not isinstance(port, int):
+        return None
+    answering = ask_version(port)
+    return (answering, port) if answering else None
+
+
 def running_sibling(root: Path):
     """The first sibling that is actually alive, as (folder, version).
 
     A sibling that has a runtime.json but answers nothing has simply been run
-    before and closed. That is the ordinary case after a rollback and it is not
-    a reason to refuse.
+    before and closed. That is the ordinary case after a rollback.
     """
     for folder in sibling_folders(root):
-        recorded = read_runtime(folder)
-        port = recorded.get("port")
-        if not isinstance(port, int):
-            continue
-        answering = ask_version(port)
-        if answering:
-            return folder, answering
+        found = answering_at(folder)
+        if found:
+            return folder, found[0]
     return None
 
 
-def refuse_if_another_version_runs(root: Path) -> None:
-    """Two copies must never write the home folder at the same time."""
-    found = running_sibling(root)
-    if found is None:
-        return
-    folder, version = found
-    raise StartupRefused(
-        "Roy R. Fisher %s is already running, from:\n"
-        "    %s\n"
-        "Close that window first, then start this one again.\n"
-        "Only one version can run at a time."
-        % (version, folder))
+def copies_running(root: Path):
+    """Every copy of the app alive right now, as (folder, version, port).
+
+    This folder first, then the ones installed beside it. Both belong in one
+    list because both are the same fact to the launcher: something is holding
+    the home folder and has to go before this copy starts.
+
+    This folder counts whatever version it answers with, which is the point.
+    Four builds on 2026-09-14 all called themselves 0.7.0, so a newly unpacked
+    build is not something `/api/version` can tell from a two-hour-old one, and
+    an app that cannot tell them apart may not claim the right one is running.
+    """
+    found = []
+    here = answering_at(root)
+    if here:
+        found.append((Path(root).resolve(), here[0], here[1]))
+    for folder in sibling_folders(root):
+        alive = answering_at(folder)
+        if alive:
+            found.append((folder, alive[0], alive[1]))
+    return found
 
 
 def already_running_here(root: Path, version: str) -> int:
     """The port this same version is already answering on, or 0.
 
-    Both halves matter. A port recorded by this folder is not enough, because
-    something else may have taken it since; and something answering is not
-    enough either, because it may be another program or another version. Only
-    our own version string on our own recorded port counts.
+    Kept for the installer, which asks a narrower question than the launcher:
+    it wants to know whether the copy it is about to overwrite is this exact
+    version. The launcher no longer asks it, because the version number is not
+    enough to tell one build from another.
     """
-    recorded = read_runtime(root)
-    port = recorded.get("port")
-    if not isinstance(port, int):
-        return 0
-    return port if ask_version(port) == version else 0
+    found = answering_at(root)
+    return found[1] if found and found[0] == version else 0
+
+
+# --------------------------------------------------- stopping the old one ---
+def ask_it_to_stop(port: int, timeout: float = PROBE_TIMEOUT) -> bool:
+    """Ask the copy on this port to close itself. True if it took the request.
+
+    The same route the `Close the app` button on the Settings screen posts to,
+    rather than a second way of stopping the app invented here. It lets the
+    running copy finish whatever it is writing and go on its own terms, which
+    is the whole reason that route exists.
+
+    False covers every way this can fail: nothing listening, a copy too old to
+    have the route, something that is not our app. None of those may ever be
+    treated as a yes, because the caller has to be able to say truthfully that
+    the old copy is gone.
+    """
+    url = "http://%s:%d%s" % (HOST, int(port), CLOSE_PATH)
+    request = urllib.request.Request(url, data=b"", method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return 200 <= response.status < 300
+    except (urllib.error.URLError, OSError, ValueError, TypeError):
+        return False
+
+
+def wait_until_it_stops(port: int, version: str, timeout: float = STOP_TIMEOUT,
+                        sleep=time.sleep, now=time.monotonic) -> bool:
+    """Poll until that copy stops answering, or give up.
+
+    Polled rather than slept through. A fixed sleep is a guess, and it is
+    either too long on a fast machine or too short on Mark's, and being too
+    short here means starting a second copy beside a live one.
+    """
+    deadline = now() + timeout
+    while now() < deadline:
+        if ask_version(port, timeout=0.5) != version:
+            return True
+        sleep(0.25)
+    return False
+
+
+def would_not_stop(folder: Path, version: str, port: int) -> str:
+    """What to say when a copy will not go, and what he can do about it.
+
+    Everything this copy could do has already been done by the time this is
+    read, and the message says so before it asks him for anything. Task Manager
+    is named last, after the thing that always works, because finding a process
+    in a list is not something to ask an appraiser to do first.
+    """
+    return (
+        "Roy R. Fisher %s is still running and would not stop.\n"
+        "\n"
+        "  Folder: %s\n"
+        "  Port:   %d\n"
+        "\n"
+        "This copy asked it to close and then waited %d seconds. It is still\n"
+        "answering, so starting a second copy now would have two of them\n"
+        "writing the same files.\n"
+        "\n"
+        "Restart the computer, then double-click the Roy R. Fisher icon again.\n"
+        "\n"
+        "If you would rather not restart: hold Control, Shift and Escape\n"
+        "together to open Task Manager, find pythonw.exe in the list, and\n"
+        "choose End task."
+        % (version or "(unknown version)", Path(folder), int(port),
+           int(STOP_TIMEOUT)))
+
+
+def stop_the_running_copies(copies, say=None, timeout: float = STOP_TIMEOUT,
+                            sleep=time.sleep, now=time.monotonic) -> None:
+    """Stop every copy that is running, so this one can take over.
+
+    Raises `StartupRefused` only once asking has been tried and has not worked,
+    which is the only honest moment to refuse: before that, nothing has been
+    attempted, and a refusal with nothing attempted is what 0.7.0 did.
+
+    `say` is how this reaches the screen. Stopping the old copy takes a few
+    seconds in which nothing else is happening, and silence at the very first
+    click reads as the click having failed.
+    """
+    for folder, version, port in copies:
+        if say:
+            say("Roy R. Fisher %s is already open. Closing it." % version)
+        ask_it_to_stop(port)
+        if say:
+            say("Waiting for it to close.")
+        if not wait_until_it_stops(port, version, timeout=timeout,
+                                   sleep=sleep, now=now):
+            raise StartupRefused(would_not_stop(folder, version, port))
+        if say:
+            say("It has closed.")
 
 
 # -------------------------------------------------------- waiting to be up --

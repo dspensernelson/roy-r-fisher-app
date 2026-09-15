@@ -74,16 +74,29 @@ def splash_dir() -> Path:
         return Path(tempfile.gettempdir())
 
 
-def page(port: int, version: str) -> str:
-    """The page itself. One file, no network, no fonts, no images."""
+def page(port: int, version: str, saying: str = None, patience: int = None) -> str:
+    """The page itself. One file, no network, no fonts, no images.
+
+    `saying` is the one line it shows. It defaults to the ordinary start, and
+    is given something else when the app has to stop a copy that is already
+    running before it can start, because that is a different several seconds
+    and the screen should not describe it wrongly.
+
+    `patience` is how long it waits before it stops saying "starting" and
+    points at the other tab. It is longer when a copy is being stopped first,
+    since that wait is legitimate and pointing him at another tab in the middle
+    of it would point him at the copy being closed.
+    """
     url = "http://127.0.0.1:%d/" % int(port)
+    saying = saying or ("Starting version %s. This takes a few seconds."
+                        % (version or ""))
     # Tokens rather than per-cent formatting. This page is mostly CSS, and CSS
     # is full of per-cent signs: 38%, 100vh, and every keyframe stop. The same
     # trap the rollback batch file carries a comment about.
     return TEMPLATE.replace("{{MARK}}", MARK) \
-                   .replace("{{VERSION}}", version or "") \
+                   .replace("{{SAY}}", saying) \
                    .replace("{{URL}}", url) \
-                   .replace("{{SECONDS}}", str(GIVE_UP_SECONDS)) \
+                   .replace("{{SECONDS}}", str(int(patience or GIVE_UP_SECONDS))) \
                    .replace("{{EVERY}}", str(LOOK_EVERY_MS)) \
                    .replace("{{LATE}}", str(LOOK_EVERY_LATE_MS))
 
@@ -123,7 +136,7 @@ TEMPLATE = """<!doctype html>
   {{MARK}}
   <h1>ROY R. FISHER</h1>
   <p class="tag">&ldquo;The Established Commercial Valuation Experts&rdquo;</p>
-  <p class="say">Starting version {{VERSION}}. This takes a few seconds.</p>
+  <p class="say">{{SAY}}</p>
   <div class="bar"><span></span></div>
   <div class="late">
     <p><strong>Roy R. Fisher has probably opened in another tab.</strong></p>
@@ -158,18 +171,20 @@ TEMPLATE = """<!doctype html>
 """
 
 
-def write(port: int, version: str, where: Path = None) -> Path:
+def write(port: int, version: str, where: Path = None, saying: str = None,
+          patience: int = None) -> Path:
     """Put the page on disk and return its path. Raises if it cannot."""
     folder = Path(where) if where else splash_dir()
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "starting.html"
     temp = path.with_name("starting.%d.writing" % os.getpid())
-    temp.write_text(page(port, version), encoding="utf-8")
+    temp.write_text(page(port, version, saying, patience), encoding="utf-8")
     os.replace(str(temp), str(path))
     return path
 
 
-def show(port: int, version: str, opener=None) -> bool:
+def show(port: int, version: str, opener=None, saying: str = None,
+         patience: int = None) -> bool:
     """Write it and open it. True if the browser was given something to show.
 
     Never raises. A splash screen is a courtesy; failing to draw one must never
@@ -180,7 +195,7 @@ def show(port: int, version: str, opener=None) -> bool:
         import webbrowser
         opener = webbrowser.open
     try:
-        path = write(port, version)
+        path = write(port, version, saying=saying, patience=patience)
         return bool(opener(path.as_uri()))
     except Exception:
         return False

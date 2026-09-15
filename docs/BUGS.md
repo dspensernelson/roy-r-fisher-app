@@ -242,9 +242,9 @@ happen with a window in front of you saying "Starting Roy R. Fisher". Now it
 happens in silence.
 
 **Not the same as B11 and not a reason to bring the window back.** The window
-was the wrong answer to a real need. Clicking again is harmless, because the
-second copy finds the first and just opens the browser at it, but a person who
-sees nothing has no way to know that.
+was the wrong answer to a real need. Clicking again is harmless, because since
+0.7.1 the second copy stops the first and takes over, but a person who sees
+nothing has no way to know that.
 
 **How bad.** Medium. It is the first thing that happens every time anybody
 uses the app, and it currently looks like a click that failed.

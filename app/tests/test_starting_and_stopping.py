@@ -150,5 +150,8 @@ def test_the_port_is_still_asked_for_rather_than_assumed():
     assert "startup.free_port()" in RUN_APP
 
 
-def test_two_versions_still_refuse_to_run_at_once():
-    assert "refuse_if_another_version_runs" in RUN_APP
+def test_two_versions_still_never_run_at_once():
+    """Stopped rather than refused, since 0.7.1. The property is the same one:
+    only one copy is left writing the home folder."""
+    assert "copies_running" in RUN_APP
+    assert "stop_the_running_copies" in RUN_APP

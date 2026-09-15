@@ -135,6 +135,32 @@ def test_it_opens_a_file_on_this_machine(tmp_path, monkeypatch):
     assert seen[0].endswith("starting.html")
 
 
+# --- saying what is actually happening --------------------------------------
+# Added 0.7.1. When a copy is already running, the first thing the app does is
+# stop it, and that takes a few seconds in which nothing else is on screen.
+
+def test_by_default_it_says_the_app_is_starting():
+    assert "Starting version 0.6.8" in splash.page(51234, "0.6.8")
+
+
+def test_it_can_say_what_is_happening_instead():
+    page = splash.page(51234, "0.6.8", saying="Closing the copy that is already open.")
+    assert "Closing the copy that is already open." in page
+    assert "Starting version 0.6.8. This takes" not in page
+
+
+def test_it_can_be_told_to_wait_longer_before_giving_up():
+    """Stopping the old copy is a legitimate wait. Saying "look in another tab"
+    in the middle of it would point him at the copy being closed."""
+    page = splash.page(51234, "0.6.8", patience=90)
+    assert "90 * 1000" in page
+
+
+def test_the_launcher_draws_one_screen_that_says_which_case_it_is():
+    source = (APP / "run_app.py").read_text(encoding="utf-8")
+    assert "splash.show(port, version, saying=" in source
+
+
 # --- the order in run_app, which is the whole point ------------------------
 def test_the_screen_goes_up_before_the_package_check():
     """A loading screen after the slow work is not a loading screen.

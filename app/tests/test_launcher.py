@@ -122,7 +122,9 @@ def test_there_is_no_walk_up_from_8000():
     for func in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
         if any(loop in ast.walk(func) for loop in looping):
             enclosing.add(func.name)
-    assert enclosing <= {"wait_until_answering", "running_sibling"}, enclosing
+    assert enclosing <= {"wait_until_answering", "wait_until_it_stops",
+                         "running_sibling", "copies_running",
+                         "stop_the_running_copies"}, enclosing
 
 
 # --- runtime.json -----------------------------------------------------------
@@ -192,41 +194,280 @@ def test_a_stale_recorded_port_that_answers_nothing_is_not_running(tmp_path):
 
 
 # --- another version running beside us --------------------------------------
+# It is stopped rather than refused, since 0.7.1. What is unchanged is that two
+# copies never write the home folder at the same time: one of them goes first.
 
-def test_it_refuses_when_a_sibling_version_is_alive(tmp_path):
+def test_a_live_sibling_version_is_found(tmp_path):
     with Answering({"version": "0.2.0"}) as server:
-        folder(tmp_path, "Roy R. Fisher v0.2.0", server.port, "0.2.0")
+        beside = folder(tmp_path, "Roy R. Fisher v0.2.0", server.port, "0.2.0")
         here = folder(tmp_path, "Roy R. Fisher v0.1.0")
-
-        with pytest.raises(startup.StartupRefused) as raised:
-            startup.refuse_if_another_version_runs(here)
-
-        message = raised.value.message
-        assert "0.2.0" in message
-        assert "Roy R. Fisher v0.2.0" in message
-        assert "Close that window first" in message
-        assert "Traceback" not in message
+        assert startup.running_sibling(here) == (beside, "0.2.0")
 
 
-def test_a_sibling_that_has_run_before_but_is_closed_does_not_refuse(tmp_path):
+def test_a_sibling_that_has_run_before_but_is_closed_is_not_alive(tmp_path):
     """The ordinary case after a rollback: the other folder is still there and
     still remembers a port, and nothing is listening on it."""
     folder(tmp_path, "Roy R. Fisher v0.2.0", startup.free_port(), "0.2.0")
     here = folder(tmp_path, "Roy R. Fisher v0.1.0")
-    startup.refuse_if_another_version_runs(here)          # does not raise
+    assert startup.running_sibling(here) is None
 
 
-def test_a_sibling_that_has_never_run_does_not_refuse(tmp_path):
+def test_a_sibling_that_has_never_run_is_not_alive(tmp_path):
     folder(tmp_path, "Roy R. Fisher v0.2.0")
     here = folder(tmp_path, "Roy R. Fisher v0.1.0")
-    startup.refuse_if_another_version_runs(here)
+    assert startup.running_sibling(here) is None
 
 
 def test_our_own_folder_is_never_its_own_sibling(tmp_path):
     with Answering({"version": "0.1.0"}) as server:
         here = folder(tmp_path, "Roy R. Fisher v0.1.0", server.port, "0.1.0")
         assert startup.sibling_folders(here) == []
-        startup.refuse_if_another_version_runs(here)
+        assert startup.running_sibling(here) is None
+
+
+# --- stopping the copy that is already running ------------------------------
+# Until 0.7.1 the launcher refused here and told Mark to close a window. There
+# is no window: the app has run with no console since 0.6.5, and the tab it
+# opened may have been closed hours ago. So it asked him to do something
+# impossible and left him nowhere to go but Task Manager.
+
+
+class Copy:
+    """A running copy of the app, on a real port, that can be asked to stop.
+
+    Real sockets for the same reason as `Answering` above: what is being proved
+    is that one copy of the app talks to another over a port, in the way the
+    Settings screen's `Close the app` button already does.
+
+    `stubborn` answers the request and then keeps answering anyway, which is
+    the case the launcher has to be able to say something useful about.
+    `deaf` is a copy too old to have the route at all.
+    """
+
+    def __init__(self, version="0.1.0", stubborn=False, deaf=False):
+        self.version = version
+        self.stubborn = stubborn
+        self.deaf = deaf
+        self.alive = True
+        self.asked = 0
+        parent = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path != "/api/version" or not parent.alive:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                payload = json.dumps({"version": parent.version}).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def do_POST(self):
+                if self.path != startup.CLOSE_PATH or parent.deaf:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                parent.asked += 1
+                payload = b'{"closing": true}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                if not parent.stubborn:
+                    parent.alive = False
+
+            def log_message(self, *args):
+                pass
+
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.port = self.server.server_address[1]
+
+    def __enter__(self):
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        return self
+
+    def __exit__(self, *exc):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+def test_it_asks_over_the_route_the_close_button_already_uses():
+    """One way to stop the app, not two. The Settings screen posts to this
+    same path, and the path is owned here so the two cannot drift apart."""
+    assert startup.CLOSE_PATH == "/api/close"
+    with Copy("0.1.0") as copy:
+        assert startup.ask_it_to_stop(copy.port) is True
+        assert copy.asked == 1
+
+
+def test_a_copy_without_that_route_is_never_reported_as_stopping():
+    with Copy("0.1.0", deaf=True) as copy:
+        assert startup.ask_it_to_stop(copy.port) is False
+
+
+def test_nothing_listening_is_not_a_yes():
+    assert startup.ask_it_to_stop(startup.free_port(), timeout=0.4) is False
+
+
+def test_the_wait_ends_when_the_copy_stops_answering():
+    """Polled, never slept through. A fixed sleep is a guess that is too long
+    on a fast machine and too short on Mark's."""
+    with Copy("0.1.0") as copy:
+        startup.ask_it_to_stop(copy.port)
+        assert startup.wait_until_it_stops(copy.port, "0.1.0", timeout=5.0) is True
+
+
+def test_the_wait_gives_up_rather_than_waiting_forever():
+    with Copy("0.1.0", stubborn=True) as copy:
+        startup.ask_it_to_stop(copy.port)
+        assert startup.wait_until_it_stops(
+            copy.port, "0.1.0", timeout=0.6,
+            sleep=[].append, now=_ticking()) is False
+
+
+def test_the_wait_is_long_enough_for_a_copy_finishing_a_write():
+    """The copy being stopped waits for its own writes to finish before it
+    goes. Giving up sooner than it takes would call a working close a failure.
+    Its numbers are not read from here: it is another program, possibly an
+    older build of it, so its constants are not ours to reach into."""
+    assert startup.STOP_TIMEOUT >= 35.0
+
+
+# --- finding every copy that is running ------------------------------------
+
+def test_a_copy_running_in_this_very_folder_is_found(tmp_path):
+    """The second branch of the same fault. Until 0.7.1 this case opened a
+    browser at whatever was running, and four builds in one day all called
+    themselves 0.7.0, so a freshly unpacked build handed him a stale one."""
+    with Copy("0.1.0") as copy:
+        here = folder(tmp_path, "Roy R. Fisher v0.1.0", copy.port, "0.1.0")
+        found = startup.copies_running(here)
+        assert [(f.name, v, p) for f, v, p in found] == [
+            ("Roy R. Fisher v0.1.0", "0.1.0", copy.port)]
+
+
+def test_a_copy_running_beside_this_one_is_found(tmp_path):
+    with Copy("0.2.0") as copy:
+        folder(tmp_path, "Roy R. Fisher v0.2.0", copy.port, "0.2.0")
+        here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+        found = startup.copies_running(here)
+        assert [(f.name, v, p) for f, v, p in found] == [
+            ("Roy R. Fisher v0.2.0", "0.2.0", copy.port)]
+
+
+def test_a_folder_that_has_run_before_and_is_closed_is_not_a_running_copy(tmp_path):
+    folder(tmp_path, "Roy R. Fisher v0.2.0", startup.free_port(), "0.2.0")
+    here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+    assert startup.copies_running(here) == []
+
+
+# --- taking over ------------------------------------------------------------
+
+def test_the_copy_that_was_running_is_stopped_and_this_one_carries_on(tmp_path):
+    with Copy("0.2.0") as copy:
+        folder(tmp_path, "Roy R. Fisher v0.2.0", copy.port, "0.2.0")
+        here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+
+        startup.stop_the_running_copies(startup.copies_running(here))
+
+        assert copy.asked == 1
+        assert copy.alive is False
+        assert startup.copies_running(here) == []
+
+
+def test_nothing_running_means_nothing_to_stop(tmp_path):
+    here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+    startup.stop_the_running_copies(startup.copies_running(here))   # no raise
+
+
+def test_it_says_what_it_is_doing_while_it_does_it(tmp_path):
+    """The first thing he sees. Silence reads as a failed click."""
+    said = []
+    with Copy("0.2.0") as copy:
+        folder(tmp_path, "Roy R. Fisher v0.2.0", copy.port, "0.2.0")
+        here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+        startup.stop_the_running_copies(startup.copies_running(here), say=said.append)
+
+    spoken = " ".join(said).lower()
+    assert "0.2.0" in spoken
+    assert "clos" in spoken
+
+
+def test_a_copy_that_will_not_stop_finally_says_so(tmp_path):
+    with Copy("0.2.0", stubborn=True) as copy:
+        folder(tmp_path, "Roy R. Fisher v0.2.0", copy.port, "0.2.0")
+        here = folder(tmp_path, "Roy R. Fisher v0.1.0")
+
+        with pytest.raises(startup.StartupRefused) as raised:
+            startup.stop_the_running_copies(
+                startup.copies_running(here), timeout=0.6,
+                sleep=[].append, now=_ticking())
+
+    message = raised.value.message
+    assert "0.2.0" in message
+    assert "Roy R. Fisher v0.2.0" in message
+    assert str(copy.port) in message
+    assert "Traceback" not in message
+
+
+def test_it_never_asks_him_to_close_a_window_that_is_not_there(tmp_path):
+    """The whole defect. There has been no window since 0.6.5."""
+    message = startup.would_not_stop(tmp_path, "0.2.0", 51234)
+    assert "window" not in message.lower()
+    assert "Close that window first" not in message
+
+
+def test_it_says_what_it_already_tried_before_it_asks_him_for_anything(tmp_path):
+    message = startup.would_not_stop(tmp_path, "0.2.0", 51234)
+    tried = message.lower().index("asked it to close")
+    assert tried < message.lower().index("restart")
+
+
+def test_there_is_always_something_he_can_do(tmp_path):
+    message = startup.would_not_stop(tmp_path, "0.2.0", 51234).lower()
+    assert "restart" in message
+    assert "double-click" in message
+
+
+def test_task_manager_is_the_last_thing_said_and_never_the_first(tmp_path):
+    """Acceptable as a last line to an appraiser. Not acceptable as the only
+    thing on offer, which is what 0.7.0 left him with."""
+    message = startup.would_not_stop(tmp_path, "0.2.0", 51234)
+    said = message.lower()
+    assert "task manager" in said
+    assert said.index("restart") < said.index("task manager")
+    last = [line for line in message.splitlines() if line.strip()][-1]
+    assert "task" in last.lower() or "end task" in last.lower()
+
+
+# --- the order the launcher does it in --------------------------------------
+
+def test_the_launcher_stops_the_old_copy_rather_than_refusing():
+    source = (Path(__file__).resolve().parents[1] / "run_app.py").read_text(encoding="utf-8")
+    assert "stop_the_running_copies" in source
+    assert "refuse_if_another_version_runs" not in source
+
+
+def test_the_launcher_never_just_opens_whatever_is_already_running():
+    """Two builds can wear the same number, and /api/version cannot tell them
+    apart, so 'it is already running' is not a thing the app can know."""
+    source = (Path(__file__).resolve().parents[1] / "run_app.py").read_text(encoding="utf-8")
+    assert "is already running. Opening it." not in source
+
+
+def test_the_screen_says_so_before_the_waiting_starts():
+    source = (Path(__file__).resolve().parents[1] / "run_app.py").read_text(encoding="utf-8")
+    assert source.index("splash.show(") < source.index("stop_the_running_copies")
+
+
+def test_stopping_the_old_copy_happens_before_this_one_binds_anything():
+    source = (Path(__file__).resolve().parents[1] / "run_app.py").read_text(encoding="utf-8")
+    assert source.index("stop_the_running_copies") < source.index("import uvicorn")
+    assert source.index("stop_the_running_copies") < source.index("write_runtime")
 
 
 # --- waiting, and giving up ------------------------------------------------
@@ -279,7 +520,7 @@ def test_the_launcher_checks_the_package_before_importing_uvicorn():
     purpose, because a missing wheel is exactly what goes wrong."""
     source = (Path(__file__).resolve().parents[1] / "run_app.py").read_text(encoding="utf-8")
     assert source.index("packaging.verify") < source.index("import uvicorn")
-    assert source.index("refuse_if_another_version_runs") < source.index("import uvicorn")
+    assert source.index("copies_running") < source.index("import uvicorn")
     # and the verify happens before runtime.json is written or touched
     assert source.index("packaging.verify") < source.index("write_runtime")
 

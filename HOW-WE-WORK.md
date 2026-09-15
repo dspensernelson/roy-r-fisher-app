@@ -127,6 +127,16 @@ his. When it and a builder's judgement disagree, it wins. It does not delete
 itself: the whole of 2026-09-14 was spent recovering a design conversation
 that was never written down.
 
+**Blue words go in the lower right. Everywhere, no exceptions.** Spenser's
+rule, 2026-09-15, stated in capitals after a round in which three sensible
+exceptions were kept and handed back to him as reasoning. A rule with three
+exceptions is not a rule. On any row, the things that act sit on the left and
+the thing that only shows, explains or backs him out is pushed to the right
+hand end. Buttons are not affected. Build it by letting the app's own
+`margin-left: auto` on `.linky` stand rather than by adding a class to opt in,
+so a link written next month lands in the right place without anybody
+remembering to tag it.
+
 **A click leads to a step.** A choice that shapes an action lives inside that
 action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see

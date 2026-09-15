@@ -20,7 +20,8 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 - [x] Find out why every new version dies the first time it runs
 - [x] Fix it, which ticks north star 1 and 2: start the background jobs after the web server
 - [x] Make the launcher say what killed it instead of dying silently
-- [ ] Prove an update Spenser can take himself, end to end
+- [x] Prove an update Spenser can take himself, end to end
+- [ ] Starting the app must open one tab, not two
 - [ ] Run the 28 by-hand checks on Windows
 - [ ] Upload to the office
 

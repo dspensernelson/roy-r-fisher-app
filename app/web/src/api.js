@@ -42,8 +42,9 @@ export const appVersion = () => fetch("/api/version").then(j);
 export const captionEstimate = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/caption-estimate`).then(j);
 // His first few photographs, captioned in both styles, for the style window.
-// It spends money, so it is only ever called from a press he makes and it
-// refuses without the confirmation that press carries.
+// It spends money. Opening that window is what buys them, once per job, which
+// is the spend Spenser authorised on 2026-09-04. The flag stays so nothing
+// can wander into a paid route by accident.
 export const captionSamples = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/caption-samples?confirmed=true`,
         { method: "POST" }).then(j);

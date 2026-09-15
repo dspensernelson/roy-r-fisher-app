@@ -95,6 +95,9 @@ export default function PhotosScreen({ job }) {
   // read, so a caption sent a moment before and still travelling comes back
   // as the old one, and the old one lands on his screen. B13.
   const saving = useRef(Promise.resolve());
+  // Whether this job's samples have been bought. Opening the style window
+  // buys them; opening it a second time must not buy them again.
+  const bought = useRef(false);
   const dragFrom = useRef(null);
   const filePicker = useRef(null);
 
@@ -102,7 +105,7 @@ export default function PhotosScreen({ job }) {
     setManifest(null); setError(null); setReading(null);
     // A different job's photographs, so what was bought for the last one is
     // not his any more.
-    setShots(null); setShotsError("");
+    setShots(null); setShotsError(""); bought.current = false;
     // Polls alongside the call rather than after it. Nothing was watching at
     // mount, which is exactly when the waiting happens.
     let alive = true;
@@ -170,10 +173,12 @@ export default function PhotosScreen({ job }) {
     setBusy("");
   }
 
-  // Opens a step and nothing else. It reads no photograph, sends no
-  // photograph, and calls nobody. Choosing how the captions should read used
-  // to caption three of his photos both ways, which meant two paid requests
-  // fired before he had seen a price or agreed to anything.
+  // Opens the step, and writes captions from his first three photographs
+  // while he looks at it. Spenser authorised that money on 2026-09-04:
+  // *"we're going to spend the 3 pennies to generate the 6 suggestions."*
+  // It sat behind a button quoting him the price for one evening and he threw
+  // the button out on 2026-09-14: he had already agreed, and being asked
+  // again is a question with one sensible answer.
   function openChooser() {
     // The second and last place the price is asked for. He is about to be
     // shown a figure and asked to agree to it, so it is worked out again here
@@ -181,13 +186,17 @@ export default function PhotosScreen({ job }) {
     refreshQuote();
     setShowing(manifest.caption_style || "view");
     setAsking(true);
+    askForSamples();
   }
 
-  // The one press in the style window that spends money. Nothing else in that
-  // window calls anybody: not opening it, not switching styles, not closing
-  // it. The figure is on the button before it is pressed, which is the whole
-  // reason this is a press and not something the window does for him.
-  async function onAskForSamples() {
+  // Three photographs in both styles, once for this job. Fixed and tiny, and
+  // part of opening the window rather than a thing he decides. The ref is the
+  // whole of the guard: closing the window and opening it again is free, and
+  // so is every redraw. What it really cost is recorded on the server the
+  // same way a run is.
+  async function askForSamples() {
+    if (bought.current || !aiOn) return;
+    bought.current = true;
     setShotsBusy(true); setShotsError("");
     try {
       const got = await captionSamples(job);
@@ -199,7 +208,9 @@ export default function PhotosScreen({ job }) {
       }
     } catch (e) { setShotsError(e.message); }
     setShotsBusy(false);
-    refreshQuote();
+    // The price is not asked again here. Samples write nothing into the job,
+    // so the number has not moved, and asking opens photograph files across
+    // the office network for an answer that is already on screen.
   }
 
   // Above thirty photographs he sees the number in a window of its own before
@@ -543,16 +554,12 @@ export default function PhotosScreen({ job }) {
   // His own photographs with the captions written from them, for the style he
   // is looking at right now. Null means the style window has nothing bought
   // for this style and draws the written specimens instead, which is what it
-  // does before he presses, when there is no key, and when a demo job refuses.
+  // does while they are still being written, when there is no key, and when a
+  // demo job refuses.
   const shownShots = (shots && shots.samples && shots.samples[showing])
     ? shots.samples[showing].map((line) => ({ caption: line.caption,
                                               src: thumbUrl(job, line.file) }))
     : null;
-  // The press is offered only while it has something to buy and somewhere to
-  // send it. Once bought, it is gone: the same six captions are never paid
-  // for twice.
-  const canSample = !shots && aiOn && !blockedBecause
-                    && !!(quote && quote.samples && quote.samples.photos > 0);
 
   return (
     <div
@@ -637,7 +644,10 @@ export default function PhotosScreen({ job }) {
             </p>
           )}
         </div>
-        <div className="screen-actions">
+        {/* Spenser, 2026-09-14: *"I want this to be more of a control panel,
+            right? like a rounded panel that has controls in it."* The buttons
+            and the two switches were loose on the page background. */}
+        <div className="screen-actions control-panel">
           <div className="action-row">
             {/* Off means off, and it looks off. The brand red at half opacity
                 still reads as a button he should be able to press, which is
@@ -1104,14 +1114,16 @@ export default function PhotosScreen({ job }) {
                 estimated maximum cost for 4 photos should go in the upper
                 right"*. It used to be a boxed callout with a red bar down its
                 side, sitting above everything in the middle of the window. It
-                is a number he glances at, not a warning. */}
+                is a number he glances at, not a warning.
+                One line. It was three stacked: a label, the figure, the
+                count. Spenser, 2026-09-14: *"DONT USE 10 WORDS WHEN 3 WILL
+                DO"*. */}
             <div className="sheet-head">
               <h2>How should the captions read?</h2>
               {quote && quote.estimate && toSend > 0 && (
                 <p className="sheet-cost">
-                  <span>Est. max</span>
-                  <strong>${quote.estimate.total.toFixed(2)}</strong>
-                  <span>{toSend} {toSend === 1 ? "photo" : "photos"}</span>
+                  ${quote.estimate.total.toFixed(2)} max, {toSend}{" "}
+                  {toSend === 1 ? "photo" : "photos"}
                 </p>
               )}
             </div>
@@ -1144,33 +1156,26 @@ export default function PhotosScreen({ job }) {
                            perPage, shownShots)}
             </div>
 
+            {/* Two states, never a mixture. While his own are being written
+                the frames stay blank, because a written specimen beside a
+                photograph reads as a caption of that photograph. */}
             {!shownShots && (
               <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
-                Examples of the writing style, not captions of your photographs.
+                {shotsBusy
+                  ? "Captioning your photographs..."
+                  : "Examples of the style, not your photographs."}
               </p>
             )}
 
-            {/* The second thing in this window that can spend money, and the
-                only one that spends it here. Its own figure is on it, because
-                pressing it is the moment he agrees to that figure. Opening
-                this window still sends nothing and calls nobody. */}
-            {canSample && (
-              <button className="button final sample-press"
-                      disabled={shotsBusy} onClick={onAskForSamples}>
-                {shotsBusy
-                  ? "Writing them..."
-                  : `Show these on my photographs  $${quote.samples.estimate.total.toFixed(2)}`}
-              </button>
-            )}
             {shotsError && (
               <p className="sub sample-trouble" style={{ margin: "10px 0 0" }}>{shotsError}</p>
             )}
 
             <div className="sheet-foot">
-              <p className="keep-note">
-                Captions you have already typed are never changed. Photos that
-                already have a caption are not sent and are not charged for again.
-              </p>
+              {/* One idea, once. It was two sentences and twenty-two words:
+                  his typing is never changed, and a captioned photo is not
+                  sent or charged for again. Both are the same promise. */}
+              <p className="keep-note">Photos you already captioned are skipped.</p>
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
               <button className="button secondary" onClick={() => beginCaptions(showing)}>
                 Use this style

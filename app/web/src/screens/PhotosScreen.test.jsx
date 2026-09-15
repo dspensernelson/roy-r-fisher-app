@@ -66,6 +66,10 @@ beforeEach(() => {
   vi.spyOn(api, "putPhotoGroup").mockResolvedValue({ chosen: "" });
   vi.spyOn(api, "readingProgress").mockResolvedValue(
     { reading: false, done: 0, total: 0 });
+  // The style window writes captions from his first photographs as it opens,
+  // so every test that opens it answers that call. Nothing here by default.
+  vi.spyOn(api, "captionSamples").mockResolvedValue(
+    { ai_available: true, photos: [], samples: {} });
 });
 
 const TWO_PLACES = {
@@ -104,7 +108,7 @@ describe("with no key on this computer", () => {
 });
 
 describe("choosing a style", () => {
-  it("shows static examples and calls nobody", async () => {
+  it("shows the written examples while his own are being written", async () => {
     await show();
     await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
     expect(await screen.findByText("View of the front entrance")).toBeInTheDocument();
@@ -900,12 +904,15 @@ describe("the caption style chooser he complained about", () => {
     return screen.findByRole("dialog", { name: "How should the captions read?" });
   }
 
-  it("puts the estimated maximum cost in the upper right, small", async () => {
+  it("puts the estimated maximum cost in the upper right, on one line", async () => {
     const sheet = await openIt();
     const head = sheet.querySelector(".sheet-head");
     const cost = head.querySelector(".sheet-cost");
     expect(cost).not.toBeNull();
-    expect(cost.textContent).toContain("$0.15");
+    // One line. It was three stacked: "Est. max", the figure, the count.
+    // Spenser, 2026-09-14: *"DONT USE 10 WORDS WHEN 3 WILL DO"*.
+    expect(cost.textContent).toBe("$0.15 max, 3 photos");
+    expect(cost.children).toHaveLength(0);
     // It is a number he glances at. Not the boxed callout with the red bar.
     expect(cost.closest(".confirm")).toBeNull();
     // Last in the head row, which is what puts it on the right.
@@ -918,11 +925,14 @@ describe("the caption style chooser he complained about", () => {
     expect(sheet.querySelector(".toggle-flag")).toBeNull();
   });
 
-  it("drops the callout naming Anthropic and keeps the money promises", async () => {
+  it("makes the money promise once, in one short line", async () => {
     const sheet = await openIt();
     expect(sheet.textContent).not.toMatch(/Anthropic/);
-    expect(sheet.textContent).toMatch(/Captions you have already typed are never changed/);
-    expect(sheet.textContent).toMatch(/already have a caption are not sent/);
+    // It was two sentences and twenty-two words for one idea.
+    expect(sheet.querySelector(".keep-note").textContent)
+      .toBe("Photos you already captioned are skipped.");
+    expect(sheet.textContent).not.toMatch(/are never changed/);
+    expect(sheet.textContent).not.toMatch(/charged for again/);
   });
 
   it("finishes the window from the bottom right, with Cancel to its left", async () => {
@@ -938,31 +948,37 @@ describe("the caption style chooser he complained about", () => {
     expect(use).toHaveClass("secondary");
   });
 
-  it("shows his own photographs once he presses for them, and not before", async () => {
+  it("shows his own photographs when the window opens, with nothing to press", async () => {
     const ask = vi.spyOn(api, "captionSamples").mockResolvedValue(SAMPLES);
     const sheet = await openIt();
-    expect(ask).not.toHaveBeenCalled();
-    expect(sheet.querySelectorAll(".cell-photo img")).toHaveLength(0);
-
-    const press = screen.getByRole("button", { name: /Show these on my photographs/ });
-    // The press carries its own price, because pressing it spends money.
-    expect(press.textContent).toContain("$0.30");
-    // Money spent cannot be unspent, and he came here to pick a style rather
-    // than to buy samples, so it is the plain button with red text and not a
-    // filled one. docs/ROADMAP.md, the colour law of 2026-09-08.
-    expect(press).toHaveClass("final");
-    expect(press).not.toHaveClass("secondary");
-    await userEvent.click(press);
 
     await waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("View of the north elevation")).toBeInTheDocument();
     expect(sheet.querySelectorAll(".cell-photo img").length).toBe(3);
+
+    // The button that asked him to pay for them is gone. He authorised this
+    // spend on 2026-09-04 and did not ask to be asked again.
+    expect(screen.queryByRole("button", { name: /Show these on my photographs/ })).toBeNull();
+    expect(sheet.querySelector(".sample-press")).toBeNull();
+    expect(sheet.textContent).not.toMatch(/\$0\.30/);
+  });
+
+  it("does not buy them a second time when the window is opened again", async () => {
+    const ask = vi.spyOn(api, "captionSamples").mockResolvedValue(SAMPLES);
+    await openIt();
+    await waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: /Generate captions/ }));
+    await screen.findByRole("dialog", { name: "How should the captions read?" });
+
+    expect(ask).toHaveBeenCalledTimes(1);
   });
 
   it("switches to the other style's captions of the same photographs", async () => {
     vi.spyOn(api, "captionSamples").mockResolvedValue(SAMPLES);
     await openIt();
-    await userEvent.click(screen.getByRole("button", { name: /Show these on my photographs/ }));
     await screen.findByText("View of the north elevation");
 
     await userEvent.click(screen.getByRole("button", { name: /Location first/ }));
@@ -970,15 +986,15 @@ describe("the caption style chooser he complained about", () => {
     expect(screen.queryByText("View of the north elevation")).toBeNull();
   });
 
-  it("keeps the written examples when the press cannot produce captions", async () => {
+  it("keeps the written examples when the captions cannot be written", async () => {
     // No key on the machine, or a demo job. The window still has to work.
     vi.spyOn(api, "captionSamples").mockRejectedValue(
       new Error("Demo photographs stay on this computer."));
     const sheet = await openIt();
-    await userEvent.click(screen.getByRole("button", { name: /Show these on my photographs/ }));
 
     expect(await screen.findByText("View of the front entrance")).toBeInTheDocument();
     expect(sheet.querySelectorAll(".cell-photo img")).toHaveLength(0);
-    expect(sheet.textContent).toMatch(/Demo photographs stay on this computer/);
+    expect(await screen.findByText(/Demo photographs stay on this computer/))
+      .toBeInTheDocument();
   });
 });

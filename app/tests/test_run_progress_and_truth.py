@@ -227,7 +227,7 @@ def test_progress_sits_with_the_work_not_in_the_corner():
     """Its own block above the grid, not inside the actions row."""
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
     assert 'className="run"' in screen
-    actions = screen[screen.index('<div className="screen-actions">'):]
+    actions = screen[screen.index('<div className="screen-actions control-panel">'):]
     actions = actions[:actions.index('className="run"')]
     assert 'className="run"' not in actions
 

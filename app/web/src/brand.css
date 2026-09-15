@@ -70,7 +70,16 @@ body {
    of the window. Sticky rather than fixed: the masthead above it still
    scrolls away, and the page below it keeps its own flow. */
 .bar { background: var(--box); position: sticky; top: 0; z-index: 10; }
-.bar-inner { max-width: 1200px; margin: 0 auto; padding: 11px 24px; display: flex; gap: 8px; color: var(--box-ink); font-size: 14px; font-weight: 500; }
+/* One line for the lot. The row holds two bordered chips, two separators and
+   a plain last crumb, and the chips are taller than the words. Without this
+   the flex default stretches every item to the chips' height and the plain
+   words sit at the top of it, so nothing shares a baseline. Mark saw it on
+   2026-09-14, on every screen, because this bar is on every screen. */
+.bar-inner { max-width: 1200px; margin: 0 auto; padding: 11px 24px; display: flex;
+  align-items: center; gap: 8px; color: var(--box-ink); font-size: 14px; font-weight: 500; }
+/* One line-height across the row, so a chip's text and a bare word are the
+   same height before anything is centred. */
+.bar-inner > * { line-height: 1.55; }
 .bar-inner button { background: none; border: none; color: var(--box-ink); font: inherit; opacity: 0.85; cursor: pointer; padding: 0 4px; }
 .bar-inner button:hover { opacity: 1; text-decoration: underline; }
 .bar-inner .bar-right { margin-left: auto; }
@@ -395,6 +404,17 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .screen-head > :first-child { min-width: 0; }
 .screen-actions { display: flex; flex-direction: column; align-items: flex-end;
                   gap: 9px; padding-top: 4px; flex: none; }
+/* "like a rounded panel that has controls in it." The buttons and the two
+   switches under them were loose on the eggshell page. They are one block, so
+   they sit on one surface: white, the only other surface the design system
+   allows, at the same radius and border as every other panel in the app. */
+.screen-actions.control-panel {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  padding: 14px 16px; gap: 12px; box-shadow: var(--shadow-raised);
+}
+/* Inside the panel the switches line up with the buttons above them rather
+   than running to the far edge of a box that now has an edge. */
+.screen-actions.control-panel .band-row { justify-content: flex-end; }
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }
 .button.secondary { background: var(--link); }
@@ -467,13 +487,12 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   gap: 20px; margin: 0 0 16px;
 }
 /* Small on purpose. It is a figure he glances at on the way past, not a
-   warning, so it carries no box, no rule and no colour of its own. */
+   warning, so it carries no box, no rule and no colour of its own. One line:
+   it was three stacked, and three stacked lines is a callout again. */
 .sheet-cost {
   margin: 0; flex: 0 0 auto; text-align: right; white-space: nowrap;
-  font-size: 12px; color: var(--ink-muted); line-height: 1.3;
+  font-size: 12.5px; color: var(--ink-muted); line-height: 1.3;
 }
-.sheet-cost span { display: block; }
-.sheet-cost strong { display: block; font-size: 17px; color: var(--ink); font-weight: 700; }
 
 /* Stays put while the page preview scrolls behind it, so the button he came
    here to press is never below the fold. The thing that finishes the window
@@ -490,11 +509,8 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    the colour law of 2026-09-08 in docs/ROADMAP.md. */
 .sheet-foot .button { white-space: nowrap; padding: 13px 22px; font-size: 15px; }
 
-/* The one press in this window that spends money. Its own figure is on it.
-   Plain button with red text, which the colour law of 2026-09-08 gives to a
-   thing that cannot be taken back and is not why he came to the window. He
-   came to pick a style. Money spent cannot be unspent. */
-.sample-press { margin-top: 14px; font-size: 14px; padding: 11px 20px; }
+/* Said once, quietly, when his own photographs could not be captioned. The
+   window still works: the written examples stay and nothing was sent. */
 .sample-trouble { color: var(--ink-muted); font-size: 12.5px; }
 
 /* A segmented control across the top of the page preview: two equal halves,
@@ -734,7 +750,9 @@ input::placeholder, textarea::placeholder {
   padding: 3px;
   border: 1px solid #d7d4cf;
   border-radius: 999px;
-  background: #fff;
+  /* A sunk track, so the chosen half can read as raised out of it. It used to
+     be white, which left the fill as the only way to tell them apart. */
+  background: var(--paper-sunk);
 }
 .bands-label { font-size: 13px; color: #6b6b6b; padding: 0 6px 0 8px; }
 .pill-opt {
@@ -748,7 +766,17 @@ input::placeholder, textarea::placeholder {
   color: #6b6b6b;
   cursor: pointer;
 }
-.pill-opt.is-on { background: var(--brand); color: #fff; font-weight: 600; }
+/* The chosen half. It was a brand red fill, which the colour law of
+   2026-09-08 gives to a control that cannot be taken back, one per screen at
+   most. Turning bands off, or pages to three, is completely undoable, and the
+   fill made a switch the loudest thing on the photographs screen. So it is
+   selected the way the style window's segmented control is selected: raised
+   and white out of a sunk track, in full-strength ink. No new colour, no new
+   idea, and the red stays with `Build photo pages`. */
+.pill-opt.is-on {
+  background: var(--paper); color: var(--ink); font-weight: 600;
+  box-shadow: var(--shadow-raised);
+}
 .pill-opt:disabled { opacity: .45; cursor: not-allowed; }
 .band-chip {
   font: inherit;

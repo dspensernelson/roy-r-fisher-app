@@ -66,3 +66,46 @@ def test_both_ways_out_of_a_job_are_drawn_as_chips():
     app = APP.read_text()
     assert app.count('"crumb-chip"') == 2, "the way back to Jobs and to the job"
     assert "crumb-back" not in app and "crumb-back" not in CSS.read_text()
+
+
+# The crumb row grew a second chip on 2026-09-14 and the misalignment showed:
+# two bordered chips, two separators and a plain last word, none of them
+# sharing a line. Mark saw it on every screen, because the bar is on every
+# screen.
+
+def test_the_whole_crumb_row_sits_on_one_line():
+    bar = block(".bar-inner")
+    assert re.search(r"align-items:\s*center", bar), \
+        "stretch put the plain crumbs at the top of the chips' height"
+    row = block(".bar-inner > *")
+    assert re.search(r"line-height:\s*[\d.]+", row), \
+        "chips, separators and the last crumb share one line-height"
+
+
+# "I want this to be more of a control panel, right? like a rounded panel that
+# has controls in it." The buttons and the two switches sat loose on the page.
+
+def test_the_actions_and_the_switches_sit_in_one_panel():
+    panel = block(".screen-actions.control-panel")
+    assert "var(--paper)" in panel, "white: the only surface allowed on the page"
+    assert re.search(r"border-radius:\s*\d+px", panel)
+    assert re.search(r"padding:\s*", panel)
+    screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
+    assert '"screen-actions control-panel"' in screen
+
+
+def test_a_switch_that_can_be_undone_carries_no_red_fill():
+    """The colour law of 2026-09-08, in docs/ROADMAP.md.
+
+    A red fill means a control that cannot be taken back, one per screen at
+    most. `Bands Off` and `Per page Three` are completely undoable and were
+    the loudest things on the photographs screen. The selected half now reads
+    as selected the way the style window's segmented control does: raised and
+    white on a sunk track.
+    """
+    lit = block(".pill-opt.is-on")
+    assert "var(--brand)" not in lit, "a red fill is reserved for the one-way control"
+    assert "background:" in lit, "it still has to read as the chosen half"
+    assert "var(--paper)" in lit
+    track = block(".bands-pill")
+    assert "var(--paper-sunk)" in track, "the track is sunk so the lit half reads as raised"

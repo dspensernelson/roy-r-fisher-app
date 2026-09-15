@@ -6,15 +6,20 @@ sentences. That is a defensible idea and an indefensible order of events. The
 money was spent before the price was shown and before he agreed to anything,
 and neither request appeared in the estimate on that same screen.
 
-The rule these tests hold: opening the style step spends nothing and calls
-nobody, and every paid route behind it needs an explicit press first.
+The rule these tests hold: nothing in this app reaches the provider by
+accident, and every paid route is in the estimate that describes it.
 
-Amended 2026-09-14. Spenser authorised the money for real photographs in that
-window on 2026-09-04, and it is written down in `docs/THE-WALK-2026-09-04.md`.
-The rule that was broken then was the ORDER, not the idea: money went before
-the price and before he agreed. So the samples now cost a press of their own,
-that press carries its own figure, and opening the window is still free. The
-tests below hold the order, which is the part that was ever the safety.
+Amended 2026-09-14, twice. Spenser authorised the money for real photographs
+in that window on 2026-09-04: *"we're going to spend the 3 pennies to generate
+the 6 suggestions."* The first amendment put them behind a press carrying a
+price. He saw that press on Windows the same evening and said it was annoying
+and not well thought out, because he had already agreed to the spend and was
+being asked a second time. So the samples are written as the window opens.
+
+What survives is the rule that was ever the safety: no route reaches the
+provider by accident. The old route that fired on open is still gone, the
+samples route still refuses a bare call, and the window buys them once per job
+and never again.
 
 The provider seam is `captions.draft_captions`. Every paid path in the app goes
 through it, so a stand-in that raises is a complete answer to "was anything
@@ -68,21 +73,31 @@ def test_no_screen_can_still_reach_it():
     assert "captionPreview" not in screen
 
 
-def test_the_samples_route_refuses_until_he_has_pressed(client, never_called):
-    """Its replacement costs a press, and the press is what confirms it."""
+def test_the_samples_route_refuses_a_bare_call(client, never_called):
+    """Its replacement still will not run for anyone who just asks."""
     answer = client.post("/api/jobs/anything/caption-samples")
     assert answer.status_code in (404, 409)
 
 
-def test_nothing_on_the_screen_asks_for_samples_by_itself():
-    """No effect, no timer, no open handler. Only a press he makes."""
+def test_the_style_window_is_the_only_thing_that_asks_for_samples():
+    """One caller, and it is opening the window he already paid for."""
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
     assert "captionSamples" in screen, "the screen is the only caller"
-    # the shape of the old defect: the call wired into opening the window
+    # No press offers to sell them any more, and no price rides on one.
+    assert "Show these on my photographs" not in screen
+    assert "sample-press" not in screen
+    assert "quote.samples" not in screen, "the window quotes him no sample price"
+
+
+def test_the_window_buys_the_samples_once_per_job():
+    """Opening it twice must not spend twice, and neither must a redraw."""
+    screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
     opener = screen[screen.index("function openChooser("):]
-    assert "captionSamples" not in opener[:opener.index("\n  }")]
-    for effect in screen.split("useEffect(")[1:]:
-        assert "captionSamples" not in effect[:effect.index("}, [")]
+    opener = opener[:opener.index("\n  }")]
+    assert "askForSamples(" in opener, "the window opening is what buys them"
+    guard = screen[screen.index("async function askForSamples("):]
+    guard = guard[:guard.index("\n  }")]
+    assert "bought.current" in guard, "one purchase per job, held in a ref"
 
 
 # --- what the style step now reads ---------------------------------------
@@ -123,7 +138,7 @@ def test_a_written_example_never_sits_beside_one_of_his_photographs():
     """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
     assert "cell-photo is-example" in screen
-    assert "Examples of the writing style, not captions of your photographs." in screen
+    assert "Examples of the style, not your photographs." in screen
     # One switch decides which of the two the grid is drawing, so there is no
     # arrangement in which a written line and a photograph share a row.
     assert "function previewRows(samples, perPage, shots)" in screen

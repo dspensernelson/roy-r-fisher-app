@@ -4,12 +4,14 @@ Spenser, 2026-09-04: *"There need to be real photos in here... we're going to
 spend the 3 pennies to generate the 6 suggestions. It should be the first 3
 photos."* He authorised the money. `docs/THE-WALK-2026-09-04.md`, click 8.
 
-The money rules already in this app make a spend on opening the window
-impossible, and that is not a technicality. `test_no_spend_before_approval.py`
-exists because the chooser once fired two paid requests the moment it opened,
-before a price was shown and before he agreed to anything. So the samples are
-behind one press, the press carries its own price, and opening the window
-still calls nobody.
+The window writes them as it opens. That is the whole of the authorisation he
+gave: three photographs, both styles, once per job. It sat behind a press for
+one evening and he threw the press out on 2026-09-14: *"its annoying and not
+well thought out"*. He had already agreed to the spend.
+
+What `test_no_spend_before_approval.py` guards is unchanged. The route still
+refuses a bare call, the screen still buys once per job, and nothing else in
+the app can reach the provider by accident.
 
 Everything here runs with a stand-in for the model, so the file costs nothing.
 """
@@ -88,23 +90,24 @@ def manifest_of(client, job=JOB):
     return client.get("/api/jobs/%s/manifest" % job).json()
 
 
-# --- opening the window is still free -------------------------------------
+# --- everything else the window loads is still free ------------------------
 
-def test_opening_the_window_calls_nobody(client, never_called):
+def test_the_styles_and_the_price_call_nobody(client, never_called):
+    """The samples are the only paid thing the window touches."""
     assert client.get("/api/caption-styles").status_code == 200
     assert client.get("/api/jobs/%s/caption-estimate" % JOB).status_code == 200
 
 
-def test_the_samples_will_not_run_without_the_press(client, never_called):
-    """No confirmation, no request. The press is where he agrees to the money."""
+def test_the_samples_will_not_run_for_a_bare_call(client, never_called):
+    """A deliberate caller only. Nothing wanders into this route."""
     answer = samples(client, confirmed=False)
     assert answer.status_code == 409
     assert "confirm" in answer.json()["detail"].lower()
 
 
-# --- what the press buys --------------------------------------------------
+# --- what opening the window buys -----------------------------------------
 
-def test_the_press_captions_the_first_three_photographs_in_both_styles(client, model):
+def test_it_captions_the_first_three_photographs_in_both_styles(client, model):
     body = samples(client).json()
     assert body["ai_available"] is True
     assert [p["file"] for p in body["photos"]] == ["p00.jpg", "p01.jpg", "p02.jpg"]
@@ -176,9 +179,9 @@ def test_a_job_with_every_caption_written_asks_for_nothing(client, model):
     assert model["requests"] == 0
 
 
-# --- the price of the press, quoted before it is pressed -------------------
+# --- the samples are still counted, because he is still paying -------------
 
-def test_the_estimate_quotes_the_samples_as_well_as_the_run(client):
+def test_the_estimate_still_accounts_for_the_samples(client):
     quote = client.get("/api/jobs/%s/caption-estimate" % JOB).json()
     shown = quote["samples"]
     # Three photographs, both styles, so six photographs are paid for.

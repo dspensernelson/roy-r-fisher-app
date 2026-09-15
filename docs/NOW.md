@@ -36,23 +36,29 @@ is true today.
 
 ## After that
 
-- [ ] Close the bugs that are already fixed. The list says 15 and several were
-      fixed weeks ago and never struck off. B13 was fixed 2026-09-14. B7 went
-      with the send-the-log work. B8 and B11, the black window, went in 0.6.5.
-      Nobody has checked the list against the code.
-- [ ] Trim `HOW-WE-WORK.md`. It is 280 lines and growing every time Spenser
-      states a rule. The rules are right; the file is becoming unreadable.
-- [ ] 5 items from the 2026-09-04 walk, on the job screen and the update screen
+- [ ] Strike off the bugs already fixed. The list holds fifteen and several were
+      fixed weeks ago and never crossed out. Nobody has checked it against the
+      code.
+- [ ] Trim the rules file. It is 280 lines and grows every time Spenser states
+      a rule. The rules are right; the file is becoming unreadable.
+- [ ] Five things from the 4 September walk, on the job screen and the update
+      screen
 
-## Where these overlap, so nothing is done twice
+## What overlaps, so nothing is done twice
 
-- **B15 is north star 1 and 2.** Every new version failing its first run is
-  what breaks both Update and the icon. Fixing it ticks two of the five.
-- **B14 is B15.** "Nothing happens for a few seconds after you click the icon"
-  is the same cold start, reported separately.
-- **B10 is north star 4.** The screen that never closes after an update is the
-  old screen he must never be shown.
-- **So the first fix is B15**, and it is the largest single move available.
+- **The first-run crash is two of the five north star lines at once.** Every new
+  version dying the first time it runs is what breaks both Update and the icon.
+  Fixing that one thing ticks both.
+- **"Nothing happens for a few seconds after you click the icon" is the same
+  crash**, reported separately weeks ago.
+- **"The screen never closes after an update" is the north star line about never
+  being shown an old screen.**
+- **So the first-run crash is the first fix**, and it is the largest single move
+  available.
+
+**Bug numbers are for `docs/BUGS.md` only.** Spenser works from the checklist
+and does not open the markdown. A thing on this page is named in words or it is
+not on this page.
 
 ## Done
 

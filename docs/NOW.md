@@ -23,6 +23,7 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 - [x] Prove an update Spenser can take himself, end to end
 - [ ] Starting the app must open one tab, not two
 - [ ] Check now must offer the update there and then, not point at another button
+- [ ] The update box must fill the width, not sit in a narrow box on the left
 - [ ] Run the 28 by-hand checks on Windows
 - [ ] Upload to the office
 

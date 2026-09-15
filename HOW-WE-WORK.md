@@ -31,6 +31,25 @@ when it does not fit rather than following it off a cliff.
 - **Never guess at a folder's name.** The exact name on disk is the job's
   identity. If we need to know what he calls it, ask him.
 
+## The north star
+
+**It should behave like a real app.** Spenser, 2026-09-15, after a week of
+fixes that each answered the last thing he pointed at and added up to nothing.
+Five sentences. Everything gets measured against them.
+
+1. **He presses Update. The new app opens and the old one closes.** Nothing
+   else happens and he is asked nothing.
+2. **He double-clicks the icon. It opens.** Anything else still running shuts
+   down on its own.
+3. **He closes the tab, or presses Close the app. Everything closes.**
+4. **He is never shown an old screen or an old message.** No dead tab still
+   drawing the last thing it had.
+5. **The app never tells him something it does not know.** No "probably", no
+   "on some computers", no guessing on his behalf.
+
+None of these is true today. Anything that does not move one of them closer is
+not the work.
+
 ## Where we are
 
 `docs/NOW.md` is the one page that says what we are doing, what is blocked, and

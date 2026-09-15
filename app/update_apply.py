@@ -199,7 +199,7 @@ def apply(home=None, source=None, out=print, sleep=time.sleep,
         out("")
         out("Roy R. Fisher %s is still running, so the update was not "
             "installed." % still_up)
-        out("Close its window and run the update again.")
+        out("Restart the computer, then take the update again.")
         out("")
         out(STILL_WORKS)
         return 1

@@ -513,6 +513,15 @@ def test_the_failure_report_is_plain_and_names_what_was_tried(tmp_path):
     assert "send Spenser" in report
 
 
+def test_the_failure_report_names_no_window_either(tmp_path):
+    """The same defect, in the other message. This one reaches Mark as a
+    dialog box, because `tell.problem` has no console to print to, and it told
+    him to close a window that has not existed since 0.6.5."""
+    report = startup.failure_report(tmp_path, 51234, "0.1.0")
+    assert "window" not in report.lower()
+    assert "again" in report.lower(), "and it still says what to do"
+
+
 # --- the order the launcher does things in ----------------------------------
 
 def test_the_launcher_checks_the_package_before_importing_uvicorn():

@@ -118,6 +118,9 @@ def test_it_refuses_plainly_when_the_app_never_closes(place, tmp_path, monkeypat
     assert "0.5.3 is still running" in lines(said)
     assert "Desktop" in lines(said)
     assert not home.exists(), "it copied something after refusing"
+    assert "window" not in lines(said).lower(), (
+        "the app closes itself with no window since 0.6.5, so there is none "
+        "to close")
 
 
 # --- the ordinary case ------------------------------------------------------

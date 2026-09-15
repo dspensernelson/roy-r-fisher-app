@@ -32,6 +32,12 @@ import install_windows as installer  # noqa: E402
 import packaging  # noqa: E402
 import startup  # noqa: E402
 
+# A running copy of the app, on a real port, that can be asked to stop. It
+# lives beside the launcher tests because that is where a running copy was
+# first needed. Imported rather than copied: two test doubles drift the same
+# way two copies of anything else do.
+from test_launcher import Copy  # noqa: E402
+
 
 def make_package(where: Path, version: str) -> Path:
     """A folder shaped like a built package: a VERSION, a launcher, an app,
@@ -263,16 +269,129 @@ def test_a_package_with_no_version_is_refused(place, tmp_path):
         installer.install(source)
 
 
-def test_it_refuses_while_a_version_is_running(place, tmp_path, monkeypatch):
+# --- a copy that is already running ----------------------------------------
+#
+# Until 0.7.2 this refused, with "Roy R. Fisher 0.7.0 is running. Close its
+# window, then run this again." There has been no window since 0.6.5, so on
+# 2026-09-15 Mark unzipped a package over a running copy and was told to close
+# something that does not exist. Task Manager was the only way out. His words:
+# *"We need something that kills it because I can't actually see that 0.7.0 is
+# running anywhere."*
+#
+# It now stops the running copy instead, over the app's own `Close the app`
+# route, which is the same thing the launcher was given on 0.7.1. Somebody
+# running the installer is trying to use the app, and the app saves every
+# change as it is made, so there is nothing to lose by stopping it.
+
+
+def a_ticking_clock():
+    """A clock that advances a quarter second each read, so a test of the
+    giving-up path finishes now instead of in forty seconds. The asking, the
+    polling and the message are all the real ones."""
+    state = {"t": 0.0}
+
+    def now():
+        state["t"] += 0.25
+        return state["t"]
+    return now
+
+
+@pytest.fixture
+def without_the_wait(monkeypatch):
+    """The forty second wait, without waiting forty seconds."""
+    real = startup.stop_the_running_copies
+
+    def fast(copies, **kw):
+        kw.setdefault("timeout", 0.6)
+        return real(copies, sleep=lambda _s: None, now=a_ticking_clock(), **kw)
+
+    monkeypatch.setattr(installer.startup, "stop_the_running_copies", fast)
+
+
+def test_it_stops_the_running_copy_and_installs(place, tmp_path):
     _, home, _ = place
     installer.install(make_package(tmp_path / "v3", "0.3.0"))
-    startup.write_runtime(home / "0.3.0", 51234, "0.3.0")
-    monkeypatch.setattr(installer.startup, "ask_version", lambda *a, **k: "0.3.0")
-
-    with pytest.raises(installer.InstallRefused) as refused:
+    with Copy("0.3.0") as running:
+        startup.write_runtime(home / "0.3.0", running.port, "0.3.0")
         installer.install(make_package(tmp_path / "v4", "0.4.0"))
+        assert running.asked == 1, "it never asked the running copy to stop"
+        assert running.alive is False
+    assert (home / "0.4.0").is_dir(), "it refused instead of installing"
+
+
+def test_it_says_what_it_is_doing_while_it_does_it(place, tmp_path):
+    """He is watching a console window, and silence reads as a hang."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "v3", "0.3.0"))
+    said = []
+    with Copy("0.3.0") as running:
+        startup.write_runtime(home / "0.3.0", running.port, "0.3.0")
+        installer.install(make_package(tmp_path / "v4", "0.4.0"), say=said.append)
+    spoken = " ".join(said).lower()
+    assert "0.3.0" in spoken, "it never said what it was closing"
+    assert "clos" in spoken
+
+
+def test_it_stops_it_the_way_the_app_already_stops(place):
+    """One way to stop the app, not two. The recorded defect on this project is
+    a behaviour written out a second time instead of read from where it lives:
+    one fault, five times."""
+    import ast
+    tree = ast.parse(Path(installer.__file__).read_text(encoding="utf-8"))
+    called = {ast.unparse(node.func) for node in ast.walk(tree)
+              if isinstance(node, ast.Call)}
+    assert "startup.stop_the_running_copies" in called
+    assert not [name for name in called
+                if name.endswith(("ask_it_to_stop", "wait_until_it_stops"))], \
+        "the stopping sequence, written out a second time"
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.While)], \
+        "a waiting loop of its own, beside the one in startup"
+
+
+def test_it_refuses_only_after_it_has_tried(place, tmp_path, without_the_wait):
+    """A refusal with nothing attempted is what 0.7.2 did."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "v3", "0.3.0"))
+    with Copy("0.3.0", stubborn=True) as running:
+        startup.write_runtime(home / "0.3.0", running.port, "0.3.0")
+        with pytest.raises(installer.InstallRefused) as refused:
+            installer.install(make_package(tmp_path / "v4", "0.4.0"))
+        assert running.asked == 1, "it refused without asking"
     assert "running" in refused.value.message.lower()
     assert not (home / "0.4.0").exists(), "nothing was copied"
+
+
+def test_it_never_names_a_window_he_cannot_see(place, tmp_path, without_the_wait):
+    """The whole defect."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "v3", "0.3.0"))
+    with Copy("0.3.0", stubborn=True) as running:
+        startup.write_runtime(home / "0.3.0", running.port, "0.3.0")
+        with pytest.raises(installer.InstallRefused) as refused:
+            installer.install(make_package(tmp_path / "v4", "0.4.0"))
+    # Without the folder it names, which is a pytest temporary directory named
+    # after this very test and so contains the word by accident.
+    said = refused.value.message.replace(str(home), "")
+    assert "window" not in said.lower()
+
+
+def test_what_it_asks_him_to_do_is_run_the_installer_again(place, tmp_path,
+                                                           without_the_wait):
+    """Not the Desktop icon, which is the launcher's answer and not this one.
+    He got here by unzipping a package and double-clicking the installer."""
+    _, home, _ = place
+    installer.install(make_package(tmp_path / "v3", "0.3.0"))
+    with Copy("0.3.0", stubborn=True) as running:
+        startup.write_runtime(home / "0.3.0", running.port, "0.3.0")
+        with pytest.raises(installer.InstallRefused) as refused:
+            installer.install(make_package(tmp_path / "v4", "0.4.0"))
+    said = refused.value.message
+    assert installer.INSTALLER_NAME in said
+    lower = said.lower()
+    assert lower.index("asked it to close") < lower.index("restart")
+    assert lower.index("restart") < lower.index("task manager")
+    last = [line for line in said.splitlines() if line.strip()][-1]
+    assert "task" in last.lower()
 
 
 def test_a_stale_runtime_file_does_not_block_an_update(place, tmp_path, monkeypatch):

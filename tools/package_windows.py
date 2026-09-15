@@ -753,11 +753,10 @@ def readme_text() -> str:
         "\n"
         "Double-click the Roy R. Fisher icon on your Desktop.\n"
         "\n"
-        "Your browser opens by itself. Leave the black window open while you\n"
-        "work. " + STOP_INSTRUCTION + "\n"
+        "Your browser opens by itself. " + STOP_INSTRUCTION + "\n"
         "\n"
-        "The app picks a fresh address each time it starts, so open it from the\n"
-        "black window rather than from a bookmark.\n"
+        "The app picks a fresh address each time it starts, so start it from\n"
+        "that icon rather than from a bookmark.\n"
         "\n"
         "The version you are running is shown at the top right of every screen.\n"
         "When a newer one is available, that is where it says so. Clicking it\n"
@@ -830,10 +829,11 @@ def readme_text() -> str:
         "finished. Nothing of yours is affected either way.\n"
         "\n"
         "Only one version runs at a time. If a copy is already open when you\n"
-        "start this one, it closes that copy for you first and says so on the\n"
-        "loading screen. There is nothing for you to close.\n"
+        "start this one, or when you install, it closes that copy for you first\n"
+        "and says so. There is nothing for you to close.\n"
         "\n"
-        "The black window says what happened. Send Spenser a photo of it.\n")
+        "If it will not start, a message box says what happened. Send Spenser\n"
+        "a photo of it.\n")
 
 
 def main() -> int:

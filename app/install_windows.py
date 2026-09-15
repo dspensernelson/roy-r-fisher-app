@@ -22,8 +22,14 @@ The previous version survives. Versions install side by side under one parent
 and the old one is never overwritten, so a version that fails is undone by
 starting the previous one rather than by repairing anything.
 
-It refuses rather than half-finishing. A running app, a damaged package, or a
-destination it cannot write to all stop it before anything is copied.
+It refuses rather than half-finishing. A damaged package or a destination it
+cannot write to stops it before anything is copied.
+
+A running copy is stopped, not refused. Changed 2026-09-15. Refusing meant
+telling Mark to close a window, and the app has had none since 0.6.5, so he
+could not see the copy he was being asked to close and Task Manager was his
+only way out. The copy is asked to stop over the app's own `Close the app`
+route, the same one the Settings button and the launcher use.
 """
 import os
 import shutil
@@ -45,6 +51,11 @@ PRODUCT = "Roy R. Fisher"
 # before it is the way back; a third is slack for the case where he notices a
 # problem a version late. Older than that is disk he cannot use.
 KEEP_VERSIONS = 3
+
+# What Mark double-clicks to get here. Named so the message at the end can
+# send him back to the thing he actually used, rather than to the Desktop icon,
+# which is the launcher's answer and not this one.
+INSTALLER_NAME = "Install or update Roy R. Fisher.bat"
 
 SHORTCUT_NAME = "Roy R. Fisher.lnk"
 FALLBACK_NAME = "Roy R. Fisher.bat"
@@ -116,38 +127,64 @@ def version_folders(home: Path) -> list:
                   reverse=True)
 
 
-# ------------------------------------------------------- refusing early ----
+# --------------------------------------- stopping what is running ---------
+def copies_running(home: Path) -> list:
+    """Every installed version answering right now, as (folder, version, port).
+
+    Asks each installed version the same question the launcher asks, through
+    the one function that owns it: is something answering on the port this
+    folder recorded, and is it us. A folder with a stale runtime.json answers
+    nothing and is not a reason to stop.
+    """
+    found = []
+    for folder in version_folders(home):
+        alive = startup.answering_at(folder)
+        if alive:
+            found.append((folder, alive[0], alive[1]))
+    return found
+
+
 def something_running(home: Path) -> str:
     """The version currently serving out of one of these folders, or empty.
-
-    Asks each installed version the same question the launcher asks: is
-    something answering on the port this folder recorded, and is it us. A
-    folder with a stale runtime.json answers nothing and is not a reason to
-    stop.
 
     Public because the update handoff waits on exactly this condition. It used
     to be private and the waiting code reached in for it, which meant the rule
     the installer enforces and the rule the waiting obeyed were the same line
     read two ways.
     """
-    for folder in version_folders(home):
-        recorded = startup.read_runtime(folder)
-        port = recorded.get("port")
-        if not isinstance(port, int):
-            continue
-        answering = startup.ask_version(port)
-        if answering:
-            return answering
+    for _folder, version, _port in copies_running(home):
+        return version
     return ""
 
 
-def _refuse_if_anything_is_running(home: Path) -> None:
-    """No copying over a version that is serving."""
-    answering = something_running(home)
-    if answering:
-        raise InstallRefused(
-            "Roy R. Fisher %s is running.\n"
-            "Close its window, then run this again." % answering)
+def _stop_anything_running(home: Path, say=None) -> None:
+    """Stop the copy that is serving, rather than naming a window.
+
+    Until 0.7.2 this refused: "Roy R. Fisher 0.7.0 is running. Close its
+    window, then run this again." There has been no window since 0.6.5, so that
+    is an instruction nobody can follow, and Mark's only way out was Task
+    Manager. Spenser, 2026-09-15: *"We need something that kills it because I
+    can't actually see that 0.7.0 is running anywhere."*
+
+    Stopping it is safe and is what he asked for. Somebody running the
+    installer is trying to use the app, and the app writes every change as it
+    is made, so a copy that stops loses nothing.
+
+    It is stopped through `startup.stop_the_running_copies`, which is the route
+    behind the Settings screen's `Close the app` button and the one the
+    launcher was given on 0.7.1. Not a second way of stopping the app invented
+    here: this project's recorded, repeating defect is a behaviour written out
+    a second time instead of read from the place that owns it.
+    """
+    copies = copies_running(home)
+    if not copies:
+        return
+    try:
+        startup.stop_the_running_copies(
+            copies, say=say,
+            next_step='double-click "%s" again' % INSTALLER_NAME)
+    except startup.StartupRefused as exc:
+        raise InstallRefused(exc.message)
 
 
 def _check_package(source: Path) -> str:
@@ -381,15 +418,20 @@ def _make_shortcut(target_launcher: Path, desktop: Path) -> str:
 
 
 # ------------------------------------------------------------- doing it ---
-def install(source: Path = None) -> dict:
-    """Install or update, from the package this file is sitting in."""
+def install(source: Path = None, say=None) -> dict:
+    """Install or update, from the package this file is sitting in.
+
+    `say` is how this reaches the console Mark is looking at. Stopping a
+    running copy takes seconds in which nothing else happens, and silence
+    reads as a hang.
+    """
     # The whole unzipped folder, which is one level above `program/`, because
     # the launcher, the readme and the practice jobs all have to travel too.
     source = Path(source) if source else HERE.parents[1]
     version = _check_package(source)
 
     home = install_home()
-    _refuse_if_anything_is_running(home)
+    _stop_anything_running(home, say=say)
     try:
         home.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -402,6 +444,8 @@ def install(source: Path = None) -> dict:
     target = home / version
     updating = target.name in before or bool(before)
 
+    if say:
+        say("Installing version %s." % version)
     try:
         _copy_version(source, target)
     except OSError as exc:
@@ -427,7 +471,7 @@ def main() -> int:
     print("Roy R. Fisher")
     print()
     try:
-        done = install()
+        done = install(say=print)
     except InstallRefused as exc:
         print(exc.message)
         print()

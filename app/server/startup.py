@@ -315,13 +315,25 @@ def wait_until_it_stops(port: int, version: str, timeout: float = STOP_TIMEOUT,
     return False
 
 
-def would_not_stop(folder: Path, version: str, port: int) -> str:
+# What to do after the restart, when nothing else has worked. The launcher's
+# answer, and the default, because that is where this message was born.
+BACK_TO_THE_APP = "double-click the Roy R. Fisher icon again"
+
+
+def would_not_stop(folder: Path, version: str, port: int,
+                   next_step: str = None) -> str:
     """What to say when a copy will not go, and what he can do about it.
 
     Everything this copy could do has already been done by the time this is
     read, and the message says so before it asks him for anything. Task Manager
     is named last, after the thing that always works, because finding a process
     in a list is not something to ask an appraiser to do first.
+
+    `next_step` is the one line that differs between the two places this is
+    read. Somebody who double-clicked the icon is sent back to the icon;
+    somebody who unzipped a package and ran the installer is sent back to the
+    installer. Everything else is the same message, in one place, rather than
+    two messages that drift.
     """
     return (
         "Roy R. Fisher %s is still running and would not stop.\n"
@@ -330,20 +342,21 @@ def would_not_stop(folder: Path, version: str, port: int) -> str:
         "  Port:   %d\n"
         "\n"
         "This copy asked it to close and then waited %d seconds. It is still\n"
-        "answering, so starting a second copy now would have two of them\n"
-        "writing the same files.\n"
+        "answering, so nothing was changed.\n"
         "\n"
-        "Restart the computer, then double-click the Roy R. Fisher icon again.\n"
+        "Restart the computer, then\n"
+        "%s.\n"
         "\n"
         "If you would rather not restart: hold Control, Shift and Escape\n"
         "together to open Task Manager, find pythonw.exe in the list, and\n"
         "choose End task."
         % (version or "(unknown version)", Path(folder), int(port),
-           int(STOP_TIMEOUT)))
+           int(STOP_TIMEOUT), next_step or BACK_TO_THE_APP))
 
 
 def stop_the_running_copies(copies, say=None, timeout: float = STOP_TIMEOUT,
-                            sleep=time.sleep, now=time.monotonic) -> None:
+                            sleep=time.sleep, now=time.monotonic,
+                            next_step: str = None) -> None:
     """Stop every copy that is running, so this one can take over.
 
     Raises `StartupRefused` only once asking has been tried and has not worked,
@@ -353,6 +366,9 @@ def stop_the_running_copies(copies, say=None, timeout: float = STOP_TIMEOUT,
     `say` is how this reaches the screen. Stopping the old copy takes a few
     seconds in which nothing else is happening, and silence at the very first
     click reads as the click having failed.
+
+    `next_step` is passed through to the message, because the installer calls
+    this too and it got here by a different route. See `would_not_stop`.
     """
     for folder, version, port in copies:
         if say:
@@ -362,7 +378,8 @@ def stop_the_running_copies(copies, say=None, timeout: float = STOP_TIMEOUT,
             say("Waiting for it to close.")
         if not wait_until_it_stops(port, version, timeout=timeout,
                                    sleep=sleep, now=now):
-            raise StartupRefused(would_not_stop(folder, version, port))
+            raise StartupRefused(
+                would_not_stop(folder, version, port, next_step))
         if say:
             say("It has closed.")
 
@@ -387,8 +404,10 @@ def wait_until_answering(port: int, version: str, timeout: float = START_TIMEOUT
 def failure_report(root: Path, port: int, version: str) -> str:
     """What went wrong, what was tried, and what to do about it.
 
-    Printed instead of a traceback, and the `.bat` pauses afterwards so the
-    window stays open long enough to read it.
+    Printed instead of a traceback. It reaches Mark as a dialog box, because
+    `tell.problem` finds no console to print to, so it may not name a window:
+    it used to say "Close this window and try again", and there has been no
+    window since 0.6.5.
     """
     return (
         "Roy R. Fisher %s did not finish starting.\n"
@@ -397,6 +416,6 @@ def failure_report(root: Path, port: int, version: str) -> str:
         "  Port:   %d\n"
         "  Waited: %d seconds for the app to answer\n"
         "\n"
-        "Close this window and try again. If it happens twice, send Spenser\n"
-        "this whole window and do not delete the folder."
+        "Start Roy R. Fisher again. If it happens twice, send Spenser this\n"
+        "message and do not delete the folder."
         % (version or "(unknown version)", Path(root), int(port), int(START_TIMEOUT)))

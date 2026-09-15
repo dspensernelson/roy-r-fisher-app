@@ -78,6 +78,23 @@ def test_he_is_not_pointed_at_a_bookmark():
     assert "rather than from a bookmark" in PACKAGER
 
 
+def test_the_packaged_readme_names_no_window_he_does_not_have():
+    """The same defect as the installer's, in the first thing he reads.
+
+    Three sentences still told him to leave the black window open, to open the
+    app from it, and to photograph it. There has been no window since 0.6.5 and
+    a failure now arrives as a message box.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import package_windows                                  # noqa: E402
+
+    # Minus the operating system's own name, which the SmartScreen paragraph
+    # has to be able to say.
+    readme = package_windows.readme_text().lower().replace("windows", "")
+    assert "black window" not in readme
+    assert "window" not in readme, "nothing on his screen is called a window"
+
+
 # --- a quiet window -------------------------------------------------------
 def test_routine_server_chatter_is_off():
     assert 'log_level="warning"' in RUN_APP

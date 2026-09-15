@@ -729,6 +729,36 @@ window that has not existed since 0.6.5.
   **every build that is handed over gets its own number**, and a number that
   has been built once is never built again.
 
+## Decisions on record (2026-09-15, Spenser, in chat)
+
+Made after the same fault was found in the other door. 0.7.1 fixed the
+launcher; the installer still refused, with *"Roy R. Fisher 0.7.0 is running.
+Close its window, then run this again."* Mark unzips a package and runs the
+installer by hand, so nothing ever asks the running copy to close, and there
+is no window to close. Spenser: *"We need something that kills it because I
+can't actually see that 0.7.0 is running anywhere."*
+
+- **Stop it automatically, in every door.** Somebody who double-clicks the
+  installer is trying to use the app, and the app writes every change as it is
+  made, so a copy that is stopped loses nothing. The installer now asks the
+  running copy to stop over the same `Close the app` route the Settings button
+  and the launcher already use, polls until it really stops answering, says
+  each step on the console, and only then copies. It refuses only when the copy
+  will not go, and that message says what was tried before it asks for
+  anything.
+
+- **One message, one place, with the last line as the variable.** The launcher
+  sends him back to the Desktop icon and the installer sends him back to the
+  installer, so `startup.would_not_stop` takes the next step as an argument
+  rather than being written out twice. Copying it would have been the same
+  defect this project has already recorded five times.
+
+- **Nothing on his screen is called a window.** Three more messages still named
+  one: the launcher's failure report, which reaches him as a message box; the
+  update's give-up line; and the packaged README, which told him to leave the
+  black window open, to start the app from it, and to photograph it. All fixed,
+  and a test now reads the README and refuses the word.
+
 ## The punch list
 
 It lives in `docs/PUNCHLIST.md`. It is a work list, and this file is not one:

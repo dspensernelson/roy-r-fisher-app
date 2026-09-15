@@ -22,6 +22,9 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 - [x] Make the launcher say what killed it instead of dying silently
 - [x] Prove an update Spenser can take himself, end to end
 - [ ] Starting the app must open one tab, not two
+- [ ] An update must not leave the old version's tabs behind: three were open after one
+- [ ] The widget on the photographs screen must feel right-aligned, not left-aligned
+- [ ] Everything on the photographs screen must be readable the way it is at 90 per cent
 - [ ] Check now must offer the update there and then, not point at another button
 - [ ] The update box must fill the width, not sit in a narrow box on the left
 - [ ] Run the 28 by-hand checks on Windows

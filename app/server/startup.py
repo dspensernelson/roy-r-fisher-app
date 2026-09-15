@@ -37,6 +37,7 @@ import json
 import os
 import socket
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -82,6 +83,52 @@ CLOSE_PATH = "/api/close"
 # seconds in a case that is already going wrong. Giving up too early would call
 # a working close a failure and send him to Task Manager for nothing.
 STOP_TIMEOUT = 40.0
+
+
+# ------------------------------------------------- the loading page's hand ---
+# How the loading page says it got here, so the launcher opens one tab and not
+# two.
+#
+# The page already asks this app whether it is up, every half second, from a
+# file on disk. That asking is now the message: the route below is hit only by
+# that page, so the app hearing it is proof the page reached it and is about to
+# move itself over. Nothing is sent back that the page reads; the answer is
+# opaque to it, and arriving at all is the whole content.
+#
+# An event in this process rather than a second endpoint or a file, because the
+# launcher thread that decides whether to open a browser is a thread of the
+# server process. `uvicorn.run` imports `main` here, so `main` and `run_app`
+# hold this same module and this same flag.
+#
+# It is one way only, and deliberately. Set means the page spoke, which can
+# only be true. Clear means nothing has been heard, which covers the page being
+# blocked, the browser being slow, and there being no page at all, and every
+# one of those has the same right answer: open the app. The failure that costs
+# nothing is a spare tab. The failure that cost an evening on 2026-09-14 is an
+# app running with nobody looking at it.
+LOADING_PAGE_PATH = "/api/loading-page"
+
+_loading_page = threading.Event()
+
+
+def the_loading_page_arrived() -> None:
+    """Called by the route. The page reached us and is about to hand over."""
+    _loading_page.set()
+
+
+def wait_for_the_loading_page(seconds: float) -> bool:
+    """True if the page has spoken, waiting up to `seconds` for it to.
+
+    False is not a failure and never says anything went wrong. It says nobody
+    has told us anything, and the caller's answer to that is to open the app
+    itself.
+    """
+    return _loading_page.wait(float(seconds))
+
+
+def forget_the_loading_page() -> None:
+    """Only the tests need this. The flag lasts exactly one run of the app."""
+    _loading_page.clear()
 
 
 class StartupRefused(Exception):

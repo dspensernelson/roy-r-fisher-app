@@ -186,18 +186,25 @@ def test_the_record_of_a_running_app_is_still_written_after_the_check():
     assert source.index("packaging.verify(ROOT)") < source.index("startup.write_runtime(")
 
 
-# Superseded on 2026-09-14 by what happened on the Windows machine. This used
-# to require that the browser was NOT opened on the app when the loading page
-# had been drawn, so as to avoid a second tab. On that machine Edge blocked the
-# page from reaching the app, the handover never happened, and the app was left
-# running with nobody looking at it. A stale second tab is a small cost. A
-# person sitting in front of a false sentence is not.
-def test_the_app_is_opened_even_when_the_loading_page_was_drawn():
+# Rewritten twice, and both times by his machine.
+#
+# It first required that the browser was NOT opened when the loading page had
+# been drawn, so as to avoid a second tab. On 2026-09-14 Edge blocked that page
+# from reaching the app, the handover never happened, and the app was left
+# running with nobody looking at it, so the open was made unconditional and
+# this test required that.
+#
+# Now the page says when it arrives, so the launcher can tell the two apart.
+# What is required here is the half that must never be lost: nothing arriving
+# still opens the app. `test_one_tab_not_two.py` holds the rest.
+def test_the_app_is_opened_when_the_loading_page_never_reached_it():
     source = (APP / "run_app.py").read_text(encoding="utf-8")
     body = source[source.index("def when_up():"):source.index("def tidy_cache():")]
     assert "webbrowser.open(" in body, "nothing opens the app once it answers"
-    assert "if not showing" not in body, \
-        "the browser is still skipped when the loading page was drawn"
+    opens = body.index("webbrowser.open(")
+    guard = body.rindex("if ", 0, opens)
+    assert "not" in body[guard:opens], \
+        "the browser is opened on a message, rather than on the lack of one"
 
 
 def test_the_splash_ships_inside_the_package():

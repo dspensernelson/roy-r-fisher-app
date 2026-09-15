@@ -163,6 +163,19 @@ describe("Close the app, in the nav bar", () => {
     expect(screen.getByRole("heading", { name: JOB })).toBeInTheDocument();
   });
 
+  // Spenser, 2026-09-15: "that is a weird place for that comment". Under the
+  // question sat "Closing the browser tab does not stop it. This does.", which
+  // explains why the button exists to somebody who has already pressed it.
+  it("asks the question and says nothing else", async () => {
+    await onJobs();
+    await userEvent.click(screen.getByRole("button", { name: "Close the app" }));
+    const asked = await screen.findByRole("dialog", { name: "Close the app?" });
+    expect(asked.textContent).not.toMatch(/browser tab/i);
+    expect(within(asked).getByRole("heading", { name: "Close the app?" })).toBeInTheDocument();
+    expect(within(asked).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(within(asked).getByRole("button", { name: "Close the app" })).toBeInTheDocument();
+  });
+
   it("does nothing on Cancel", async () => {
     const stop = vi.spyOn(api, "closeTheApp").mockResolvedValue({});
     await onJobs();

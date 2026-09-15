@@ -208,8 +208,12 @@ export default function App() {
         </div>
       ) : (
         <div className="sheet" role="dialog" aria-modal="true" aria-label="Close the app?">
+          {/* The question and nothing else. It used to carry a line saying
+              that closing the browser tab does not stop the app and this
+              does, which explains why the button exists to somebody whose
+              finger is already on it. Spenser, 2026-09-15: "that is a weird
+              place for that comment". */}
           <h2>Close the app?</h2>
-          <p className="fine">Closing the browser tab does not stop it. This does.</p>
           <div className="sheet-acts">
             <button className="linky" onClick={() => setAskClose(false)}>Cancel</button>
             <button className="button final" onClick={async () => {

@@ -237,6 +237,24 @@ def create_app() -> FastAPI:
         # time, one place that knows it.
         return {"version": packaging.version_of(PROGRAM)}
 
+    @app.get(startup.LOADING_PAGE_PATH)
+    def loading_page_arrived():
+        """The loading page saying it got here, so only one tab is opened.
+
+        The path is read from `startup` rather than written out here, the same
+        way the close route is, because the launcher and the page both have to
+        mean the same path and two spellings of one route is how a value
+        drifts and then quietly lies.
+
+        The page asks this from a file on disk, so it cannot read the answer:
+        the request is opaque to it and this body is never seen. Reaching us at
+        all is the message. Nothing here may depend on anything in the request,
+        because a browser that blocks the page blocks it before this is called
+        and silence is the only other thing we are told.
+        """
+        startup.the_loading_page_arrived()
+        return {"seen": True}
+
     # --- updating itself ---------------------------------------------------
     # Approved 2026-08-27: Mark presses a button and the app updates itself.
     # Not automatic, not silent, not on a timer. Everything below reports; the

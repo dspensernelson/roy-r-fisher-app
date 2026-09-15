@@ -44,6 +44,21 @@ ROOT = PROGRAM
 # consumes it automatically and nothing rolls back on its own.
 GOOD_AFTER_SECONDS = 20.0
 
+# How long the app waits, after it is up, for the loading page to say it got
+# there, before it opens a tab of its own.
+#
+# The page asks every half second, so when it is not blocked it has almost
+# always spoken before the app has finished answering, and this wait ends the
+# moment it does. Nobody sits through it in the ordinary case.
+#
+# It is waited out in two cases and it is right to be short in both. One is the
+# blocked page, where five seconds is added to a start he is already watching a
+# bar for, and at the end of it the app is in front of him. The other is a
+# browser that took longer to draw the page than the app took to start, which
+# is indistinguishable from blocked and costs one spare tab. Waiting longer
+# would trade his time for that tab, and his time is worth more.
+HANDOVER_SECONDS = 5.0
+
 
 def _record_last_good(version: str) -> None:
     """Written from the server process, never from a launcher that has exited.
@@ -104,16 +119,19 @@ def _start() -> int:
 
     # 3. Say the click landed, before the slow part, and say which slow part it
     #    is. The page replaces itself with the app the moment the app answers,
-    #    when the browser lets it. Whether it managed to is deliberately not
-    #    recorded: the answer is not knowable from here, and step 6 below no
-    #    longer asks.
+    #    when the browser lets it, and tells the app on its way past so that
+    #    step 6 below does not open a second tab beside it.
+    #
+    #    What is recorded here is only whether the browser was given the page
+    #    at all. False means there is nobody who could ever hand over, so step
+    #    6 opens the app without waiting for a message that cannot come.
     saying = None
     patience = None
     if running:
         saying = ("Closing the copy that is already open, then starting "
                   "version %s." % version)
         patience = int(splash.GIVE_UP_SECONDS + startup.STOP_TIMEOUT)
-    splash.show(port, version, saying=saying, patience=patience)
+    showing = splash.show(port, version, saying=saying, patience=patience)
 
     # 4. Stop what is running, then carry on. `tell.say` reaches the console on
     #    the Mac; on Mark's machine there is none, and the loading page above is
@@ -152,19 +170,25 @@ def _start() -> int:
     #    as this version. 7. Then start the clock on the last-good record.
     def when_up():
         if startup.wait_until_answering(port, version):
-            # Always. This used to be skipped when the loading page had been
-            # drawn, on the reasoning that the page was already watching this
-            # port and would move itself over, so opening here would leave a
-            # second tab. On Mark's Windows machine on 2026-09-14 it did not
-            # move itself over: a page loaded from a file on disk may be barred
-            # from asking a server on the same computer anything, and Edge bars
-            # it. The app was running and nobody was looking at it.
+            # One tab, not two.
             #
-            # From here there is no way to find out whether the page managed
-            # the handover, so the browser is opened either way. The cost when
-            # the handover did work is one stale tab. The cost when it did not
-            # is the whole app.
-            webbrowser.open("http://%s:%d" % (startup.HOST, port))
+            # This was unconditional from 2026-09-14, because there was no way
+            # from here to find out whether the loading page had managed to
+            # hand over. On Mark's Windows machine it had not: a page loaded
+            # from a file on disk may be barred from asking a server on the
+            # same computer anything, and Edge barred it, so the app was
+            # running and nobody was looking at it. Opening every time cost a
+            # spare tab whenever the page did work, and Spenser has watched it
+            # work, so both happen.
+            #
+            # There is a way now. The page announces itself on its own route on
+            # the way past, so the silence that used to mean "no idea" means
+            # "nothing reached us", and that is exactly the case this tab is
+            # for. A page that is blocked cannot tell anybody anything, which
+            # is why the absence of a message, and not any message, is what
+            # opens the browser here.
+            if not (showing and startup.wait_for_the_loading_page(HANDOVER_SECONDS)):
+                webbrowser.open("http://%s:%d" % (startup.HOST, port))
             threading.Timer(GOOD_AFTER_SECONDS, _record_last_good, (version,)).start()
         else:
             # 8. Plain words, not a traceback. The server thread is still up,

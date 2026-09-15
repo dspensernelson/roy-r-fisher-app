@@ -28,6 +28,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import startup            # standard library only, same as this module
+
 # How long the page waits before it stops saying "starting" and starts
 # pointing somewhere else.
 #
@@ -88,6 +90,11 @@ def page(port: int, version: str, saying: str = None, patience: int = None) -> s
     of it would point him at the copy being closed.
     """
     url = "http://127.0.0.1:%d/" % int(port)
+    # Two addresses, and the difference is the point. The page asks on the
+    # first, which is the route whose only caller is this page, so the app
+    # hearing it knows the page is not blocked and does not open a tab of its
+    # own. Then the page goes to the second, which is the app.
+    ask = url.rstrip("/") + startup.LOADING_PAGE_PATH
     saying = saying or ("Starting version %s. This takes a few seconds."
                         % (version or ""))
     # Tokens rather than per-cent formatting. This page is mostly CSS, and CSS
@@ -95,6 +102,7 @@ def page(port: int, version: str, saying: str = None, patience: int = None) -> s
     # trap the rollback batch file carries a comment about.
     return TEMPLATE.replace("{{MARK}}", MARK) \
                    .replace("{{SAY}}", saying) \
+                   .replace("{{ASK}}", ask) \
                    .replace("{{URL}}", url) \
                    .replace("{{SECONDS}}", str(int(patience or GIVE_UP_SECONDS))) \
                    .replace("{{EVERY}}", str(LOOK_EVERY_MS)) \
@@ -150,7 +158,8 @@ TEMPLATE = """<!doctype html>
 </div>
 <script>
 (function () {
-  var url = "{{URL}}";
+  var app = "{{URL}}";
+  var ask = "{{ASK}}";
   var stop = Date.now() + {{SECONDS}} * 1000;
   var wait = {{EVERY}};
   function look() {
@@ -159,9 +168,12 @@ TEMPLATE = """<!doctype html>
     // rather than leaving the person to find the other tab by hand.
     if (Date.now() > stop) { document.body.className = "is-late"; wait = {{LATE}}; }
     // no-cors, because this page is a file on disk and the app is a server.
-    // The answer is opaque and that is fine: reaching it at all is the news.
-    fetch(url, { mode: "no-cors", cache: "no-store" })
-      .then(function () { window.location.replace(url); })
+    // The answer is opaque and that is fine: reaching it at all is the news,
+    // and it is the news at both ends. The app counts this request as the
+    // proof that this page is not blocked, and so does not open a tab of its
+    // own beside the one this page is about to become.
+    fetch(ask, { mode: "no-cors", cache: "no-store" })
+      .then(function () { window.location.replace(app); })
       .catch(function () { setTimeout(look, wait); });
   }
   look();

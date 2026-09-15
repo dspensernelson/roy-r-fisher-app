@@ -151,36 +151,81 @@ describe("Send the log to Spenser", () => {
 // the setting screen still look like 5 panesl down instead of 1 | 2 / 3 | 4 /
 // 5 | 6"*.
 describe("the cards sit in two columns", () => {
-  it("puts every card in one of two columns, key card first", async () => {
+  it("puts every card in one of two columns, in the order he chose", async () => {
+    // Superseded on 2026-09-15 by the approved design. This test used to
+    // assert five cards with the key card first. `Close the app` left the
+    // screen for the nav bar, which is F13, and the owner picked the order
+    // of the four that remain card by card. An earlier review argued the key
+    // belongs first. He decided otherwise and it is settled.
     settings();
-    await screen.findByRole("heading", { name: "Writing captions and reading letters" });
+    await screen.findByRole("heading", { name: "Your Anthropic key" });
 
     const cols = document.querySelectorAll(".settings-grid > .settings-col");
     expect(cols).toHaveLength(2);
     const cards = document.querySelectorAll(".setting");
-    expect(cards.length).toBe(5);
+    expect(cards.length).toBe(4);
     [...cards].forEach((c) => expect(c.parentElement).toHaveClass("settings-col"));
 
-    // The only card that changes what the app can do goes first. It sat
-    // third, under two things he sets once and never touches.
     const heads = [...cols].map((c) => [...c.querySelectorAll("h2")].map((h) => h.textContent));
-    expect(heads[0][0]).toBe("Writing captions and reading letters");
-    expect(heads[0]).toHaveLength(3);
-    expect(heads[1]).toHaveLength(2);
+    expect(heads[0]).toEqual(["The version you are running", "Where your jobs live"]);
+    expect(heads[1]).toEqual(["What the app has done", "Your Anthropic key"]);
   });
 
-  it("folds away the two paragraphs he reads on every visit", async () => {
-    // "Things should be hidden more too."
+  it("keeps closing the app off this screen entirely", async () => {
+    // F13: no belt and suspenders. It lives in the nav bar now.
     settings();
-    expect(await screen.findByRole("button", { name: "Where the key is kept" }))
-      .toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Your Anthropic key" });
+    expect(screen.queryByRole("button", { name: "Close the app" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Closing the app" })).toBeNull();
+  });
+
+  it("folds away where the key is kept, on the button row", async () => {
+    // Superseded on 2026-09-15 by the approved design. It used to fold away
+    // two paragraphs. `What is in it` is deleted: it described the log, and
+    // the button beside it shows the log, so the thing beat the description.
+    settings();
+    const link = await screen.findByRole("button", { name: "Where the key is kept" });
     expect(screen.queryByText(/kept in a file in your own user folder/)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Where the key is kept" }));
+    // On the button row, pushed right, not on the heading line.
+    expect(link.parentElement).toHaveClass("setting-actions");
+    await userEvent.click(link);
     expect(screen.getByText(/kept in a file in your own user folder/)).toBeInTheDocument();
 
-    expect(screen.queryByText(/writes down what it does/)).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "What is in it" }));
-    expect(screen.getByText(/writes down what it does/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "What is in it" })).toBeNull();
+  });
+
+  it("says nothing on the key card about what a key is for", async () => {
+    // The sentence told him the key costs money. That is said where the money
+    // is spent, on the generate window, at the moment he agrees to the figure.
+    settings();
+    await screen.findByRole("heading", { name: "Your Anthropic key" });
+    expect(screen.queryByText(/Two things need a key from Anthropic/)).toBeNull();
+    // What he must not lose: the sentence under the title, and the version.
+    expect(screen.getByText(/Set this up once/)).toBeInTheDocument();
+    expect(screen.getByText(/version 0.7.0/)).toBeInTheDocument();
+  });
+
+  it("makes the two jobs-folder controls buttons, and the right two colours", async () => {
+    // Spenser, 2026-09-15: *"lets make the 'change jobs' and start 'setup
+    // over' buttons instead of linksl"*. The colour law of 2026-09-08 decides
+    // which is which: changing the folder can be pointed somewhere else after,
+    // so it is filled blue. Starting over cannot be taken back and is not why
+    // he came, so it is the plain button with red text.
+    settings();
+    const change = await screen.findByRole("button", { name: "Change jobs folder" });
+    expect(change).toHaveClass("button", "secondary");
+    const over = screen.getByRole("button", { name: "Start setup over" });
+    expect(over).toHaveClass("button", "final");
+  });
+
+  it("makes Show what will be sent a button, knowingly bending the colour rule", async () => {
+    // Spenser, 2026-09-15: *"Make this a button like Send the log"*. When
+    // sending fails it is the only way the log reaches anybody, and an escape
+    // hatch dressed as small print is a fault this app has paid for.
+    settings();
+    const show = await screen.findByRole("button", { name: "Show what will be sent" });
+    expect(show).toHaveClass("button", "secondary");
+    expect(show).not.toHaveClass("linky");
   });
 
   it("says in his words that this computer forces the jobs folder", async () => {

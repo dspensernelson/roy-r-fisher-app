@@ -139,6 +139,15 @@ def test_the_two_settings_do_not_look_like_each_other():
 SETTINGS = WEB / "screens" / "Settings.jsx"
 
 
+def without_comments(source):
+    """What is on the screen, with the notes about why stripped out. A phrase
+    deleted from a screen usually survives in the comment explaining that it
+    was deleted, and a test that cannot tell the two apart fails on the
+    record rather than on the screen."""
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+    return re.sub(r"^\s*//.*$", "", source, flags=re.M)
+
+
 def test_settings_is_two_columns():
     grid = block(".settings-grid")
     got = re.search(r"grid-template-columns:\s*([^;]+);", grid)
@@ -159,11 +168,20 @@ def test_the_settings_screen_renders_that_grid():
     assert screen.count('"settings-col"') == 2, "one element per column"
 
 
-def test_the_key_card_is_the_first_card_on_the_screen():
-    """It is the only card that changes what the app can do. It sat third,
-    under two things he sets once and never touches."""
+def test_the_cards_sit_in_the_order_he_chose():
+    """Superseded on 2026-09-15 by the approved design. This test used to say
+    the key card comes first, because it is the only card that changes what
+    the app can do. He picked the order card by card on the mockup and put the
+    key card last. An earlier review argued for first. He decided otherwise
+    and that is settled. `Close the app` is not here at all: F13 moved it into
+    the nav bar."""
     heads = re.findall(r"<h2>([^<]+)</h2>", SETTINGS.read_text())
-    assert heads[0] == "Writing captions and reading letters", heads
+    assert heads == [
+        "The version you are running",   # left column
+        "Where your jobs live",
+        "What the app has done",         # right column
+        "Your Anthropic key",
+    ], heads
 
 
 def test_no_setting_name_from_the_code_shows_through():
@@ -174,14 +192,19 @@ def test_no_setting_name_from_the_code_shows_through():
     assert "overrides the saved choice" not in screen
 
 
-def test_the_two_paragraphs_of_reassurance_are_folded_away():
-    """*"Things should be hidden more too."* Where the key file is kept, and
-    the paragraph about the app writing a log, are read once and then read
-    again on every visit forever."""
+def test_the_reassurance_paragraph_is_folded_away():
+    """Superseded on 2026-09-15 by the approved design. It used to fold two
+    paragraphs away. *"Things should be hidden more too."* still holds for
+    where the key file is kept. The other one, `What is in it`, is deleted
+    rather than folded: Spenser, 2026-09-15, *"what does this actually
+    show?"*. It described the log, and the button beside it shows the log, so
+    the thing beat the description of the thing."""
     screen = SETTINGS.read_text()
     assert "Where the key is kept" in screen
-    assert "What is in it" in screen
-    assert "showsKeyHome" in screen and "showsLogWhat" in screen
+    assert "showsKeyHome" in screen
+    # Off the screen, not merely out of the comment that records why.
+    assert "What is in it" not in without_comments(screen)
+    assert "showsLogWhat" not in screen
 
 
 # The widget on the photographs screen, seen on Windows 2026-09-15: *"Look how

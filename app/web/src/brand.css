@@ -85,6 +85,34 @@ body {
 .bar-inner .bar-right { margin-left: auto; }
 .bar-inner .bar-right.here { opacity: 1; text-decoration: underline; }
 
+/* F13, approved 2026-09-03, built 2026-09-15. `Close the app` came out of
+   Settings and into this bar, where it is one click from every screen. A
+   solid red box rather than a link, so it reads differently from `Jobs` and
+   `Settings` beside it, and it is the only filled thing in the bar. F13 names
+   #782028 as "the app's existing .button colour". It is not: that was the
+   guess that turned out wrong in every logo file. The real brand red is the
+   token, so the box wears the token. */
+.bar-inner .bar-close {
+  background: var(--brand); color: #fff; opacity: 1; font-weight: 600;
+  border-radius: 4px; padding: 3px 11px; margin-left: 14px;
+}
+.bar-inner .bar-close:hover { background: var(--brand-hover); text-decoration: none; }
+.bar-inner .bar-close:active { background: var(--brand-press); }
+.bar-inner .bar-close[disabled] { background: #5A4242; color: rgba(255,255,255,0.65); cursor: default; }
+
+/* B10 in docs/BUGS.md: the app said "Closing now", the server stopped, and the
+   tab sat for ever showing that sentence on top of a job list that looked
+   usable and was not. The words were never the problem. The problem was that
+   everything behind them still looked alive.
+   So the question and the result do not look the same. While he is being
+   asked, the screen behind is live and in colour, because Cancel puts him back
+   in it. Once he has answered, the colour is drained out of the whole app, it
+   is dimmed, and nothing in it can be clicked or focused. The red box in the
+   bar goes grey with everything else. A stopped program looks stopped. */
+#alive { transition: filter 0.18s linear, opacity 0.18s linear; }
+.shell.finished #alive { filter: grayscale(1); opacity: 0.42; pointer-events: none; }
+.shell.finished .sheet-back { background: rgba(29, 29, 31, 0.30); }
+
 /* Actions sit on the title's row, so the content he came to see starts
    straight underneath rather than below a bar of buttons. */
 .title-row { display: flex; align-items: baseline; gap: 20px; }
@@ -227,13 +255,17 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 .lamp.off { background: #EFEDE7; color: var(--ink-muted); }
 .setting-body { font-size: 14.5px; color: var(--ink); line-height: 1.55; margin: 0 0 14px; max-width: 62ch; }
 .setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
-/* `.linky` carries `margin-left: auto` so that a link floats to the right
-   of whatever row it is in. On a settings card that flung every link to
-   the far edge, away from the words it belongs to, and split `Change jobs
-   folder` and `Start setup over` to opposite ends of the same row. The
-   title row and the photographs widget already turn it off the same way. */
-.setting .linky { margin-left: 0; }
+/* Spenser, 2026-09-15: *"BLUE WORKDS INTHE LOWER RIGH!! ON FUCKING EVERTHING
+   ON THIS PAGE!!"*. No exceptions on Settings, and no modifier class anybody
+   has to remember to add. `.linky` already carries `margin-left: auto`, and
+   what fought it here was `.setting .linky { margin-left: 0 }`, deleted on
+   2026-09-15. A link added to a settings card later lands at the lower right
+   of its row without anybody tagging it. Two in one row go right together,
+   because the first one's auto margin eats the space and the second follows
+   it. Buttons are untouched: they act, so they sit left. */
 .setting-fine { font-size: 12.5px; color: var(--ink-muted); margin: 18px 0 0; max-width: 62ch; }
+/* The answer reads directly under the row that asked for it. */
+.setting-actions + .setting-fine { margin: 12px 0 0; }
 
 /* The log, on screen, exactly as it would be sent. Scrolls in its own box
    rather than pushing the rest of Settings off the page: two days of log is

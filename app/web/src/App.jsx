@@ -9,7 +9,7 @@ import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
 import UpdateStep from "./screens/UpdateStep.jsx";
 import CloseX from "./CloseX.jsx";
-import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus } from "./api.js";
+import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus, closeTheApp } from "./api.js";
 
 const TRAIL = { photos: "Photos", sections: "Sections" };
 
@@ -55,6 +55,12 @@ export default function App() {
   // background, when the app started.
   const [update, setUpdate] = useState(null);
   const [updating, setUpdating] = useState(false);
+  // F13. Closing the app is a question and then a result, and both are
+  // windows over whatever screen he is on, because the button that starts it
+  // lives in the nav bar and the nav bar is on every screen. Press it while
+  // looking at a job's photographs and it has to ask there.
+  const [askClose, setAskClose] = useState(false);
+  const [closed, setClosed] = useState(false);
 
   // Two different failures, and they used to read the same. A damaged
   // settings file is not an unreachable server, and telling Mark to restart
@@ -183,6 +189,41 @@ export default function App() {
     </div>
   );
 
+  // Built from the window values already in the stylesheet rather than as a
+  // second kind of window: the same `.sheet` the photographs screen asks its
+  // questions in.
+  const closeStep = (askClose || closed) && (
+    <div className="sheet-back"
+         onClick={(e) => { if (!closed && e.target === e.currentTarget) setAskClose(false); }}>
+      {closed ? (
+        /* No Cancel. By the time this is up the decision is made and the
+           server is gone, so there is nothing to back out to and nothing
+           left to press. B10 is answered behind it, not in these words. */
+        <div className="sheet" role="status" aria-label="Closing now">
+          <h2>Closing now.</h2>
+          <p className="fine">
+            You can close this tab. Start the app again with the Roy R. Fisher
+            icon on your Desktop.
+          </p>
+        </div>
+      ) : (
+        <div className="sheet" role="dialog" aria-modal="true" aria-label="Close the app?">
+          <h2>Close the app?</h2>
+          <p className="fine">Closing the browser tab does not stop it. This does.</p>
+          <div className="sheet-acts">
+            <button className="linky" onClick={() => setAskClose(false)}>Cancel</button>
+            <button className="button final" onClick={async () => {
+              setAskClose(false); setClosed(true);
+              try { await closeTheApp(); } catch { /* it is going away */ }
+            }}>
+              Close the app
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const resetNote = (
     <>
       {resetting && (
@@ -254,7 +295,8 @@ export default function App() {
   const toJobs = () => setView({ screen: "jobs", job: null });
 
   return (
-    <>
+    <div className={closed ? "shell finished" : "shell"}>
+      <div id="alive">
       {masthead}
       <div className="bar">
         <nav className="bar-inner">
@@ -266,6 +308,14 @@ export default function App() {
           <button className={`bar-right ${view.screen === "settings" ? "here" : ""}`}
                   onClick={() => setView({ screen: "settings", job: view.job })}>
             Settings
+          </button>
+          {/* F13.3: a solid red box, not a link, so it reads differently from
+              the crumbs and `Settings` beside it. The only filled thing in
+              the bar. Disabled once the app has actually gone, with
+              everything else. */}
+          <button className="bar-close" disabled={closed}
+                  onClick={() => setAskClose(true)}>
+            Close the app
           </button>
         </nav>
       </div>
@@ -300,6 +350,8 @@ export default function App() {
                     onUpdateChecked={refreshUpdate} />
         )}
       </div>
-    </>
+      </div>
+      {closeStep}
+    </div>
   );
 }

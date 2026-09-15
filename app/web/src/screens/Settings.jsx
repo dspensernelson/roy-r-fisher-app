@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, logSend, closeTheApp } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, logSend } from "../api.js";
 import CloseX from "../CloseX.jsx";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
@@ -22,14 +22,13 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);
-  const [closing, setClosing] = useState(false);
-  // "Things should be hidden more too." Spenser, 2026-09-04. Two
-  // paragraphs on this screen are reassurance: where the key file is
-  // kept, and what the app writes into its log. He reads both on every
-  // visit, forever. They are folded behind a link and the answer is
-  // still one click away.
+  // "Things should be hidden more too." Spenser, 2026-09-04. Where the key
+  // file is kept is reassurance he reads on every visit, forever, so it is
+  // folded behind a link on the button row and the answer is one click away.
+  // `What is in it` used to fold the same way on the log card and is gone:
+  // Spenser, 2026-09-15, *"what does this actually show?"*. It described the
+  // log, and the button beside it shows the log.
   const [showsKeyHome, setShowsKeyHome] = useState(false);
-  const [showsLogWhat, setShowsLogWhat] = useState(false);
 
   useEffect(() => {
     getSettings().then(setState)
@@ -59,303 +58,301 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
 
   const asking = !state.key_set || replacing;
 
+  // Folded away, and it reads directly under whichever button row asked for
+  // it. Lower right of that row, like every blue link on this screen.
+  const keyHome = (
+    <button className="linky" aria-expanded={showsKeyHome}
+            onClick={() => setShowsKeyHome(!showsKeyHome)}>
+      Where the key is kept
+    </button>
+  );
+  const keyHomeSaid = showsKeyHome && (
+    <p className="setting-fine">
+      It is kept in a file in your own user folder, outside this program, and it is
+      never shown on screen again or written into any job.
+    </p>
+  );
+
+  // The order is his, picked card by card on 2026-09-15 on the approved
+  // mockup. An earlier review argued the key card belongs first, because it
+  // is the only card that changes what the app can do. He decided otherwise
+  // and that is settled. Below 900px there is one column, in this same order.
+  const versionCard = (
+    <div className="setting">
+      <div className="setting-head"><h2>The version you are running</h2></div>
+      <p className="setting-body">
+        This computer is running <strong>version {version || "unknown"}</strong>.
+      </p>
+      <div className="setting-actions">
+        <button className="button secondary" disabled={looking} onClick={async () => {
+          setLooking(true); setLooked(null);
+          try {
+            const found = await checkForUpdate();
+            // The masthead holds its own copy of this answer and only ever
+            // asked once, at load. Without this it goes on saying nothing
+            // while this screen says a newer version is there.
+            if (onUpdateChecked) await onUpdateChecked();
+            setLooked(found.available
+              ? `Version ${found.available} is available. Use the Update available button at the top of the screen.`
+              : "You are on the newest version.");
+          } catch {
+            setLooked("The update service could not be reached just now. Nothing has changed.");
+          }
+          setLooking(false);
+        }}>
+          Check now
+        </button>
+        {looking && (
+          <span className="working">
+            <span className="loading-bar"><span /></span>
+            <span className="working-text">Checking...</span>
+          </span>
+        )}
+      </div>
+      {looked && <p className="setting-fine">{looked}</p>}
+    </div>
+  );
+
+  const jobsCard = (
+    <div className="setting">
+      <div className="setting-head"><h2>Where your jobs live</h2></div>
+      <p className="setting-body">
+        The app is pointed at <strong>{workspace.path}</strong>, which holds{" "}
+        {workspace.folder_count} {workspace.folder_count === 1 ? "folder" : "folders"}.
+      </p>
+      {workspace.source === "override" && (
+        <p className="setting-fine">
+          This computer is set to use this folder. Changing it here will not stick.
+        </p>
+      )}
+
+      {/* The question the action raises is asked inside the action, when he
+          clicks it, not parked on the page beside it. */}
+      {forgetting ? (
+        <>
+          <p className="setting-body">
+            Forget this jobs folder? Your jobs will not be changed. The app will ask
+            you to choose the folder again.
+          </p>
+          <div className="setting-actions">
+            <button className="button final" disabled={!!busy} onClick={async () => {
+              setBusy("Forgetting..."); setError(null);
+              try { onWorkspaceChanged(await forgetWorkspace()); }
+              catch (e) { setError(e.message); setBusy(""); setForgetting(false); }
+            }}>
+              Forget it
+            </button>
+            <button className="linky" onClick={() => setForgetting(false)}>Cancel</button>
+          </div>
+        </>
+      ) : (
+        /* Spenser, 2026-09-15: *"lets make the 'change jobs' and start 'setup
+           over' buttons instead of linksl"*. The colour law of 2026-09-08
+           decides which is which. Changing the folder does work for him and he
+           can point it somewhere else after, so it is filled blue. Starting
+           over throws away what he saved and cannot be taken back, but it is
+           not why he opened Settings, which is the plain button with red text
+           exactly. No red fill: that is for the one thing a screen is for, and
+           this screen is not for wiping his setup. */
+        <div className="setting-actions">
+          <button className="button secondary" onClick={onChangeFolder}>Change jobs folder</button>
+          <button className="button final" onClick={() => { setForgetting(true); setNote(null); }}>
+            Start setup over
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const logCard = (
+    <div className="setting">
+      <div className="setting-head"><h2>What the app has done</h2></div>
+
+      <div className="setting-actions">
+        {/* Filled blue, by the colour law of 2026-09-08. Not filled red:
+            that is for something he cannot take back that also writes into
+            a folder Mark keeps or replaces the program, and the whole app
+            carries three of those. This writes nothing of his anywhere. */}
+        <button className="button secondary" disabled={sending} onClick={async () => {
+          setSending(true); setSent(null); setLogNote(null);
+          try {
+            setSent(await logSend());
+          } catch {
+            // The one failure the server cannot word for itself, because
+            // it is the server that is missing. Still not a dead end.
+            setSent({ sent: false, message:
+              "The app's own server did not answer, so nothing was sent. Start the app "
+              + "again from the Roy R. Fisher icon, or press Show what will be sent, "
+              + "press Copy, and paste it into an email to d.spensernelson@gmail.com." });
+          }
+          setSending(false);
+        }}>
+          {sending ? "Sending..." : "Send the log to Spenser"}
+        </button>
+
+        {/* A button, and that bends the colour law of 2026-09-08 knowingly.
+            By the letter of it, showing the log on screen moves nothing and
+            writes nothing, so it is `.linky`. Spenser, 2026-09-15: *"Make
+            this a button like Send the log"*. When sending fails this is not
+            decoration; it is the only way the log reaches anybody. It is the
+            escape hatch, and an escape hatch dressed as small print is a
+            fault this app has already paid for. */}
+        <button className="button secondary" disabled={loading} onClick={async () => {
+          setLogNote(null); setLoading(true);
+          try { setLog(await logRecent()); }
+          catch (e) { setLog(null); setLogNote(e.message); }
+          setLoading(false);
+        }}>
+          Show what will be sent
+        </button>
+
+        {loading && (
+          <span className="working">
+            <span className="loading-bar"><span /></span>
+            <span className="working-text">Reading the log...</span>
+          </span>
+        )}
+      </div>
+
+      {sent && (
+        <p className={sent.sent ? "done" : "error"} style={{ whiteSpace: "pre-line" }}>
+          <CloseX onClose={() => setSent(null)} what="this message" />
+          {sent.message}
+        </p>
+      )}
+
+      {log && log.empty && (
+        <p className="setting-body" style={{ marginTop: 14 }}>
+          Nothing has been written yet. There is no log on this computer to show
+          or to send.
+        </p>
+      )}
+
+      {log && !log.empty && (
+        <>
+          <div className="setting-actions">
+            <button className="linky" onClick={async () => {
+              setLogNote(null);
+              try {
+                await navigator.clipboard.writeText(log.text);
+                setLogNote("Copied. You can paste it into an email.");
+              } catch {
+                // Never a dead end. The text is on the screen either way,
+                // so the way through is always to select it by hand.
+                setLogNote("This browser would not copy it. Select the text below "
+                           + "and press Ctrl and C.");
+              }
+            }}>
+              Copy
+            </button>
+            <button className="linky" onClick={() => { setLog(null); setLogNote(null); }}>
+              Hide it
+            </button>
+          </div>
+          <pre className="logtext">{log.text}</pre>
+        </>
+      )}
+
+      {logNote && <p className="setting-fine">{logNote}</p>}
+    </div>
+  );
+
+  // No sentence under the heading, and nobody is to put one back. What the
+  // sentence was for was telling him the key costs money. That is said where
+  // the money is actually spent, on the generate window, at the moment he
+  // agrees to the figure. Said again here it is the reassurance-on-every-visit
+  // that HOW-WE-WORK.md warns about, on a screen he sets up once.
+  const keyCard = (
+    <div className="setting">
+      <div className="setting-head">
+        <h2>Your Anthropic key</h2>
+        <span className={`lamp ${state.key_set ? "on" : "off"}`}>
+          {state.key_set ? "On" : "Off"}
+        </span>
+      </div>
+
+      {state.key_set && !replacing && (
+        <>
+          <p className="setting-body">
+            A key is saved on this computer. It ends in <strong>{state.ends_with}</strong>.
+          </p>
+          <div className="setting-actions">
+            <button className="button secondary" onClick={() => { setReplacing(true); setNote(null); }}>
+              Replace it
+            </button>
+            <button className="button final" onClick={onRemove} disabled={!!busy}>Remove it</button>
+            {keyHome}
+          </div>
+          {keyHomeSaid}
+        </>
+      )}
+
+      {asking && (
+        <>
+          <label className="field" style={{ maxWidth: 520 }}>
+            <span className="key-label">Paste your key</span>
+            <input type="password" value={typed} autoComplete="off" spellCheck="false"
+              placeholder="Paste it here" onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) onSave(); }} />
+          </label>
+          <div className="setting-actions">
+            <button className="button secondary" onClick={onSave} disabled={!typed.trim() || !!busy}>
+              Check and save
+            </button>
+            {busy && (
+              <span className="working">
+                <span className="loading-bar"><span /></span>
+                <span className="working-text">{busy}</span>
+              </span>
+            )}
+            {replacing && (
+              <button className="linky" onClick={() => { setReplacing(false); setTyped(""); }}>
+                Cancel
+              </button>
+            )}
+            {keyHome}
+          </div>
+          {keyHomeSaid}
+          <p className="setting-body" style={{ marginTop: 16 }}>
+            You get a key from <strong>console.anthropic.com</strong>, under Settings, then
+            Keys. Anthropic calls it an API key on their site. It is a long line of
+            characters starting with <strong>sk-ant-</strong>. Copy the whole thing.
+          </p>
+        </>
+      )}
+
+      {note && (
+        <div className="done">
+          <CloseX onClose={() => setNote(null)} what="this message" />
+          {note}
+        </div>
+      )}
+      {error && (
+        <div className="error">
+          <CloseX onClose={() => setError(null)} what="this message" />
+          {error}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <h1>Settings</h1>
       <p className="sub">Set this up once. The app remembers it on this computer.</p>
 
-      {/* Two columns, which is click 11 of the walk of 2026-09-04 and was
-          asked for again on 2026-09-15: *"why does the setting screen still
-          look like 5 panesl down instead of 1 | 2 / 3 | 4 / 5 | 6"*. The
-          left column carries the card that changes what the app can do and
-          the two he comes here to work in. The right column carries the two
-          he glances at. Below 900px there is one column, in this order. */}
+      {/* Two columns, which is click 11 of the walk of 2026-09-04. The order
+          inside them is the one he chose on 2026-09-15, card by card, on the
+          approved mockup. `Close the app` is not here at all: it is in the
+          nav bar now, which is F13. */}
       <div className="settings-grid">
         <div className="settings-col">
-          <div className="setting">
-            <div className="setting-head">
-              <h2>Writing captions and reading letters</h2>
-              <span className={`lamp ${state.key_set ? "on" : "off"}`}>
-                {state.key_set ? "On" : "Off"}
-              </span>
-            </div>
-
-            <p className="setting-body">
-              Two things need a key from Anthropic: writing photo captions for you, and reading
-              a signed engagement letter to fill in a new job. Everything else in the app works
-              the same either way, and you can always type captions in yourself.
-            </p>
-
-            {state.key_set && !replacing && (
-              <>
-                <p className="setting-body">
-                  A key is saved on this computer. It ends in <strong>{state.ends_with}</strong>.
-                </p>
-                <div className="setting-actions">
-                  <button className="button secondary" onClick={() => { setReplacing(true); setNote(null); }}>
-                    Replace it
-                  </button>
-                  <button className="button final" onClick={onRemove} disabled={!!busy}>Remove it</button>
-                </div>
-              </>
-            )}
-
-            {asking && (
-              <>
-                <label className="field" style={{ maxWidth: 520 }}>
-                  <span className="key-label">Paste your key</span>
-                  <input type="password" value={typed} autoComplete="off" spellCheck="false"
-                    placeholder="Paste it here" onChange={(e) => setTyped(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) onSave(); }} />
-                </label>
-                <div className="setting-actions">
-                  <button className="button secondary" onClick={onSave} disabled={!typed.trim() || !!busy}>
-                    Check and save
-                  </button>
-                  {replacing && (
-                    <button className="linky" onClick={() => { setReplacing(false); setTyped(""); }}>
-                      Cancel
-                    </button>
-                  )}
-                  {busy && (
-                    <span className="working">
-                      <span className="loading-bar"><span /></span>
-                      <span className="working-text">{busy}</span>
-                    </span>
-                  )}
-                </div>
-                <p className="setting-body" style={{ marginTop: 16 }}>
-                  You get a key from <strong>console.anthropic.com</strong>, under Settings, then
-                  Keys. Anthropic calls it an API key on their site. It is a long line of
-                  characters starting with <strong>sk-ant-</strong>. Copy the whole thing.
-                </p>
-              </>
-            )}
-
-            {note && (
-              <div className="done">
-                <CloseX onClose={() => setNote(null)} what="this message" />
-                {note}
-              </div>
-            )}
-            {error && (
-              <div className="error">
-                <CloseX onClose={() => setError(null)} what="this message" />
-                {error}
-              </div>
-            )}
-
-            <div className="setting-actions">
-              <button className="linky" aria-expanded={showsKeyHome}
-                      onClick={() => setShowsKeyHome(!showsKeyHome)}>
-                Where the key is kept
-              </button>
-            </div>
-            {showsKeyHome && (
-              <p className="setting-fine">
-                It is kept in a file in your own user folder, outside this program, and it is
-                never shown on screen again or written into any job.
-              </p>
-            )}
-          </div>
-          <div className="setting">
-            <div className="setting-head"><h2>Where your jobs live</h2></div>
-            <p className="setting-body">
-              The app is pointed at <strong>{workspace.path}</strong>, which holds{" "}
-              {workspace.folder_count} {workspace.folder_count === 1 ? "folder" : "folders"}.
-            </p>
-            {workspace.source === "override" && (
-              <p className="setting-fine">
-                This computer is set to use this folder. Changing it here will not stick.
-              </p>
-            )}
-
-            {/* The question the action raises is asked inside the action, when he
-                clicks it, not parked on the page beside it. */}
-            {forgetting ? (
-              <>
-                <p className="setting-body">
-                  Forget this jobs folder? Your jobs will not be changed. The app will ask
-                  you to choose the folder again.
-                </p>
-                <div className="setting-actions">
-                  <button className="button final" disabled={!!busy} onClick={async () => {
-                    setBusy("Forgetting..."); setError(null);
-                    try { onWorkspaceChanged(await forgetWorkspace()); }
-                    catch (e) { setError(e.message); setBusy(""); setForgetting(false); }
-                  }}>
-                    Forget it
-                  </button>
-                  <button className="linky" onClick={() => setForgetting(false)}>Cancel</button>
-                </div>
-              </>
-            ) : (
-              <div className="setting-actions">
-                <button className="linky" onClick={onChangeFolder}>Change jobs folder</button>
-                <button className="linky" onClick={() => { setForgetting(true); setNote(null); }}>
-                  Start setup over
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="setting">
-            <div className="setting-head"><h2>What the app has done</h2></div>
-            <div className="setting-actions" style={{ marginBottom: 14 }}>
-              <button className="linky" aria-expanded={showsLogWhat}
-                      onClick={() => setShowsLogWhat(!showsLogWhat)}>
-                What is in it
-              </button>
-            </div>
-            {showsLogWhat && (
-              <p className="setting-body">
-                The app writes down what it does, in a file on this computer. If a screen ever
-                sits without answering, this is what Spenser needs to see. One press sends him
-                the last two days of it.
-              </p>
-            )}
-
-            <div className="setting-actions">
-              {/* Filled blue, by the colour law of 2026-09-08. Not filled red:
-                  that is for something he cannot take back that also writes into
-                  a folder Mark keeps or replaces the program, and the whole app
-                  carries three of those. This writes nothing of his anywhere. */}
-              <button className="button secondary" disabled={sending} onClick={async () => {
-                setSending(true); setSent(null); setLogNote(null);
-                try {
-                  setSent(await logSend());
-                } catch {
-                  // The one failure the server cannot word for itself, because
-                  // it is the server that is missing. Still not a dead end.
-                  setSent({ sent: false, message:
-                    "The app's own server did not answer, so nothing was sent. Start the app "
-                    + "again from the Roy R. Fisher icon, or press Show what will be sent, "
-                    + "press Copy, and paste it into an email to d.spensernelson@gmail.com." });
-                }
-                setSending(false);
-              }}>
-                {sending ? "Sending..." : "Send the log to Spenser"}
-              </button>
-            </div>
-
-            {sent && (
-              <p className={sent.sent ? "done" : "error"} style={{ whiteSpace: "pre-line" }}>
-                <CloseX onClose={() => setSent(null)} what="this message" />
-                {sent.message}
-              </p>
-            )}
-
-            <div className="setting-actions" style={{ marginTop: 16 }}>
-              {/* Blue text, no box. The colour law of 2026-09-08: this shows her
-                  something and changes nothing, which is exactly `.linky`. */}
-              <button className="linky" disabled={loading} onClick={async () => {
-                setLogNote(null); setLoading(true);
-                try { setLog(await logRecent()); }
-                catch (e) { setLog(null); setLogNote(e.message); }
-                setLoading(false);
-              }}>
-                Show what will be sent
-              </button>
-              {loading && (
-                <span className="working">
-                  <span className="loading-bar"><span /></span>
-                  <span className="working-text">Reading the log...</span>
-                </span>
-              )}
-            </div>
-
-            {log && log.empty && (
-              <p className="setting-body">
-                Nothing has been written yet. There is no log on this computer to show
-                or to send.
-              </p>
-            )}
-
-            {log && !log.empty && (
-              <>
-                <div className="setting-actions">
-                  <button className="linky" onClick={async () => {
-                    setLogNote(null);
-                    try {
-                      await navigator.clipboard.writeText(log.text);
-                      setLogNote("Copied. You can paste it into an email.");
-                    } catch {
-                      // Never a dead end. The text is on the screen either way,
-                      // so the way through is always to select it by hand.
-                      setLogNote("This browser would not copy it. Select the text below "
-                                 + "and press Ctrl and C.");
-                    }
-                  }}>
-                    Copy
-                  </button>
-                  <button className="linky" onClick={() => { setLog(null); setLogNote(null); }}>
-                    Hide it
-                  </button>
-                </div>
-                <pre className="logtext">{log.text}</pre>
-              </>
-            )}
-
-            {logNote && <p className="setting-fine">{logNote}</p>}
-          </div>
+          {versionCard}
+          {jobsCard}
         </div>
         <div className="settings-col">
-          <div className="setting">
-            <div className="setting-head"><h2>The version you are running</h2></div>
-            <p className="setting-body">
-              This computer is running <strong>version {version || "unknown"}</strong>.
-            </p>
-            <div className="setting-actions">
-              <button className="button secondary" disabled={looking} onClick={async () => {
-                setLooking(true); setLooked(null);
-                try {
-                  const found = await checkForUpdate();
-                  // The masthead holds its own copy of this answer and only ever
-                  // asked once, at load. Without this it goes on saying nothing
-                  // while this screen says a newer version is there.
-                  if (onUpdateChecked) await onUpdateChecked();
-                  setLooked(found.available
-                    ? `Version ${found.available} is available. Use the Update available button at the top of the screen.`
-                    : "You are on the newest version.");
-                } catch {
-                  setLooked("The update service could not be reached just now. Nothing has changed.");
-                }
-                setLooking(false);
-              }}>
-                Check now
-              </button>
-              {looking && (
-                <span className="working">
-                  <span className="loading-bar"><span /></span>
-                  <span className="working-text">Checking...</span>
-                </span>
-              )}
-            </div>
-            {looked && <p className="setting-fine">{looked}</p>}
-          </div>
-          <div className="setting">
-            <div className="setting-head"><h2>Closing the app</h2></div>
-            {closing ? (
-              <p className="setting-body">
-                <strong>Closing now.</strong> You can close this tab. Start the app
-                again with the Roy R. Fisher icon on your Desktop.
-              </p>
-            ) : (
-              <>
-                <p className="setting-body">
-                  The app keeps running after you close the browser tab. Use this
-                  when you have finished for the day.
-                </p>
-                <div className="setting-actions">
-                  <button className="button final" onClick={async () => {
-                    setClosing(true);
-                    try { await closeTheApp(); } catch { /* it is going away */ }
-                  }}>
-                    Close the app
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          {logCard}
+          {keyCard}
         </div>
       </div>
     </>

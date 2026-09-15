@@ -128,3 +128,74 @@ def test_the_two_settings_do_not_look_like_each_other():
     css = CSS.read_text()
     assert ".bands-pill" not in css, "a rule for an element nothing renders is a puzzle"
     assert ".pill-opt" not in css
+
+
+# Click 11 of the walk of 2026-09-04, and asked again on 2026-09-15 looking at
+# the shipped screen: *"why does the setting screen still look like 5 panesl
+# down instead of 1 | 2 / 3 | 4 / 5 | 6"*. His original words were about
+# layout and were written into the roadmap as a complaint about red buttons,
+# which is recorded in docs/THE-WALK-2026-09-04.md. The layout never changed.
+
+SETTINGS = WEB / "screens" / "Settings.jsx"
+
+
+def test_settings_is_two_columns():
+    grid = block(".settings-grid")
+    got = re.search(r"grid-template-columns:\s*([^;]+);", grid)
+    assert got, "the cards have to be laid out in columns, not stacked"
+    assert len(got.group(1).split()) == 2, "two columns, not one and not three"
+
+
+def test_the_two_columns_become_one_when_the_window_is_narrow():
+    css = CSS.read_text()
+    got = re.search(r"@media \(max-width: (\d+)px\) \{ \.settings-grid[^}]*\}", css)
+    assert got, "below some width the two columns have to become one"
+    assert "grid-template-columns: 1fr" in got.group(0)
+
+
+def test_the_settings_screen_renders_that_grid():
+    screen = SETTINGS.read_text()
+    assert '"settings-grid"' in screen
+    assert screen.count('"settings-col"') == 2, "one element per column"
+
+
+def test_the_key_card_is_the_first_card_on_the_screen():
+    """It is the only card that changes what the app can do. It sat third,
+    under two things he sets once and never touches."""
+    heads = re.findall(r"<h2>([^<]+)</h2>", SETTINGS.read_text())
+    assert heads[0] == "Writing captions and reading letters", heads
+
+
+def test_no_setting_name_from_the_code_shows_through():
+    """*"This is set by RRF_JOBS_HOME on this computer, which overrides the
+    saved choice"* is a line of code on a screen he reads."""
+    screen = SETTINGS.read_text()
+    assert "RRF_JOBS_HOME" not in screen
+    assert "overrides the saved choice" not in screen
+
+
+def test_the_two_paragraphs_of_reassurance_are_folded_away():
+    """*"Things should be hidden more too."* Where the key file is kept, and
+    the paragraph about the app writing a log, are read once and then read
+    again on every visit forever."""
+    screen = SETTINGS.read_text()
+    assert "Where the key is kept" in screen
+    assert "What is in it" in screen
+    assert "showsKeyHome" in screen and "showsLogWhat" in screen
+
+
+# The widget on the photographs screen, seen on Windows 2026-09-15: *"Look how
+# tight that little icon in the upper right is."* Its contents sat 9px from
+# its walls, which on Windows metrics is the whole of the room it had.
+
+def test_the_widget_gives_its_contents_room_at_the_sides():
+    panel = block(".screen-actions.control-panel")
+    got = re.search(r"padding:\s*(\d+)px (\d+)px", panel)
+    assert got, "the panel needs a padding it can be measured by"
+    assert int(got.group(2)) >= 12, "9px is what he was looking at"
+
+
+def test_the_widget_keeps_the_fixed_height_that_stops_the_screen_bouncing():
+    panel = block(".screen-actions.control-panel")
+    assert re.search(r"height:\s*76px", panel)
+    assert re.search(r"width:\s*\d+px", panel), "its width is pinned too"

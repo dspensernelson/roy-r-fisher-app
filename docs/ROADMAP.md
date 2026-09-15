@@ -625,6 +625,62 @@ colour law of 2026-09-08 still reads off both and neither carries a red fill.
 
 Shipped as 0.7.2.
 
+### Settings in two columns, 2026-09-15
+
+**Click 11 of the walk of 2026-09-04, built eleven days late.** His words then:
+*"We have boxes that are left, and there's too much empty space on the right...
+There are 4: 1, 2, 3, 4. I think this needs to be reconfigured."* His words on
+2026-09-15, looking at the shipped screen: *"why does the setting screen still
+look like 5 panesl down instead of 1 | 2 / 3 | 4 / 5 | 6"*. It had been
+recorded as a complaint about red buttons and closed by the colour rule, which
+is written up in `docs/THE-WALK-2026-09-04.md`.
+
+**Two columns now, and the order is an argument.** Left: the key, where the
+jobs live, what the app has done. Right: the version, closing the app. The key
+card went from third to first because it is the only card on the screen that
+changes what the app can do; the two it used to sit under are set once and
+never touched again. Below 900px there is one column, in that same order.
+
+**Two paragraphs folded away**, which is *"Things should be hidden more too."*
+Where the key file is kept, and what the app writes into its log. Both are
+reassurance, both were read on every visit forever, and both are one click
+away behind a link that names the answer.
+
+**A line of code came off the screen.** *"This is set by RRF_JOBS_HOME on this
+computer, which overrides the saved choice"* is now *"This computer is set to
+use this folder. Changing it here will not stick."*
+
+**`.linky` carries `margin-left: auto`**, so every link on a settings card was
+flung to the card's far edge, away from the words it belonged to, and `Change
+jobs folder` and `Start setup over` sat at opposite ends of one row. Turned off
+inside the card, the same way the title row and the photographs widget already
+turn it off.
+
+### The photographs widget, 2026-09-15
+
+**Spenser on Windows:** *"Look how tight that little icon in the upper right
+is."* He was right, and the measurement says why. The panel's contents sat 9px
+from its walls, and 9px was all the room it had: the top row needs 440.8px of
+controls in Helvetica and 451.1 in Tahoma, the widest Windows face this
+stylesheet can fall back to. At 500px wide the panel had about 7px spare on his
+machine. It looked full because it was full.
+
+**Walls 14px, gaps 9 and 8, width pinned at 516.** The height stays 76px, which
+is what stops the screen bouncing. Measured in a browser against this
+stylesheet, widest state: `Generate captions` carrying a three-digit count,
+which is the 131-photograph job.
+
+**What the photographs gained: nothing, and that is the finding.** Measured at
+a 1309px window before and after, the grid is the same five columns of 216px.
+It spans the whole page and the panel never shared a row with it; the panel's
+right edge already sits exactly on the photographs' right edge, which is the
+page's right margin. The only thing a narrower panel would give back is room on
+the document's title line, and that line already has slack. **The panel cannot
+be made narrower without taking a control out of its top row.** The approved
+design at `docs/design/photos-screen.html` has three there and pins 386px; the
+app has four, because `Clear captions` was added after the design was approved.
+Taking it out is Spenser's decision, not a builder's.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not

@@ -208,6 +208,17 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
    them five things. Only Settings uses this card, so nothing else moves. */
 .setting { background: #FFFFFF; border: 1px solid var(--line); border-radius: 6px;
   padding: 20px 22px; max-width: 720px; margin-bottom: 16px; }
+/* Two columns. Click 11 of the walk of 2026-09-04: *"We have boxes that are
+   left, and there's too much empty space on the right... There are 4: 1, 2,
+   3, 4. I think this needs to be reconfigured"*, and again on 2026-09-15:
+   *"why does the setting screen still look like 5 panesl down instead of
+   1 | 2 / 3 | 4 / 5 | 6"*. The cards keep their own bottom margin, so that is
+   the space down a column and this gap is the space across. Below 900px there
+   is one column, because two columns of a 720px card do not fit a laptop
+   turned sideways. */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.settings-col { min-width: 0; }
+@media (max-width: 900px) { .settings-grid { grid-template-columns: 1fr; } }
 .setting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
 .setting-head h2 { font-size: 17px; font-weight: 700; margin: 0; }
 .lamp { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700;
@@ -216,6 +227,12 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 .lamp.off { background: #EFEDE7; color: var(--ink-muted); }
 .setting-body { font-size: 14.5px; color: var(--ink); line-height: 1.55; margin: 0 0 14px; max-width: 62ch; }
 .setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+/* `.linky` carries `margin-left: auto` so that a link floats to the right
+   of whatever row it is in. On a settings card that flung every link to
+   the far edge, away from the words it belongs to, and split `Change jobs
+   folder` and `Start setup over` to opposite ends of the same row. The
+   title row and the photographs widget already turn it off the same way. */
+.setting .linky { margin-left: 0; }
 .setting-fine { font-size: 12.5px; color: var(--ink-muted); margin: 18px 0 0; max-width: 62ch; }
 
 /* The log, on screen, exactly as it would be sent. Scrolls in its own box
@@ -462,22 +479,31 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    came and went, and again the first time a caption was typed, which is what
    Spenser saw on 2026-09-07.
 
-   500 rather than a round guess. Measured in a browser against this
-   stylesheet on 2026-09-15: the top row needs 473px with a two-digit count
-   and 480px with a three-digit one, which is the largest job in his corpus at
-   131 photographs. The rest is room for Windows rendering the same words in
-   Segoe UI rather than Helvetica. The settings row needs 266 and sits inside
-   it, so nothing there can move anything either. */
+   516 rather than a round guess, and it went up from 500 on 2026-09-15.
+   Spenser, looking at it on Windows: *"Look how tight that little icon in the
+   upper right is."* He was right and the measurement says why. The contents
+   sat 9px from the walls, and on Windows metrics that 9px was all the room
+   there was: the top row needs 440.8px of controls in Helvetica and 451.1 in
+   Tahoma, which is the widest Windows face this stylesheet can fall back to.
+   At 500 with 9px walls the panel had 7px spare on his machine. It looked
+   full because it was full.
+
+   So the walls went to 14px and the gaps between controls from 7 to 9. The
+   top row now needs 467.8px in Helvetica and 508.1 in the box on Windows,
+   measured in a browser against this stylesheet, widest state: Generate
+   captions carrying a three-digit count, which is the 131-photograph job.
+   516 is that number with 8px left over. The settings row needs 257.8 and
+   sits inside it, so nothing there can move anything either. */
 .screen-actions.control-panel {
-  flex: none; width: 500px; height: 76px;
+  flex: none; width: 516px; height: 76px;
   display: flex; flex-direction: column; align-items: stretch;
   justify-content: space-between; gap: 0;
-  padding: 7px 9px;
+  padding: 7px 14px;
   background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
   box-shadow: var(--shadow-raised);
 }
-.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 7px; height: 30px; }
-.screen-actions.control-panel .w-row.two { height: 24px; gap: 6px; }
+.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 9px; height: 30px; }
+.screen-actions.control-panel .w-row.two { height: 24px; gap: 8px; }
 .screen-actions.control-panel .linky { margin-left: 0; }
 /* Written at the panel's own specificity so it beats the roomier
    `.screen-actions .button` below, which NewJob still uses. */

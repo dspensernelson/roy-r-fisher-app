@@ -146,3 +146,47 @@ describe("Send the log to Spenser", () => {
     expect(await screen.findByText(/did not answer/)).toBeInTheDocument();
   });
 });
+
+// Click 11 of the walk of 2026-09-04, asked again on 2026-09-15: *"why does
+// the setting screen still look like 5 panesl down instead of 1 | 2 / 3 | 4 /
+// 5 | 6"*.
+describe("the cards sit in two columns", () => {
+  it("puts every card in one of two columns, key card first", async () => {
+    settings();
+    await screen.findByRole("heading", { name: "Writing captions and reading letters" });
+
+    const cols = document.querySelectorAll(".settings-grid > .settings-col");
+    expect(cols).toHaveLength(2);
+    const cards = document.querySelectorAll(".setting");
+    expect(cards.length).toBe(5);
+    [...cards].forEach((c) => expect(c.parentElement).toHaveClass("settings-col"));
+
+    // The only card that changes what the app can do goes first. It sat
+    // third, under two things he sets once and never touches.
+    const heads = [...cols].map((c) => [...c.querySelectorAll("h2")].map((h) => h.textContent));
+    expect(heads[0][0]).toBe("Writing captions and reading letters");
+    expect(heads[0]).toHaveLength(3);
+    expect(heads[1]).toHaveLength(2);
+  });
+
+  it("folds away the two paragraphs he reads on every visit", async () => {
+    // "Things should be hidden more too."
+    settings();
+    expect(await screen.findByRole("button", { name: "Where the key is kept" }))
+      .toBeInTheDocument();
+    expect(screen.queryByText(/kept in a file in your own user folder/)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Where the key is kept" }));
+    expect(screen.getByText(/kept in a file in your own user folder/)).toBeInTheDocument();
+
+    expect(screen.queryByText(/writes down what it does/)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "What is in it" }));
+    expect(screen.getByText(/writes down what it does/)).toBeInTheDocument();
+  });
+
+  it("says in his words that this computer forces the jobs folder", async () => {
+    render(<Settings workspace={{ path: "C:\\Jobs", folder_count: 4, source: "override" }}
+                     version="0.7.2" onChangeFolder={() => {}} onWorkspaceChanged={() => {}} />);
+    expect(await screen.findByText(/Changing it here will not stick/)).toBeInTheDocument();
+    expect(screen.queryByText(/RRF_JOBS_HOME/)).toBeNull();
+  });
+});

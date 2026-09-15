@@ -31,6 +31,24 @@ when it does not fit rather than following it off a cliff.
 - **Never guess at a folder's name.** The exact name on disk is the job's
   identity. If we need to know what he calls it, ask him.
 
+## Where we are
+
+`docs/NOW.md` is the one page that says what we are doing, what is blocked, and
+what is waiting on Spenser. Read it first, every session, before anything else
+in this file. Update it the moment something changes, not at the end of the
+work. Anything he asks for goes on it when he asks, not when it is convenient.
+
+Written 2026-09-15, after he had to ask twice in one evening where the project
+stood, and was right to. The detail still lives in `docs/BUGS.md`,
+`docs/PUNCHLIST.md`, `docs/THE-WALK-2026-09-04.md` and `docs/CHECKS.md`. That
+page is the index to them.
+
+**One thing at a time.** His words, 2026-09-15: one thing per message, one step
+for him, one question at the end. He is not slow; he is being handed four
+decisions at once by somebody who has read the code and he has not. A reply
+that carries a plan, a fix, a version number and three questions is a reply he
+cannot act on.
+
 ## Talking to Spenser
 
 Main point first. Short sentences. Common words. Say what you found, what it

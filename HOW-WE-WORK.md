@@ -30,6 +30,13 @@ The rules that come out of it:
   a message on screen is a product decision.
 - **Prove it before claiming it.** A theory offered as a finding costs a round
   and costs trust.
+- **Say how sure you are, every time.** "This could be the problem" when it
+  could be. "This is the problem" only when it has been shown. Never "it has
+  never worked" or "it always does this" about his machine, which you cannot
+  see. He corrected this on 2026-09-15 after being told the loading page had
+  never once worked on his computer, which was a guess, stated flatly, and
+  wrong: he had watched it work. A forceful wrong answer costs more than a
+  hedged right one, because he acts on it.
 - **Show him, do not explain to him.** A checklist beats a report. A mockup
   beats a paragraph. He works from `docs/NOW.md` published as a page, not from
   these files.

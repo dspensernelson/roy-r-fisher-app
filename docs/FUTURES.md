@@ -28,6 +28,19 @@ the log pasted into it, which is exactly what Spenser said he did not want.
 Needs a Worker so no password ships inside the package, and it moves client
 property addresses off her machine. Both are decisions and neither is settled.
 
+**Points 1 and 2 built on branch `send-the-log-to-spenser`, 2026-09-14, after
+the fault of that morning.** She had been asked for the log, the log had
+rotated into a second file nothing on screen mentioned, and she sent the half
+without the fault in it. `Show what will be sent` shows the text with a `Copy`
+button, and `Send the log to Spenser` posts the last two days to a Cloudflare
+Worker that stores them privately and emails him. No password is in the
+package: the mail key and the address salt are Worker secrets, and the
+recipient is fixed inside the Worker so the app cannot be aimed at anybody.
+Uploads are kept thirty days and then deleted.
+
+**Point 3 is still owed.** Reaching the log without her pressing anything at
+all is a different thing and is not built.
+
 ## F2. Mark all as reviewed
 
 Wanted 2026-09-02, restated 2026-09-03 as something that has to exist.

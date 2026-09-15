@@ -60,10 +60,19 @@ Photo pages are the only section that produces a document. Everything else is
 listed so the report's real shape is visible, and says plainly that it is not
 ready yet.
 
-The suite last measured 1,052 passed, nothing skipped, on 2026-08-26. That is
+He can also read the last two days of the app's own log on the settings
+screen, copy it, and send it to Spenser with one press. That send is the only
+thing in the app that puts anything on the internet other than checking for an
+update.
+
+The suite last measured 1,515 passed and 27 skipped, on 2026-09-14. That is
 the result of that run, not a permanent number: it moves every time tests are
 added. Tests that need Mark's private material skip on a machine without it;
-they run here because the reports sit next door in `RRF`.
+they run here because the reports sit next door in `RRF`. Build the interface
+first. Without `app/web/dist` the packaging tests skip, which is deliberate,
+and five route tests in `test_jobs_api` and `test_photos_api` fail rather than
+skip, which is not: they read a refusal that only comes out right once the
+static files are mounted. Measured 2026-09-14.
 
 `python3 -m pytest` runs everything, including the React screens: one test
 shells out to the Vitest suite in `app/web`, which renders the screens and

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, showTheLog, closeTheApp } from "../api.js";
+import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, logSend, closeTheApp } from "../api.js";
 import CloseX from "../CloseX.jsx";
 
 export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
@@ -15,6 +15,13 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   const [looking, setLooking] = useState(false);
   const [looked, setLooked] = useState(null);
   const [logNote, setLogNote] = useState(null);
+  // What the server says would be sent, once she has asked to see it. Never
+  // fetched at load: reading the log costs two file reads and she has not
+  // asked for it.
+  const [log, setLog] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(null);
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
@@ -208,17 +215,91 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
         <div className="setting-head"><h2>What the app has done</h2></div>
         <p className="setting-body">
           The app writes down what it does, in a file on this computer. If a screen ever
-          sits without answering, this is what Spenser needs to see.
+          sits without answering, this is what Spenser needs to see. One press sends him
+          the last two days of it. You do not have to find a file or attach anything.
         </p>
+
         <div className="setting-actions">
-          <button className="linky" onClick={async () => {
-            setLogNote(null);
-            try { await showTheLog(); }
-            catch (e) { setLogNote(e.message); }
+          {/* Filled blue, by the colour law of 2026-09-08. Not filled red:
+              that is for something he cannot take back that also writes into
+              a folder Mark keeps or replaces the program, and the whole app
+              carries three of those. This writes nothing of his anywhere. */}
+          <button className="button secondary" disabled={sending} onClick={async () => {
+            setSending(true); setSent(null); setLogNote(null);
+            try {
+              setSent(await logSend());
+            } catch {
+              // The one failure the server cannot word for itself, because
+              // it is the server that is missing. Still not a dead end.
+              setSent({ sent: false, message:
+                "The app's own server did not answer, so nothing was sent. Start the app "
+                + "again from the Roy R. Fisher icon, or press Show what will be sent, "
+                + "press Copy, and paste it into an email to d.spensernelson@gmail.com." });
+            }
+            setSending(false);
           }}>
-            Show the log
+            {sending ? "Sending..." : "Send the log to Spenser"}
           </button>
         </div>
+
+        {sent && (
+          <p className={sent.sent ? "done" : "error"} style={{ whiteSpace: "pre-line" }}>
+            <CloseX onClose={() => setSent(null)} what="this message" />
+            {sent.message}
+          </p>
+        )}
+
+        <div className="setting-actions" style={{ marginTop: 16 }}>
+          {/* Blue text, no box. The colour law of 2026-09-08: this shows her
+              something and changes nothing, which is exactly `.linky`. */}
+          <button className="linky" disabled={loading} onClick={async () => {
+            setLogNote(null); setLoading(true);
+            try { setLog(await logRecent()); }
+            catch (e) { setLog(null); setLogNote(e.message); }
+            setLoading(false);
+          }}>
+            Show what will be sent
+          </button>
+          {loading && (
+            <span className="working">
+              <span className="loading-bar"><span /></span>
+              <span className="working-text">Reading the log...</span>
+            </span>
+          )}
+        </div>
+
+        {log && log.empty && (
+          <p className="setting-body">
+            Nothing has been written yet. There is no log on this computer to show
+            or to send.
+          </p>
+        )}
+
+        {log && !log.empty && (
+          <>
+            <div className="setting-actions">
+              <button className="linky" onClick={async () => {
+                setLogNote(null);
+                try {
+                  await navigator.clipboard.writeText(log.text);
+                  setLogNote("Copied. You can paste it into an email.");
+                } catch {
+                  // Never a dead end. The text is on the screen either way,
+                  // so the way through is always to select it by hand.
+                  setLogNote("This browser would not copy it. Select the text below "
+                             + "and press Ctrl and C.");
+                }
+              }}>
+                Copy
+              </button>
+              <button className="linky" onClick={() => { setLog(null); setLogNote(null); }}>
+                Hide it
+              </button>
+            </div>
+            <pre className="logtext">{log.text}</pre>
+          </>
+        )}
+
         {logNote && <p className="setting-fine">{logNote}</p>}
       </div>
 

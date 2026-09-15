@@ -217,6 +217,19 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 .setting-body { font-size: 14.5px; color: var(--ink); line-height: 1.55; margin: 0 0 14px; max-width: 62ch; }
 .setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
 .setting-fine { font-size: 12.5px; color: var(--ink-muted); margin: 18px 0 0; max-width: 62ch; }
+
+/* The log, on screen, exactly as it would be sent. Scrolls in its own box
+   rather than pushing the rest of Settings off the page: two days of log is
+   thousands of lines, and the controls above it have to stay reachable. Long
+   lines wrap rather than scroll sideways, so nothing is hidden off the right
+   edge where she would never think to look. */
+.logtext {
+  margin: 12px 0 0; padding: 12px 14px; max-height: 340px; overflow: auto;
+  background: var(--paper-sunk); border: 1px solid var(--line-strong);
+  border-radius: 6px; color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+}
 .key-label { display: block; font-size: 12px; color: var(--ink-muted); margin-bottom: 5px; }
 .setting .field input {
   width: 100%; background: #FFFFFF; color: var(--ink); font: inherit; font-size: 15px;

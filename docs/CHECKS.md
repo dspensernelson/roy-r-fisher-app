@@ -68,11 +68,13 @@ Say the number when one fails. "Check 2 failed" is enough to start from.
 > **Should:** the app is the thing you are looking at.
 > **Wrong if:** a black window is in front of it, or instead of it.
 
-> ### Check 9. `Show the log` shows you the log
-> Open Settings and find **`Show the log`**. It is blue writing with no box
-> round it, not a button. Click it.
-> **Should:** you can read the log and copy it, without hunting for a file.
-> **Wrong if:** nothing appears to happen, or it is a coloured button.
+> ### Check 9. `Show what will be sent` puts the log on the screen
+> Open Settings, click **`Show what will be sent`**, read it, then click
+> **`Copy`** and paste it into anything.
+> **Should:** the log text appears on the screen, it names both log files when
+> the log has rotated, and what you paste is what you read.
+> **Wrong if:** nothing appears to happen, a folder window opens instead, or
+> the pasted text is shorter than what is on screen.
 
 ## Updating
 
@@ -225,3 +227,20 @@ how important a control is. The full rule is in `docs/ROADMAP.md`, 2026-09-08.
 > clearing captions, and the one that asks before resetting the demo.
 > **Should:** none of them has an x. The only ways out are the buttons on it.
 > **Wrong if:** any question can be closed with an x instead of answered.
+## Sending the log
+
+> ### Check 27. `Send the log to Spenser` sends it, once
+> Open Settings, click **`Send the log to Spenser`**, wait for the answer, then
+> click it again.
+> **Should:** the first says it was sent, the button says `Sending...` while it
+> goes and cannot be clicked twice, and the second says one already arrived from
+> this computer in the last hour.
+> **Wrong if:** nothing on the screen changes, or a failure leaves you with
+> nothing to do about it.
+
+> ### Check 28. A log still reaches him with the internet off
+> Turn the network off. Click **`Send the log to Spenser`**.
+> **Should:** it says the internet may be off, says to try again in a minute,
+> and tells you to press `Show what will be sent`, press `Copy`, and paste it
+> into an email to the address it names.
+> **Wrong if:** it says it was sent, or the message gives you no way through.

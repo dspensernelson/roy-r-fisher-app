@@ -18,8 +18,8 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 ## To get a version to the office
 
 - [x] Find out why every new version dies the first time it runs
-- [ ] Fix it, which ticks north star 1 and 2: start the background jobs after the web server
-- [ ] Make the launcher say what killed it instead of dying silently
+- [x] Fix it, which ticks north star 1 and 2: start the background jobs after the web server
+- [x] Make the launcher say what killed it instead of dying silently
 - [ ] Prove an update Spenser can take himself, end to end
 - [ ] Run the 28 by-hand checks on Windows
 - [ ] Upload to the office

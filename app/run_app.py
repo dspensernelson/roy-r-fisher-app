@@ -68,7 +68,7 @@ def _record_last_good(version: str) -> None:
             pass
 
 
-def main() -> int:
+def _start() -> int:
     version = packaging.version_of(ROOT)
 
     # The order below changed on 2026-09-08, and the reason is the whole point
@@ -211,11 +211,28 @@ def main() -> int:
             except Exception:
                 pass
 
+    import uvicorn          # the first third-party import in the whole file
+
+    # 10. Only now. B15, proven on Spenser's Windows machine on 2026-09-15:
+    #     these three used to start on the line above the import, and that is
+    #     what killed every version the first time it ran.
+    #
+    #     On a machine that has never run this version there is no compiled
+    #     cache, so these three have to compile hundreds of files. That takes
+    #     long enough that the uvicorn import chain reached `dataclasses` while
+    #     one of them still had `typing` half built, read the half-built module
+    #     and died: "partially initialized module 'typing' has no attribute
+    #     'ClassVar'". No window, no message. The second run found a warm cache
+    #     and worked, and so did every run after it, which is why it looked
+    #     random for a week.
+    #
+    #     Nothing between the old place and this one needed them. `when_up`
+    #     waits for the server to answer, so it only has to be running before
+    #     `uvicorn.run` below, not before the import.
     threading.Thread(target=tidy_cache, daemon=True).start()
     threading.Thread(target=look_for_an_update, daemon=True).start()
     threading.Thread(target=when_up, daemon=True).start()
 
-    import uvicorn          # the first third-party import in the whole file
     try:
         # Quiet. uvicorn's own INFO lines announced a process id, a bind
         # address and every request, which is real server output in a window
@@ -242,6 +259,57 @@ def main() -> int:
         #    that everything already treats as meaningless.
         startup.clear_runtime(HOME)
     return 0
+
+
+def _where_the_log_is() -> str:
+    """Named in the message, because he is being asked to send it."""
+    try:
+        import applog
+        return str(applog.log_file())
+    except Exception:
+        return ".rrf-app.log"
+
+
+def main() -> int:
+    """`_start`, with nothing left able to die in silence.
+
+    The launcher spoke for two failures it knew by name, a damaged package and
+    a server that never answered, and let everything else fall out of the
+    bottom. On the Mac that prints a traceback. On Mark's machine the shortcut
+    runs `pythonw.exe`, which has no console, so it printed into nowhere: no
+    window, no message, nothing. B15 lived in that gap for a week.
+
+    So anything unexpected now goes to both places `tell` knows about. The log
+    gets the whole traceback, because that is the thing Spenser can be sent
+    afterwards. The person in front of the machine gets a message box with the
+    one line that matters and what to do about it.
+
+    Control-C is not one of these. It is how the app is stopped on purpose on
+    the Mac, and a box asking him to send a log would be wrong.
+    """
+    try:
+        return _start()
+    except KeyboardInterrupt:
+        raise
+    except Exception as exc:
+        import traceback
+        named = "%s: %s" % (type(exc).__name__, exc)
+        try:
+            import applog
+            applog.note("the app could not start", error=named,
+                        traceback=traceback.format_exc())
+        except Exception:
+            # The log is the better record, but it may not become the reason
+            # the message below is never shown.
+            pass
+        tell.problem(
+            "Roy R. Fisher could not start.\n"
+            "\n"
+            "  %s\n"
+            "\n"
+            "Start it again. If it happens twice, send Spenser this message\n"
+            "and the file %s." % (named, _where_the_log_is()))
+        return 4
 
 
 if __name__ == "__main__":

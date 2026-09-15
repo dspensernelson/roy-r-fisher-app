@@ -72,6 +72,14 @@ named failures and sends everything else nowhere, since the shortcut runs
 `pythonw.exe`, which has no console. That gap hid this for a week and is its
 own item.
 
+**Built in 0.7.5.1, not yet proven.** The three background jobs now start after
+uvicorn is imported, and anything unexpected now reaches both the log and a
+message box that says to start it again and which file to send. Two tests hold
+the order, one on the source and one while the launcher runs. Neither can prove
+a cold Windows start, because every machine the tests run on is warm. This
+entry stays open until 0.7.5.1 is installed cold on Spenser's Windows machine
+and opens first time.
+
 ---
 
 ## B1. Generating captions deletes photographs you added

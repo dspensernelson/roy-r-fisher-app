@@ -25,6 +25,55 @@ Spenser worked this out on 2026-09-03 from the behaviour alone. Confirmed in
 
 ---
 
+## B15. Every new version fails the first time it runs
+
+**What happens.** A version that has never run before dies instantly at
+startup. No window, no message, nothing. Run it a second time and it works, and
+then it works for ever. So it looks random and looks like it fixed itself.
+
+**Proven on Spenser's Windows machine, 2026-09-15.** 0.7.5 crashed three times
+out of three from a cold install. Comparing the two installed copies file by
+file showed the only differences were `.pyc` cache files, the version, and the
+browser files. 0.7.4's cache was warm from dozens of runs. 0.7.5's had never
+been written. Warming it by crashing three times was enough: the fourth run
+started and it has worked ever since.
+
+**Why, from the traceback.** `app/run_app.py` starts three background jobs and
+then, on the very next line, imports uvicorn. On a cold start those jobs must
+compile hundreds of files, which takes long enough that the uvicorn import
+reaches `dataclasses` while a background job still has `typing` half built. It
+reads the half-built module and dies:
+
+    AttributeError: partially initialized module 'typing' has no attribute
+    'ClassVar' (most likely due to a circular import)
+
+Warm cache, the background jobs finish in a blink and nothing collides.
+
+**Who it hits.** Everyone, on every update and every fresh install, because
+both are cold starts by definition. This is one fault wearing four faces, and
+all four were reported as separate problems during the week of 2026-09-08:
+
+- Colleen's Desktop icon doing nothing, then an older version updating and
+  working.
+- The loading page saying the app had probably opened in another tab when it
+  had not.
+- 0.7.5 installing through the update button and never answering.
+- "Nothing happens for a few seconds after you click the icon", B14 below.
+
+**How bad.** The worst on this list. It is the first thing that happens to
+anybody on any new version, and it destroys the update button, which is the
+only way the office gets anything.
+
+**The fix.** Start those three background jobs after the web server is loaded,
+not before. `app/run_app.py` lines 214 to 218.
+
+**Nobody saw the error because the launcher throws it away.** It speaks for two
+named failures and sends everything else nowhere, since the shortcut runs
+`pythonw.exe`, which has no console. That gap hid this for a week and is its
+own item.
+
+---
+
 ## B1. Generating captions deletes photographs you added
 
 **What happens.** Add a photograph with `Add a photo`. Run captions. The

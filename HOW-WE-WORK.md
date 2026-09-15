@@ -1,5 +1,40 @@
 # How we work on this
 
+## Read this first
+
+**What the week of 2026-09-08 taught, written on 2026-09-15 at Spenser's ask.**
+
+Everything that went wrong went wrong the same way: work was done without a
+goal, decisions that were his got made for him, and nothing was written down.
+
+The pattern to avoid is whack-a-mole. He points at something, it gets fixed, he
+points at the next thing. A week of that adds up to nothing, and he said so.
+Then he gave the goal himself in five sentences, which is the north star below.
+
+Two patterns worked, both twice. **Build him something he can see and let him
+correct it**: the photographs screen took eight rounds of his corrections and is
+now the best screen in the app. **Chase one fault with one experiment at a
+time**: that is how a crash that had worn four different faces for a week was
+finally cornered in an hour.
+
+The rules that come out of it:
+
+- **Hold the goal, not the last complaint.** He asked to be kept in line and he
+  meant it. Push back when he is down a rabbit hole, and say which north star
+  line the work serves.
+- **One thing per message.** One step for him, one question at the end.
+- **Write every decision down the day he makes it.** A decision spoken in a
+  session dies with that session. This is why `docs/THE-WALK-2026-09-04.md`
+  exists and why it cost an evening to recover.
+- **Never make a product decision.** If he has not said it, ask. The wording of
+  a message on screen is a product decision.
+- **Prove it before claiming it.** A theory offered as a finding costs a round
+  and costs trust.
+- **Show him, do not explain to him.** A checklist beats a report. A mockup
+  beats a paragraph. He works from `docs/NOW.md` published as a page, not from
+  these files.
+
+
 Spenser's rules. Edit this file and the rules change. Nothing else governs how
 Claude behaves on this project.
 

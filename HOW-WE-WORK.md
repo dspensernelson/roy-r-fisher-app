@@ -83,6 +83,41 @@ fast; padding costs him time on every visit, forever. Reassurance is the worst
 offender, because it feels kind and it is just noise the tenth time he sees it.
 Say it once, in the fewest words that are still true, or do not say it.
 
+**Five kinds of thing, and each gets one home.** Spenser's theory, approved
+2026-09-14, after a night of fixes that each answered one screenshot and added
+up to nothing. Every screen is built against this, not against the last picture
+he sent.
+
+1. **What is being made.** A screen that makes a file is named by that file.
+   The photographs screen is titled with the document's own name, not the word
+   Photos, and shows `file name here.docx` in grey when the name cannot be read
+   yet. Under it only the numbers that describe the file.
+2. **What shapes it.** The settings that change what comes out. They sit
+   together and they look like settings.
+3. **What you can do.** The buttons. One place, nothing else in it.
+4. **What is happening right now.** One widget, one place, never two at once.
+   Progress, the last thing that happened, and anything blocking him. This is
+   the home of every message the screen used to scatter. The photographs screen
+   could stack eleven separate boxes above his photographs, and on 2026-09-04 he
+   asked what happens when three or four pile up. This is the answer.
+5. **The content.** His photographs, his files, his list. Everything above gets
+   out of their way.
+
+Four rules fall out of it.
+
+**A hint lives on the thing, not as a sentence.** "Drag a photo to reorder it"
+goes; the photographs afford dragging.
+
+**A number the app knows exactly is stated exactly.** Sixty photographs at three
+to a page is twenty pages, not about twenty.
+
+**What blocks an action is said by the action.** Not in a line above it. The
+Build button already says why it is off when he hovers it.
+
+**Two controls doing different jobs do not look the same.** Bands is on or off.
+Per page is a value. Today they are identical pills, which is why they read as
+noise rather than as two different questions.
+
 **A click leads to a step.** A choice that shapes an action lives inside that
 action, asked when he clicks it, never parked on the page beside it. Actions
 sit at the top of the screen on the title's row. The content he came to see

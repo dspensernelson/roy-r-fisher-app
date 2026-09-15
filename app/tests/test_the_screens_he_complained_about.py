@@ -98,14 +98,33 @@ def test_a_switch_that_can_be_undone_carries_no_red_fill():
     """The colour law of 2026-09-08, in docs/ROADMAP.md.
 
     A red fill means a control that cannot be taken back, one per screen at
-    most. `Bands Off` and `Per page Three` are completely undoable and were
-    the loudest things on the photographs screen. The selected half now reads
-    as selected the way the style window's segmented control does: raised and
-    white on a sunk track.
+    most. Bands and Per page are completely undoable and were the loudest
+    things on the photographs screen.
+
+    Superseded on 2026-09-15 by the approved design, as to which controls
+    these are. They were two identical pills, which is the other half of the
+    complaint: two controls doing different jobs must not look the same. Bands
+    is on or off, so it is a switch; Per page is a value, so it is a track of
+    values. The colour rule is unchanged and now reads off both of them.
     """
-    lit = block(".pill-opt.is-on")
+    lit = block(".values button.on")
     assert "var(--brand)" not in lit, "a red fill is reserved for the one-way control"
     assert "background:" in lit, "it still has to read as the chosen half"
     assert "var(--paper)" in lit
-    track = block(".bands-pill")
+    track = block(".values")
     assert "var(--paper-sunk)" in track, "the track is sunk so the lit half reads as raised"
+    on = block('.switch[aria-checked="true"]')
+    assert "var(--brand)" not in on, "the switch is undoable too"
+
+
+def test_the_two_settings_do_not_look_like_each_other():
+    """Spenser's theory, approved 2026-09-14: two controls doing different
+    jobs do not look the same. Today they were identical pills, which is why
+    they read as noise rather than as two different questions."""
+    screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
+    assert 'className="switch" role="switch"' in screen, "bands is on or off"
+    assert 'className="values" role="group" aria-label="Photographs to a page"' in screen
+    assert "bands-pill" not in screen and "pill-opt" not in screen
+    css = CSS.read_text()
+    assert ".bands-pill" not in css, "a rule for an element nothing renders is a puzzle"
+    assert ".pill-opt" not in css

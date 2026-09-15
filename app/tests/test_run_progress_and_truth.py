@@ -224,12 +224,26 @@ def test_the_screen_pulls_down_captions_as_they_land():
 
 
 def test_progress_sits_with_the_work_not_in_the_corner():
-    """Its own block above the grid, not inside the actions row."""
+    """Superseded on 2026-09-15 by the design Spenser approved that night.
+
+    It used to be its own block above the grid, because the thing before that
+    was a thin bar in a corner. A block above the grid is still a thing
+    standing between the header and his photographs, and on 2026-09-04 eleven
+    of them could stack up there. Progress is now one line in the header's own
+    quiet slot, which is reserved whether or not anything is running, so a run
+    starting and finishing moves nothing.
+
+    What this still holds is the original point: the run says which request it
+    is on, beside the work, and never in a corner.
+    """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
-    assert 'className="run"' in screen
-    actions = screen[screen.index('<div className="screen-actions control-panel">'):]
-    actions = actions[:actions.index('className="run"')]
-    assert 'className="run"' not in actions
+    assert 'className={`quiet k-${note ? note.kind : "rest"}`}' in screen
+    assert 'kind: "run"' in screen
+    # The slot is in the header, above the photographs and below the counts.
+    head = screen[screen.index('<div className="screen-head">'):]
+    head = head[:head.index("THE CONTENT")]
+    assert 'className="figures"' in head
+    assert "quiet k-" in head
 
 
 def test_a_partial_run_is_not_dressed_as_success_or_failure():
@@ -261,8 +275,23 @@ def test_a_saved_run_is_not_also_shown_as_an_error():
 
 # --- the direct corrections ----------------------------------------------
 def test_there_is_one_missing_key_message_not_two():
+    """Superseded on 2026-09-15 by the approved design.
+
+    There were two grey paragraphs above his photographs, one keyed on the
+    server's reason and one on `aiOn`, saying the same thing in different
+    words. The guard against both rendering was a condition on the second.
+    What blocks an action is now said by the action, so there is one place it
+    can be said at all: the reason on the `Generate captions` button. One
+    branch, so there is nothing left to guard against.
+    """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
-    assert "{!aiOn && !blockedBecause && (" in screen, "the two can never both render"
+    stop = screen[screen.index("function generateStop()"):]
+    stop = stop[:stop.index("\n  }")]
+    assert stop.count("needs a key on this computer") == 1
+    assert '(blockedBecause === "no_key" || !aiOn)' in stop, \
+        "the two reasons are one branch now, so they cannot both speak"
+    assert screen.count("needs a key on this computer") == 2, \
+        "the reason on the button, and the one the run itself reports"
 
 
 def without_comments(text: str) -> str:

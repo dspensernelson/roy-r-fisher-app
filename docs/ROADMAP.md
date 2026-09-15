@@ -579,6 +579,52 @@ selection. No new colour was invented and `Build photo pages` keeps the
 screen's one red fill. Held by a test, because a rule nobody is reminded of
 lasts until the first busy session.
 
+### The photographs screen, rebuilt to the theory, 2026-09-15
+
+**Spenser approved the whole screen as a mockup that night**, after eight
+rounds of changes he asked for one at a time. It is the first screen built
+against the five-kinds theory rather than against the last screenshot he sent,
+and it is what the theory is for.
+
+**What he sees now.** The screen is titled with the name of the document the
+build will write, greyed to `file name here.docx` when the name cannot be
+worked out yet, with the way to correct it beside it. Under the title the two
+numbers that describe that file, and the page count is exact: sixty
+photographs at three to a page is twenty pages, because the app knows the
+layout. Under that one quiet line, which is where every message that is only
+telling him something now lands. Upper right, one widget holding everything he
+can do and the two settings that shape what comes out.
+
+**Two homes for a message, and no third.** Anything that needs his answer is a
+window over the screen. Everything else is that one line. It had eleven boxes
+that could stack above his photographs, which is what he asked about on
+2026-09-04, and the boxes are gone: the run, the cost, the finished document,
+the review count, the bands still waiting, the folder a photograph came from.
+What blocks a button is said by that button when he hovers it, which took the
+three grey paragraphs about a missing key off the screen entirely.
+
+**Nothing moves.** The header is a fixed 76px, the widget is pinned at 500 by
+76, and the quiet line keeps its 20px whether or not it has anything to say.
+The widget's width was measured rather than guessed: 473px for its widest
+ordinary state, 480 with a three-digit count, which is the 131-photograph job.
+A test holds the DOM shape across five states, because a layout that has moved
+once will move again the next time a button is added.
+
+**One window for the money.** Generating captions used to open a style window
+and then a second window on top of it quoting the same figure twice. It is one
+window now: the count in the title, the figure in the corner, the two styles,
+his own photographs captioned in the lit style, and the button that spends it.
+
+**Three lines deleted on his instruction**: "Drag a photo to reorder it",
+"Build waits until you have read them all", and "Captions are saved as each
+request finishes." A hint lives on the thing, not as a sentence.
+
+**Two controls stopped looking like each other.** Bands is on or off, so it is
+a switch. Photographs to a page is a value, so it is a track of values. The
+colour law of 2026-09-08 still reads off both and neither carries a red fill.
+
+Shipped as 0.7.2.
+
 ### Still owed out of that work
 
 Named here rather than in a plan, because plans are deleted and these are not

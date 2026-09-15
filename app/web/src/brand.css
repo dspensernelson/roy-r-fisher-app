@@ -287,20 +287,6 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
 .done { margin-top: 18px; background: var(--ok-bg); color: var(--ok-ink); border-radius: 6px; padding: 14px 18px; font-size: 15px; }
-/* The finished document, and the two things he can do with it. One message
-   rather than the pair that used to sit here saying where it would go and
-   then where it went. */
-.finished {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 20px; flex-wrap: wrap;
-  margin: 0 0 16px; padding: 16px 18px; border-radius: 6px;
-  background: var(--ok-bg); color: var(--ok-ink);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-.finished-said { font-size: 15px; }
-.finished-where { display: block; margin-top: 3px; font-size: 13px; opacity: 0.8; }
-.finished-acts { display: flex; gap: 10px; flex-wrap: wrap; }
-
 /* A caption run has three endings and they are not all good news. Success
    keeps the green it always had; a run that saved some and not others is a
    warning; a run that saved nothing, and a cost the provider never reported,
@@ -313,15 +299,6 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .outcome-unknown { background: #F4F3F1; color: var(--ink); border: 1px solid var(--line); }
 .outcome-said { margin: 0 0 8px; font-weight: 700; }
 
-/* The run, beside the work it is doing. It used to be a thin indeterminate bar
-   in the top corner, on a page of sixty-one photographs. */
-.run {
-  margin: 0 0 16px; padding: 14px 18px; border-radius: 6px;
-  background: #FFFFFF; border: 1px solid var(--line);
-}
-.run-said strong { display: block; font-size: 15px; color: var(--ink); }
-.run-counts { display: block; margin: 3px 0 10px; font-size: 13px; color: var(--ink-muted);
-  font-variant-numeric: tabular-nums; }
 .error { margin-top: 18px; background: #FBEAEA; color: var(--brand); border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
 
 /* The job screen: what has arrived on the left, the report on the right.
@@ -389,32 +366,175 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .empty-note .name { font-size: 14px; font-weight: 600; color: var(--ink); }
 .empty-note .state { font-size: 12.5px; color: var(--ink-muted); margin-top: 4px; }
 
-/* Title on the left, the things you can do on the right, one row, nothing
-   below it but the work itself. */
-/* The actions stay up on the right, whatever is in them. They used to wrap
-   below the title the moment the row grew: typing one caption brings back
-   `Clear captions`, the row became too wide to sit beside the title, and the
-   whole block dropped down and to the left. Spenser saw it on 2026-09-07 and
-   the rule is that it never moves. So the head does not wrap, the title takes
-   the squeeze, and a crowded actions block grows taller rather than wider. */
+/* ---- THE HEADER, approved by Spenser 2026-09-15 --------------------------
+   Two things, one row, one fixed height. On the left what is being made, its
+   numbers and the quiet line. On the right the one widget. The height is set
+   here and never read from the row's contents, so nothing inside it can push
+   the photographs down.
+
+   It keeps the name `.screen-head` it has had since 2026-09-07, because the
+   rule fought for that day is still the rule: the head does not wrap, the
+   title takes the squeeze, and the actions never drop below the title. */
 .screen-head {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 20px; flex-wrap: nowrap; margin: 26px 0 20px;
+  gap: 24px; flex-wrap: nowrap; height: 76px; margin: 26px 0 12px;
 }
 .screen-head > :first-child { min-width: 0; }
-.screen-actions { display: flex; flex-direction: column; align-items: flex-end;
-                  gap: 9px; padding-top: 4px; flex: none; }
-/* "like a rounded panel that has controls in it." The buttons and the two
-   switches under them were loose on the eggshell page. They are one block, so
-   they sit on one surface: white, the only other surface the design system
-   allows, at the same radius and border as every other panel in the app. */
-.screen-actions.control-panel {
-  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
-  padding: 14px 16px; gap: 12px; box-shadow: var(--shadow-raised);
+/* The folder question is asked before any document is in view, so that state
+   is not this fixed row. */
+.screen-head.is-asking { height: auto; margin-bottom: 20px; }
+
+/* What is being made. */
+.made { min-width: 0; flex: 1 1 auto; }
+.nameline { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+/* A screen that makes a file is named by that file. */
+.made h1 {
+  margin: 0; font-size: 19px; line-height: 1.2; font-weight: 700;
+  letter-spacing: -0.15px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
-/* Inside the panel the switches line up with the buttons above them rather
-   than running to the far edge of a box that now has an edge. */
-.screen-actions.control-panel .band-row { justify-content: flex-end; }
+/* Grey, and the shape of the answer, when the name cannot be worked out. */
+.made h1.unknown { color: var(--ink-muted); font-weight: 600; }
+.nameline .linky { margin-left: 0; flex: none; }
+/* Only the numbers that describe the file, and where its photographs came
+   from. One line, never two, so the line below it cannot move. */
+.figures {
+  margin: 2px 0 0; font-size: 12.5px; line-height: 1.3; color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.figures .linky { margin-left: 8px; }
+
+/* The quiet line. One line, always there, never taller. Everything that is
+   only telling him something lands here; everything that needs his answer is
+   a window instead. When nothing is happening it holds no words and no dot,
+   and it still holds its height, so the photographs sit at the same pixel in
+   every state. */
+.quiet {
+  display: flex; align-items: center; gap: 7px;
+  height: 20px; margin-top: 5px; font-size: 12.5px; line-height: 20px;
+  color: var(--ink-on-quiet); white-space: nowrap; overflow: hidden;
+}
+.quiet .mark { flex: none; width: 7px; height: 7px; border-radius: 999px; background: #C2BEB6; }
+.quiet .said { overflow: hidden; text-overflow: ellipsis; }
+.quiet.k-run .mark { background: var(--link); }
+.quiet.k-done .mark { background: var(--ok-ink); }
+.quiet.k-done .said { color: var(--ok-ink); }
+.quiet.k-wrong .mark { background: var(--brand); }
+.quiet.k-wrong .said { color: var(--brand); }
+.quiet.k-standing .mark { background: var(--needs-ink); }
+.quiet.k-standing .said { color: var(--needs-ink); }
+/* A run's progress, on the same line rather than in a block of its own. */
+.thread { flex: none; display: inline-block; width: 54px; height: 3px;
+  border-radius: 2px; background: var(--line); overflow: hidden; }
+.thread span { display: block; height: 100%; border-radius: 2px; background: var(--link); }
+.quiet .linky { margin-left: 0; flex: none; }
+.quiet .more { background: none; border: none; font: inherit; font-size: 12.5px;
+  color: var(--ink-muted); cursor: pointer; padding: 0; flex: none; }
+.quiet .more:hover { color: var(--ink); }
+/* The x belongs on the line, not pinned to the corner of a box. */
+.quiet .note-x { position: static; flex: none; font-size: 15px; padding: 0 2px;
+  color: inherit; opacity: 0.55; }
+.quiet .note-x:hover { opacity: 1; background: none; }
+
+/* ---- THE WIDGET ----------------------------------------------------------
+   "like a rounded panel that has controls in it." Spenser, 2026-09-14. It
+   keeps the class name it was given then, because it is still the same
+   object: everything he can do, and the two settings that shape what comes
+   out, on one surface.
+
+   Its width as well as its height is pinned. The top row sets the width: the
+   widest state is `Generate captions` carrying its count beside `Clear
+   captions`. Without a pinned width the block moved every time that count
+   came and went, and again the first time a caption was typed, which is what
+   Spenser saw on 2026-09-07.
+
+   500 rather than a round guess. Measured in a browser against this
+   stylesheet on 2026-09-15: the top row needs 473px with a two-digit count
+   and 480px with a three-digit one, which is the largest job in his corpus at
+   131 photographs. The rest is room for Windows rendering the same words in
+   Segoe UI rather than Helvetica. The settings row needs 266 and sits inside
+   it, so nothing there can move anything either. */
+.screen-actions.control-panel {
+  flex: none; width: 500px; height: 76px;
+  display: flex; flex-direction: column; align-items: stretch;
+  justify-content: space-between; gap: 0;
+  padding: 7px 9px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  box-shadow: var(--shadow-raised);
+}
+.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 7px; height: 30px; }
+.screen-actions.control-panel .w-row.two { height: 24px; gap: 6px; }
+.screen-actions.control-panel .linky { margin-left: 0; }
+/* Written at the panel's own specificity so it beats the roomier
+   `.screen-actions .button` below, which NewJob still uses. */
+.screen-actions.control-panel .button {
+  border-radius: 5px; font-size: 12.5px; font-weight: 700; line-height: 1;
+  padding: 8px 11px; white-space: nowrap;
+}
+.w-add { font-size: 12.5px; white-space: nowrap; }
+/* Nothing to clear keeps its place rather than closing the gap, the way the
+   band chips do when bands are off. */
+.w-add.is-spare { visibility: hidden; }
+.w-sep { width: 1px; height: 16px; background: var(--line); flex: none; }
+.w-name { font-size: 11px; color: #6B6B6B; }
+
+/* What stops an action is said by the action, not in a line above it. */
+.act-wrap { position: relative; display: inline-block; }
+.why {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
+  background: var(--box); color: var(--box-ink); font-size: 12px; line-height: 1.35;
+  padding: 7px 9px; border-radius: 5px; width: max-content; max-width: 230px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  display: none; text-align: left; font-weight: 400; white-space: normal;
+}
+.act-wrap:hover .why[data-has="yes"] { display: block; }
+
+/* Two questions, so two controls that do not look like each other. Bands is
+   on or off, so it is a switch. Photographs to a page is a value, so it is a
+   track of values. They were identical pills, which is why they read as noise
+   rather than as two different questions. Neither is filled with brand red:
+   both are completely undoable, and the colour law of 2026-09-08 keeps the
+   screen's one red fill for `Build photo pages`. */
+.switch {
+  position: relative; width: 32px; height: 18px; flex: none; padding: 0; cursor: pointer;
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--paper-sunk);
+  transition: background .12s linear, border-color .12s linear;
+}
+.switch .knob {
+  position: absolute; top: 1px; left: 1px; width: 14px; height: 14px;
+  border-radius: 999px; background: var(--paper); box-shadow: var(--shadow-raised);
+  transition: left .12s ease;
+}
+.switch[aria-checked="true"] { background: #2F5D33; border-color: #2F5D33; }
+.switch[aria-checked="true"] .knob { left: 15px; }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
+
+.values {
+  display: inline-flex; gap: 2px; padding: 2px;
+  border: 1px solid var(--line-strong); border-radius: 5px; background: var(--paper-sunk);
+}
+.values button {
+  font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1; padding: 4px 7px;
+  border: none; border-radius: 3px; background: none; color: #6B6B6B; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+/* Raised and white out of a sunk track, which is how the style window's
+   segmented control has always shown selection. */
+.values button.on { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-raised); }
+.values button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* The bands' own chips, beside the switch. They keep their place when bands
+   are off rather than closing the gap. */
+.w-chips { display: flex; gap: 3px; }
+.w-chips.off { visibility: hidden; }
+.w-chip {
+  font: inherit; font-size: 10px; font-weight: 600; line-height: 1;
+  width: 18px; height: 18px; padding: 0; border-radius: 999px;
+  border: 1px solid #D7D4CF; background: var(--paper); color: #4A4A4A; cursor: pointer;
+}
+.w-chip:hover { border-color: #B9B5AE; }
+
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }
 .button.secondary { background: var(--link); }
@@ -444,7 +564,8 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 
 /* The x that clears a message. The boxes it sits in have to hold it, so they
    get position and room on the right for it. */
-.done, .error, .outcome { position: relative; padding-right: 44px; }
+.done, .error { position: relative; padding-right: 44px; }
+.outcome { position: relative; }
 .note-x {
   position: absolute; top: 6px; right: 8px;
   background: none; border: none; cursor: pointer;
@@ -479,7 +600,18 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   max-width: 840px; width: 100%; box-shadow: 0 18px 60px rgba(0,0,0,0.3);
   max-height: calc(100vh - 48px); overflow-y: auto;
 }
-.sheet h2 { font-size: 21px; font-weight: 700; margin: 0; }
+.sheet h2 { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.25; }
+/* One window at a time, so the one that carries the money is the widest. */
+.sheet.wide { max-width: 470px; }
+.sheet .fine { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); }
+/* The thing that finishes a window sits at the right-hand end of it, where a
+   person expects it, with the way out beside it. */
+.sheet-acts {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 14px; margin-top: 16px; flex-wrap: wrap;
+}
+.sheet-acts .linky { margin-left: 0; }
+.sheet-acts .button { white-space: nowrap; padding: 10px 15px; font-size: 13px; }
 /* The title on the left, the money on the right. Spenser asked for the cost in
    the upper right twice, on 2026-09-04 and 2026-09-07. */
 .sheet-head {
@@ -493,21 +625,6 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   margin: 0; flex: 0 0 auto; text-align: right; white-space: nowrap;
   font-size: 12.5px; color: var(--ink-muted); line-height: 1.3;
 }
-
-/* Stays put while the page preview scrolls behind it, so the button he came
-   here to press is never below the fold. The thing that finishes the window
-   sits at the right-hand end of it, where a person expects it, with the way
-   out beside it. */
-.sheet-foot {
-  display: flex; align-items: center; gap: 16px; margin-top: 18px;
-  position: sticky; bottom: -20px; background: var(--ground);
-  padding: 14px 0 16px; border-top: 1px solid var(--line);
-}
-.sheet-foot .linky { margin-left: 0; }
-/* It finishes a window, so it sits at the end of the row and stays on one
-   line. Blue, because it spends nothing by itself and he can back out of it:
-   the colour law of 2026-09-08 in docs/ROADMAP.md. */
-.sheet-foot .button { white-space: nowrap; padding: 13px 22px; font-size: 15px; }
 
 /* Said once, quietly, when his own photographs could not be captioned. The
    window still works: the written examples stay and nothing was sent. */
@@ -567,14 +684,6 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .cell-photo.is-example::after {
   content: ""; display: block; width: 100%; aspect-ratio: 4 / 3;
   border: 1px dashed var(--line); border-radius: 3px; background: #FAF8F4;
-}
-
-/* A promise about his money and his own typing. It has to be there, and it
-   has to be quiet: he asked for fewer things shouting at him on this window,
-   and a red sentence beside the button he came to press is one of them. */
-.keep-note {
-  margin: 0 auto 0 0; max-width: 46ch;
-  font-size: 12px; line-height: 1.45; color: var(--ink-muted);
 }
 
 /* Two ways into a new job. Pick the road first, then get the form. */
@@ -738,64 +847,6 @@ input::placeholder, textarea::placeholder {
   border-color: var(--brand);
   color: #fff;
 }
-/* The switch, and the chips it brings with it. */
-/* The actions column is right-aligned, so a short row would float away
-   from the buttons above it. This one starts where they start. */
-.band-row { align-items: center; gap: 8px; margin-top: 2px;
-            align-self: stretch; justify-content: flex-start; }
-.bands-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid #d7d4cf;
-  border-radius: 999px;
-  /* A sunk track, so the chosen half can read as raised out of it. It used to
-     be white, which left the fill as the only way to tell them apart. */
-  background: var(--paper-sunk);
-}
-.bands-label { font-size: 13px; color: #6b6b6b; padding: 0 6px 0 8px; }
-.pill-opt {
-  font: inherit;
-  font-size: 13px;
-  line-height: 1;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 999px;
-  background: none;
-  color: #6b6b6b;
-  cursor: pointer;
-}
-/* The chosen half. It was a brand red fill, which the colour law of
-   2026-09-08 gives to a control that cannot be taken back, one per screen at
-   most. Turning bands off, or pages to three, is completely undoable, and the
-   fill made a switch the loudest thing on the photographs screen. So it is
-   selected the way the style window's segmented control is selected: raised
-   and white out of a sunk track, in full-strength ink. No new colour, no new
-   idea, and the red stays with `Build photo pages`. */
-.pill-opt.is-on {
-  background: var(--paper); color: var(--ink); font-weight: 600;
-  box-shadow: var(--shadow-raised);
-}
-.pill-opt:disabled { opacity: .45; cursor: not-allowed; }
-.band-chip {
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid #d7d4cf;
-  background: #fff;
-  color: #4a4a4a;
-  cursor: pointer;
-}
-.band-chip:hover { border-color: #b9b5ae; }
-.review-progress { font-size: 13px; color: #6b6b6b; }
-.review-progress.is-done { color: #2f5d33; font-weight: 600; }
-
 /* What a run turned out to cost, after it has run. The arithmetic before the
    run used to sit in a boxed callout in the middle of the style window; on
    2026-09-14 that became a small figure in its top right corner, `.sheet-cost`,
@@ -824,43 +875,6 @@ input::placeholder, textarea::placeholder {
 @media (max-width: 700px) {
   .planned-row { flex-direction: column; align-items: flex-start; gap: 4px; }
   .review-line { flex-wrap: wrap; }
-}
-
-/* ---- the spend confirmation ---------------------------------------------- */
-/* Its own window, and it looks like one. The amount is the biggest thing on
-   it, because the amount is the decision. */
-.sheet.spend { max-width: 520px; }
-.spend-figure {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 16px 18px;
-  border: 1px solid #e2ded7;
-  border-radius: 10px;
-  background: #faf8f5;
-}
-.spend-label { font-size: 15px; color: #4a4a4a; }
-.spend-amount {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -.01em;
-  color: var(--brand);
-  white-space: nowrap;
-}
-.spend-warning {
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-left: 4px solid #b8862b;
-  background: #fdf6e8;
-  border-radius: 0 8px 8px 0;
-  font-size: 14px;
-  color: #4a3c1c;
-}
-@media (max-width: 700px) {
-  .spend-figure { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .spend-amount { font-size: 28px; }
 }
 
 /* Which folder inside Photos a photograph came from. Quiet on purpose: it is
@@ -903,10 +917,6 @@ input::placeholder, textarea::placeholder {
 }
 .folder-choice-name { flex: 1 1 auto; font-weight: 600; overflow-wrap: anywhere; }
 .folder-choice-count { flex: 0 0 auto; color: var(--ink-muted); font-size: 13px; }
-
-/* Which folder the report photographs came from. He chose it, so this is a
-   reminder and not an announcement. */
-.photo-from { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 
 /* Why one file cannot be one label, said on the row he clicked. Never across
    the whole screen: that is for the server having gone away, not for the app

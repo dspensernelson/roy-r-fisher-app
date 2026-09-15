@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -81,9 +81,13 @@ const TWO_PLACES = {
   chosen: null, chosen_missing: false, needs_choice: true,
 };
 
+// Superseded on 2026-09-15 by the approved design. The screen used to be
+// titled `Photos`; it is now titled with the name of the document it makes, so
+// waiting on that one word no longer works. The folder question, which is
+// asked before any document is in view, still calls itself Photos.
 async function show() {
   render(<PhotosScreen job={JOB} />);
-  await screen.findByRole("heading", { name: "Photos" });
+  await screen.findByRole("heading");
 }
 
 describe("with no key on this computer", () => {
@@ -137,15 +141,20 @@ describe("above thirty photographs", () => {
     }));
   });
 
+  // Superseded on 2026-09-15 by the approved design. The money used to be
+  // asked for in a second window that opened on top of the style window, and
+  // said the same figure twice on it. There is one window now: it carries the
+  // count, the figure, the style and the go-ahead, and cancelling it is still
+  // the thing that must send nothing.
   it("asks before anything is sent, and cancelling sends nothing", async () => {
     vi.spyOn(api, "draftCaptions").mockResolvedValue({});
     await show();
     await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Use this style" }));
 
     expect(await screen.findByText(/Generate captions for 61 photos\?/)).toBeInTheDocument();
-    // Twice on purpose: the figure, and the warning that repeats it.
-    expect(screen.getAllByText("$3.05").length).toBeGreaterThanOrEqual(1);
+    expect(document.querySelector(".sheet-cost").textContent).toBe("$3.05 max");
+    expect(screen.getByRole("button", { name: "Generate captions ($3.05)" }))
+      .toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(api.draftCaptions).not.toHaveBeenCalled();
@@ -167,10 +176,13 @@ describe("a run that saved some captions and not others", () => {
     vi.spyOn(api, "captionProgress").mockResolvedValue({ running: false });
   });
 
+  // Superseded on 2026-09-15 by the approved design. `Use this style` was the
+  // button on the old style window; the one window is finished by the button
+  // that spends the money, which names the amount.
   async function runIt() {
     await show();
     await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Use this style" }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Generate captions \(\$/ }));
   }
 
   it("says what was saved and what is left, and never says nothing changed", async () => {
@@ -220,11 +232,18 @@ describe("after a build", () => {
       JOB, "Anytown_100 Example Avenue Photos (Complete).docx", "document");
   });
 
-  it("stops promising where it will go once it has gone there", async () => {
+  // Superseded on 2026-09-15 by the approved design. There were two boxes
+  // saying where the file would go and then where it went, and the first had
+  // to disappear when the second arrived. The name is the screen's title now,
+  // so it is said once, always, and the build says only that it is ready.
+  it("says the name once, as the title, before and after the build", async () => {
+    const named = "Anytown_100 Example Avenue Photos (Complete).docx";
     await show();
-    expect(screen.getByText(/Will be saved as/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: named })).toBeInTheDocument();
+    expect(screen.queryByText(/Will be saved as/)).toBeNull();
     await userEvent.click(await screen.findByRole("button", { name: "Build photo pages" }));
     await screen.findByRole("button", { name: "Open document" });
+    expect(screen.getByRole("heading", { name: named })).toBeInTheDocument();
     expect(screen.queryByText(/Will be saved as/)).toBeNull();
   });
 });
@@ -236,11 +255,17 @@ describe("build is gated on review", () => {
     expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
   });
 
-  it("comes alive when they all have", async () => {
+  // Superseded on 2026-09-15 by the approved design. The line used to read
+  // "3 of 3 reviewed. Ready to build." Nothing is happening once they are all
+  // read, so nothing is said: the quiet line goes empty and the live Build
+  // button is the whole of the news.
+  it("comes alive when they all have, and stops talking about it", async () => {
     api.getManifest.mockResolvedValue(manifest({ photos: photos(3, "View of something") }));
     await show();
-    expect(await screen.findByText(/3 of 3 reviewed\. Ready to build\./)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    expect(screen.queryByText(/reviewed/)).toBeNull();
+    expect(document.querySelector(".quiet").textContent).toBe("");
   });
 });
 
@@ -422,7 +447,8 @@ describe("while it is waiting for the photo list", () => {
     expect(await screen.findByText(/Reading photograph 40 of 131/)).toBeInTheDocument();
 
     release(manifest());
-    await screen.findByRole("heading", { name: "Photos" });
+    // Superseded on 2026-09-15: the screen is titled by the document it makes.
+    await screen.findByRole("heading");
   });
 
   it("falls back to Loading before any count is known", async () => {
@@ -431,7 +457,8 @@ describe("while it is waiting for the photo list", () => {
     render(<PhotosScreen job={JOB} />);
     expect(await screen.findByText("Loading...")).toBeInTheDocument();
     release(manifest());
-    await screen.findByRole("heading", { name: "Photos" });
+    // Superseded on 2026-09-15: the screen is titled by the document it makes.
+    await screen.findByRole("heading");
   });
 
   it("stops asking once the list arrives", async () => {
@@ -513,7 +540,12 @@ describe("bands", () => {
                { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }],
     }));
     await show();
-    expect(await screen.findByText(/1 photograph is waiting for a band/)).toBeInTheDocument();
+    // Superseded on 2026-09-15: the reason is on the quiet line AND on the
+    // button it blocks, which is where what stops an action is said. So the
+    // line is read out of the quiet line rather than off the whole screen.
+    const said = await screen.findByText(/1 photograph is waiting for a band/,
+                                         { selector: ".said" });
+    expect(said).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
   });
 
@@ -549,17 +581,21 @@ describe("bands", () => {
 // ---------------------------------------------------------------------------
 
 describe("the bands switch", () => {
+  // Superseded on 2026-09-15 by the approved design. Bands was a pair of
+  // pills reading On and Off, identical to the pair beside it that chose
+  // three or six to a page. Two controls doing different jobs do not look the
+  // same, so bands is a switch now. What it does has not changed.
   it("starts off, with no chips, on a job that has never used bands", async () => {
     await show();
-    expect(await screen.findByRole("button", { name: "Off" })).toHaveAttribute(
-      "aria-pressed", "true");
+    expect(await screen.findByRole("switch", { name: "Bands" }))
+      .toHaveAttribute("aria-checked", "false");
     expect(screen.queryAllByRole("button", { name: /^Band [ABC]$/ })).toHaveLength(0);
   });
 
   it("asks the server to turn them on, and shows what comes back", async () => {
     const put = vi.spyOn(api, "putBands").mockResolvedValue(banded());
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    await userEvent.click(await screen.findByRole("switch", { name: "Bands" }));
     expect(put).toHaveBeenCalledWith(JOB, { bands_on: true });
     expect(await screen.findByRole("button", { name: "Band A" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Band B" })).toBeInTheDocument();
@@ -571,7 +607,7 @@ describe("the bands switch", () => {
     const put = vi.spyOn(api, "putBands").mockResolvedValue(
       manifest({ bands_on: false, bands: BANDS }));
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "Off" }));
+    await userEvent.click(await screen.findByRole("switch", { name: "Bands" }));
     expect(put).toHaveBeenCalledWith(JOB, { bands_on: false });
     await waitFor(() =>
       expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0));
@@ -583,7 +619,7 @@ describe("the bands switch", () => {
     const order = ["photo-01.jpg", "photo-02.jpg", "photo-03.jpg"];
     vi.spyOn(api, "putBands").mockResolvedValue(banded());
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "On" }));
+    await userEvent.click(await screen.findByRole("switch", { name: "Bands" }));
     await screen.findByRole("button", { name: "Band A" });
     const captions = screen.getAllByRole("textbox");
     expect(captions).toHaveLength(order.length);
@@ -664,22 +700,25 @@ describe("three or six to a page", () => {
       .toHaveAttribute("aria-pressed", "false");
   });
 
+  // Superseded on 2026-09-15 by the approved design. The count used to read
+  // "about 4 pages". The app knows the layout, so a number it knows exactly
+  // is stated exactly: twelve photographs at three to a page is four pages.
   it("counts three to a page while three is chosen", async () => {
     api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 3 }));
     await show();
-    expect(await screen.findByText(/about 4 pages/)).toBeInTheDocument();
+    expect(await screen.findByText(/12 photographs · 4 pages/)).toBeInTheDocument();
   });
 
   it("halves the page count when six is chosen", async () => {
     api.getManifest.mockResolvedValue(manifest({ photos: photos(12), photos_per_page: 6 }));
     await show();
-    expect(await screen.findByText(/about 2 pages/)).toBeInTheDocument();
+    expect(await screen.findByText(/12 photographs · 2 pages/)).toBeInTheDocument();
   });
 
   it("says one page rather than one pages", async () => {
     api.getManifest.mockResolvedValue(manifest({ photos: photos(5), photos_per_page: 6 }));
     await show();
-    expect(await screen.findByText(/about 1 page\./)).toBeInTheDocument();
+    expect(await screen.findByText(/5 photographs · 1 page$/)).toBeInTheDocument();
   });
 
   it("writes the choice into the manifest and nothing else", async () => {
@@ -898,10 +937,14 @@ describe("the caption style chooser he complained about", () => {
                 calculated_cost: 0.0211, tokens: { input: 1, output: 1 } },
   };
 
+  // Superseded on 2026-09-15 by the approved design. The window was called
+  // "How should the captions read?" and a second window opened on top of it
+  // to ask for the money. There is one window now, and it is named by what
+  // pressing it will do.
   async function openIt() {
     await show();
     await userEvent.click(await screen.findByRole("button", { name: /Generate captions/ }));
-    return screen.findByRole("dialog", { name: "How should the captions read?" });
+    return screen.findByRole("dialog", { name: "Generate captions for 3 photos?" });
   }
 
   it("puts the estimated maximum cost in the upper right, on one line", async () => {
@@ -909,9 +952,10 @@ describe("the caption style chooser he complained about", () => {
     const head = sheet.querySelector(".sheet-head");
     const cost = head.querySelector(".sheet-cost");
     expect(cost).not.toBeNull();
-    // One line. It was three stacked: "Est. max", the figure, the count.
-    // Spenser, 2026-09-14: *"DONT USE 10 WORDS WHEN 3 WILL DO"*.
-    expect(cost.textContent).toBe("$0.15 max, 3 photos");
+    // One line, and now three words. It was three stacked lines: "Est. max",
+    // the figure, the count. Superseded on 2026-09-15: the count moved into
+    // the window's own title, so the corner carries the figure alone.
+    expect(cost.textContent).toBe("$0.15 max");
     expect(cost.children).toHaveLength(0);
     // It is a number he glances at. Not the boxed callout with the red bar.
     expect(cost.closest(".confirm")).toBeNull();
@@ -925,21 +969,27 @@ describe("the caption style chooser he complained about", () => {
     expect(sheet.querySelector(".toggle-flag")).toBeNull();
   });
 
-  it("makes the money promise once, in one short line", async () => {
+  // Superseded on 2026-09-15 by the approved design. The promise under the
+  // samples is gone entirely. The window's own title says how many
+  // photographs it is about to caption, out of a job that holds more, so the
+  // sentence saying captioned ones are skipped was the same fact in words.
+  it("makes no promises under the samples at all", async () => {
     const sheet = await openIt();
     expect(sheet.textContent).not.toMatch(/Anthropic/);
-    // It was two sentences and twenty-two words for one idea.
-    expect(sheet.querySelector(".keep-note").textContent)
-      .toBe("Photos you already captioned are skipped.");
+    expect(sheet.querySelector(".keep-note")).toBeNull();
     expect(sheet.textContent).not.toMatch(/are never changed/);
     expect(sheet.textContent).not.toMatch(/charged for again/);
+    expect(sheet.textContent).not.toMatch(/saved as each request finishes/);
+    expect(sheet.querySelector("h2").textContent).toBe("Generate captions for 3 photos?");
   });
 
+  // Superseded on 2026-09-15 by the approved design: the row is `.sheet-acts`
+  // and the button that finishes the window names the money it spends.
   it("finishes the window from the bottom right, with Cancel to its left", async () => {
     const sheet = await openIt();
-    const foot = sheet.querySelector(".sheet-foot");
+    const foot = sheet.querySelector(".sheet-acts");
     const buttons = [...foot.querySelectorAll("button")];
-    const use = buttons.find((b) => b.textContent === "Use this style");
+    const use = buttons.find((b) => b.textContent === "Generate captions ($0.15)");
     const cancel = buttons.find((b) => b.textContent === "Cancel");
     expect(buttons.indexOf(cancel)).toBeLessThan(buttons.indexOf(use));
     expect(foot.lastElementChild).toBe(use);
@@ -971,7 +1021,8 @@ describe("the caption style chooser he complained about", () => {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await userEvent.click(screen.getByRole("button", { name: /Generate captions/ }));
-    await screen.findByRole("dialog", { name: "How should the captions read?" });
+    // Superseded on 2026-09-15: the window is named by what it will do.
+    await screen.findByRole("dialog", { name: "Generate captions for 3 photos?" });
 
     expect(ask).toHaveBeenCalledTimes(1);
   });
@@ -996,5 +1047,228 @@ describe("the caption style chooser he complained about", () => {
     expect(sheet.querySelectorAll(".cell-photo img")).toHaveLength(0);
     expect(await screen.findByText(/Demo photographs stay on this computer/))
       .toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The design Spenser approved on 2026-09-15, after eight rounds of his own
+// changes. Five kinds of thing and each gets one home: what is being made,
+// what shapes it, what you can do, what is happening, and the photographs.
+// ---------------------------------------------------------------------------
+
+describe("the screen is named by the document it makes", () => {
+  it("is titled with the file the build will write", async () => {
+    await show();
+    expect(await screen.findByRole("heading", {
+      name: "Anytown_100 Example Avenue Photos (Complete).docx" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Photos" })).toBeNull();
+  });
+
+  it("says file name here.docx, greyed, when the name cannot be worked out", async () => {
+    api.jobFacts.mockResolvedValue({
+      ready: false, city: "", address: "", filename: "", missing: ["city", "street address"] });
+    await show();
+    const title = await screen.findByRole("heading", { name: "file name here.docx" });
+    expect(title).toHaveClass("unknown");
+  });
+
+  it("puts the way to change it beside the name", async () => {
+    await show();
+    const title = await screen.findByRole("heading", {
+      name: "Anytown_100 Example Avenue Photos (Complete).docx" });
+    const beside = title.parentElement.querySelector("button");
+    expect(beside).toHaveTextContent("Not right?");
+  });
+
+  it("asks for the name when it could not be read", async () => {
+    api.jobFacts.mockResolvedValue({
+      ready: false, city: "", address: "", filename: "", missing: ["city"] });
+    await show();
+    expect(await screen.findByRole("button", { name: "Enter it" })).toBeInTheDocument();
+  });
+
+  it("states the pages exactly, never about", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(60), photos_per_page: 3 }));
+    await show();
+    expect(await screen.findByText(/60 photographs · 20 pages/)).toBeInTheDocument();
+    expect(screen.queryByText(/about/)).toBeNull();
+  });
+});
+
+describe("one widget, upper right", () => {
+  it("holds the three actions and the two settings, in that order", async () => {
+    await show();
+    const widget = document.querySelector(".screen-actions.control-panel");
+    const rows = widget.querySelectorAll(".w-row");
+    expect(rows).toHaveLength(2);
+    const acts = [...rows[0].querySelectorAll("button")].map((b) => b.textContent);
+    expect(acts.slice(0, 3)).toEqual(
+      ["Build photo pages", "Generate captions (3)", "Add photos"]);
+    const settings = [...rows[1].children].map((el) => el.className.split(" ")[0]);
+    expect(settings).toEqual(["w-name", "values", "w-sep", "w-name", "switch", "w-chips"]);
+  });
+
+  it("asks its two questions with two different controls", async () => {
+    api.getManifest.mockResolvedValue(banded());
+    await show();
+    // Bands is on or off, so it is a switch.
+    expect(await screen.findByRole("switch", { name: "Bands" }))
+      .toHaveAttribute("aria-checked", "true");
+    // Photographs to a page is a value, so it is a track of values.
+    expect(screen.getByRole("group", { name: "Photographs to a page" }))
+      .toHaveClass("values");
+    expect(document.querySelector(".values [role=switch]")).toBeNull();
+  });
+
+  it("keeps the band chips' place when bands are off", async () => {
+    api.getManifest.mockResolvedValue(manifest({ bands_on: false, bands: BANDS }));
+    await show();
+    await screen.findAllByPlaceholderText("Caption...");
+    expect(document.querySelector(".w-chips")).toHaveClass("off");
+    expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0);
+  });
+});
+
+describe("a message has one of two homes", () => {
+  it("keeps the quiet line's slot open when there is nothing to say", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(3, "View of something") }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    const quiet = document.querySelector(".quiet");
+    expect(quiet).not.toBeNull();
+    expect(quiet.textContent).toBe("");
+    expect(quiet.querySelector(".mark")).toBeNull();
+  });
+
+  it("says what is happening on that one line, not in a box", async () => {
+    await show();
+    expect(await screen.findByText(/0 of 3 reviewed/))
+      .toHaveClass("said");
+  });
+
+  it("says what blocks the Build button on the Build button", async () => {
+    await show();
+    const why = document.querySelector(".screen-actions .act-wrap .why");
+    expect(why.textContent).toMatch(/Tick every caption you have read first/);
+    expect(why).toHaveAttribute("data-has", "yes");
+  });
+
+  it("puts nothing between the header and the photographs, whatever happens",
+     async () => {
+    // jsdom lays nothing out, so this is not a measurement of pixels. It is
+    // the thing a measurement could not tell you anyway: that no state of
+    // this screen can put a box, a banner or a line between the header and
+    // the photographs, and that the header holds the same three slots in all
+    // of them. On 2026-09-04 eleven of them could stack up there.
+    const shape = () => {
+      const head = document.querySelector(".screen-head");
+      return {
+        kids: [...head.children].map((el) => el.className),
+        made: [...head.querySelector(".made").children]
+          .map((el) => el.className.split(" ")[0]),
+        after: head.nextElementSibling.className.split(" ")[0],
+        slot: !!head.querySelector(".quiet"),
+      };
+    };
+
+    await show();
+    await screen.findByText(/0 of 3 reviewed/);
+    const settled = shape();
+    expect(settled).toEqual({
+      kids: ["made", "screen-actions control-panel"],
+      made: ["nameline", "figures", "quiet"],
+      after: "grid",
+      slot: true,
+    });
+
+    // A photograph waiting for a band.
+    cleanup();
+    api.getManifest.mockResolvedValue(banded({
+      photos: [{ file: "photo-01.jpg", caption: "one", reviewed: true },
+               { file: "photo-02.jpg", caption: "two", reviewed: true, band: "A" },
+               { file: "photo-03.jpg", caption: "three", reviewed: true, band: "C" }] }));
+    await show();
+    await screen.findByText(/1 photograph is waiting for a band/, { selector: ".said" });
+    expect(shape()).toEqual(settled);
+
+    // No key on the computer, which used to put two grey paragraphs above the
+    // photographs saying the same thing in different words.
+    cleanup();
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(3, "a caption") }));
+    api.captionStyles.mockResolvedValue({ ...STYLES, ai_available: false });
+    api.captionEstimate.mockResolvedValue(estimate({ blocked_because: "no_key",
+                                                     ai_available: false }));
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Generate captions/ })).toBeDisabled());
+    expect(shape()).toEqual(settled);
+
+    // A finished build, which used to be a green box of its own.
+    cleanup();
+    api.captionStyles.mockResolvedValue(STYLES);
+    api.captionEstimate.mockResolvedValue(estimate({ photos_to_send: 0,
+                                                     blocked_because: "nothing_to_do" }));
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(3, "a caption") }));
+    vi.spyOn(api, "build").mockResolvedValue({ created: "x.docx", folder: "/tmp" });
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: "Build photo pages" }));
+    await screen.findByRole("button", { name: "Open document" });
+    expect(shape()).toEqual(settled);
+  });
+});
+
+describe("generating captions is one window", () => {
+  it("asks the cost, the style and the go-ahead in the same window", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(61) }));
+    api.captionEstimate.mockResolvedValue(estimate({
+      photos_to_send: 61, tranches: 2, needs_confirmation: true,
+      estimate: { label: "Estimated maximum cost", photos: 61, rate: 0.05,
+                  total: 3.05, arithmetic: "61 x $0.0500 = $3.05", is_estimate: true } }));
+    vi.spyOn(api, "draftCaptions").mockResolvedValue({});
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: /Generate captions \(61\)/ }));
+
+    const sheet = await screen.findByRole("dialog");
+    expect(document.querySelectorAll(".sheet")).toHaveLength(1);
+    expect(sheet.querySelector("h2").textContent).toBe("Generate captions for 61 photos?");
+    expect(sheet.querySelector(".sheet-cost").textContent).toBe("$3.05 max");
+    expect(sheet.querySelectorAll(".toggle button")).toHaveLength(2);
+    const acts = [...sheet.querySelectorAll(".sheet-acts button")].map((b) => b.textContent);
+    expect(acts).toEqual(["Cancel", "Generate captions ($3.05)"]);
+  });
+
+  it("opens no second window on top of it", async () => {
+    api.getManifest.mockResolvedValue(manifest({ photos: photos(61) }));
+    api.captionEstimate.mockResolvedValue(estimate({
+      photos_to_send: 61, tranches: 2, needs_confirmation: true }));
+    vi.spyOn(api, "draftCaptions").mockResolvedValue(
+      manifest({ photos: photos(61, "View of something") }));
+    vi.spyOn(api, "captionProgress").mockResolvedValue({ running: false });
+    await show();
+    await userEvent.click(await screen.findByRole("button", { name: /Generate captions \(61\)/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Generate captions \(\$/ }));
+    await waitFor(() => expect(api.draftCaptions).toHaveBeenCalled());
+    expect(api.draftCaptions.mock.calls[0][1]).toBe(true);
+  });
+
+  it("picks the caption style here and nowhere else", async () => {
+    await show();
+    await screen.findAllByPlaceholderText("Caption...");
+    expect(document.querySelector(".toggle")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Generate captions/ }));
+    expect(document.querySelectorAll(".toggle")).toHaveLength(1);
+  });
+});
+
+describe("the lines he had taken out on 2026-09-15", () => {
+  it("never says any of them", async () => {
+    await show();
+    await screen.findAllByPlaceholderText("Caption...");
+    const said = document.body.textContent;
+    expect(said).not.toMatch(/Drag a photo to reorder it/);
+    expect(said).not.toMatch(/Build waits until you have read them all/);
+    expect(said).not.toMatch(/saved as each request finishes/);
+    expect(said).not.toMatch(/saved as each one finishes/);
   });
 });

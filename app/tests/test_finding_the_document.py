@@ -202,16 +202,19 @@ def test_the_screen_offers_both_actions_and_calls_neither_on_its_own():
     assert "onReveal" not in build_fn
 
 
-def test_the_two_success_boxes_are_not_both_on_screen():
-    """`Will be saved as` disappears once the file actually exists.
+def test_the_name_is_said_once_and_only_once():
+    """Superseded on 2026-09-15 by the approved design.
 
-    Written against the condition rather than the whole line. The line held
-    the exact string this used to assert until 2026-09-08, when a way to close
-    the box was added to it, and the test failed while the thing it protects
-    was never in danger. What matters is that the name box is gated on `facts`
-    and on there being no `done`, not what else is on the line with them.
+    There were two boxes: one promising where the file would go and one saying
+    where it went, and the first had to be gated on the second not existing or
+    they were both on screen. A screen that makes a file is named by that
+    file, so the name is the title now. It is there before the build and after
+    it, it is the same words either way, and `Will be saved as` is gone.
     """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
-    start = screen.index("{facts && inPhotos.length > 0")
-    condition = screen[start:screen.index("(", start)]
-    assert "!done" in condition, "both boxes can be on screen at once"
+    assert "Will be saved as" not in screen
+    assert '<h1 className={named ? "" : "unknown"}' in screen
+    assert "const docName = named ? facts.filename : NO_NAME;" in screen
+    # And the grey stand-in when it cannot be worked out, which is the shape
+    # of the answer rather than an apology for not having it.
+    assert 'const NO_NAME = "file name here.docx";' in screen

@@ -36,8 +36,23 @@ is true today.
 
 ## After that
 
-- [ ] 14 bugs in `docs/BUGS.md`
+- [ ] Close the bugs that are already fixed. The list says 15 and several were
+      fixed weeks ago and never struck off. B13 was fixed 2026-09-14. B7 went
+      with the send-the-log work. B8 and B11, the black window, went in 0.6.5.
+      Nobody has checked the list against the code.
+- [ ] Trim `HOW-WE-WORK.md`. It is 280 lines and growing every time Spenser
+      states a rule. The rules are right; the file is becoming unreadable.
 - [ ] 5 items from the 2026-09-04 walk, on the job screen and the update screen
+
+## Where these overlap, so nothing is done twice
+
+- **B15 is north star 1 and 2.** Every new version failing its first run is
+  what breaks both Update and the icon. Fixing it ticks two of the five.
+- **B14 is B15.** "Nothing happens for a few seconds after you click the icon"
+  is the same cold start, reported separately.
+- **B10 is north star 4.** The screen that never closes after an update is the
+  old screen he must never be shown.
+- **So the first fix is B15**, and it is the largest single move available.
 
 ## Done
 

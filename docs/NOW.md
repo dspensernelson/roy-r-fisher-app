@@ -57,7 +57,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 ## Bugs still open
 
-- [ ] A photograph you removed stays in the list and blocks everything · Star 5
+- [x] A photograph you removed stays in the list and blocks everything · Star 5
 
 ## Waiting on Spenser
 

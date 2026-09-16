@@ -1229,42 +1229,56 @@ def create_app() -> FastAPI:
         if error:
             raise HTTPException(400, error)
 
-        # A photograph named in the manifest file that is not in the folder
-        # used to surface as the engine's own exception, because the engine
-        # read that file directly. It no longer does: Mark chooses which
-        # folder holds the report photographs, so the engine is handed the
-        # list instead. That made a dangling entry disappear silently, which
-        # is worse than the crash it replaced, so the check is now explicit
-        # and it runs whether or not he has chosen anything.
+        # A photograph named in the manifest file whose file has gone is taken
+        # out of the list, and the build carries on.
+        #
+        # **The trap this replaces.** `load_manifest` silently drops an entry
+        # whose file is missing, so the screen never shows it. This check read
+        # the manifest file straight off disk, so it still saw it, and refused
+        # with "take that photograph out, then build again". She could not:
+        # the photograph it named had no tile to take out. Two readings of one
+        # list, with her standing between them. Colleen met the first half of
+        # this on 2026-09-03.
+        #
+        # **Spenser chose this on 2026-09-16**, over showing the photograph so
+        # she could remove it herself, and over building a report with a gap in
+        # it and saying nothing. The refusal that used to be here argued that a
+        # report quietly missing a photograph is worse than a stop; his answer
+        # is that a stop she cannot act on is worse than both.
+        #
+        # **The removal is written to the file.** Dropping it only in memory
+        # would leave the same entry there for the next build to trip over,
+        # which is the same trap one run later.
+        #
+        # Nothing is said on her screen. That is a wording decision and it is
+        # his to make; what exists instead is a line in the log, which is what
+        # `Send the log to Spenser` carries.
         if manifest_existed:
             try:
                 raw = json.loads(manifest_file.read_text())
             except ValueError:
                 raw = {}
             if isinstance(raw, dict):
+                dangling = []
                 for entry in raw.get("photos", []) or []:
                     if not isinstance(entry, dict) or entry.get("cut"):
                         continue
                     named = entry.get("file")
                     if not named:
                         continue
-                    where = jobs.photo_path(job, entry)
-                    if not where.is_file():
-                        # A dead end used to stop here, with nothing on the
-                        # screen a person could act on. Colleen met it on
-                        # 2026-09-03 and the only way past it was editing the
-                        # file by hand, which risked every caption in the job.
-                        #
-                        # The refusal stays, because building a report that
-                        # quietly leaves a photograph out is worse. What is new
-                        # is that it says which one and what to do about it,
-                        # and `Take out` on that photograph now works even
-                        # though the file has gone, so the door is real.
-                        raise HTTPException(
-                            400, "%s is in this job's photo list but the file "
-                                 "is not there any more. Take that photograph "
-                                 "out, then build again. Nothing else has "
-                                 "been changed." % named)
+                    if not jobs.photo_path(job, entry).is_file():
+                        dangling.append(named)
+                if dangling:
+                    raw["photos"] = [
+                        entry for entry in raw.get("photos", []) or []
+                        if not (isinstance(entry, dict)
+                                and not entry.get("cut")
+                                and entry.get("file") in dangling)]
+                    with busy.writing():
+                        manifest_file.write_text(json.dumps(raw, indent=2))
+                    applog.note("photographs taken out, their files had gone",
+                                job=job.name, files=", ".join(dangling))
+                    manifest = photos_routes.load_manifest(job)
 
         # Every included caption has to have been looked at. This is the gate,
         # and it is here rather than only on the screen because the manifest is

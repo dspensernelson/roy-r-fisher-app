@@ -60,25 +60,29 @@ def test_build_creates_docx(client):
 
 
 @has_template
-def test_build_error_surfaces_real_message(client, tmp_path):
-    """A dangling entry reaches the engine, and the engine's own words come back.
+def test_a_dangling_entry_is_taken_out_and_the_build_carries_on(client, tmp_path):
+    """A photograph whose file has gone leaves the list, and the report builds.
 
-    Rewritten 2026-08-22. This used to name the missing photograph through
-    PUT /manifest, and that route can no longer produce this state: the manifest
-    is reconciled against the folder on the way in, so a file that is not there
-    is dropped rather than stored, and the review gate then refuses the build
-    long before the engine sees anything.
+    **This test asserted the opposite until 2026-09-16.** It required a 400
+    naming the photograph and saying "Take that photograph out", and it called
+    that refusal honest. It was not: `load_manifest` had already dropped that
+    entry before the screen saw it, so the photograph she was told to take out
+    had no tile to take out. She was being handed an instruction she could not
+    follow.
 
-    The state is still reachable, by the route the build endpoint's own comments
-    are about: the manifest file sits on disk where a human or another process
-    can edit it, and the engine reads that raw file rather than the
-    reconciliation. That is what makes a genuinely dangling entry surface as a
-    specific, honest error instead of being silently dropped, and it is what
-    this test now exercises.
+    Spenser chose the removal on 2026-09-16, over showing the photograph so she
+    could take it out herself, and over building with a gap and saying nothing.
+
+    The state is still reached the same way, and that part of the old note
+    stands: the manifest file sits on disk where a person or another process
+    can edit it, and the build reads that raw file rather than the
+    reconciliation, which is what makes a genuinely dangling entry reachable at
+    all.
     """
     c, job = client
     photos = job / "Photos"
-    (photos / "photo-manifest.json").write_text(json.dumps({
+    manifest = photos / "photo-manifest.json"
+    manifest.write_text(json.dumps({
         "job": "JOB1", "context": "", "report_year": 2026, "caption_style": "view",
         "photos": [
             {"file": "a.jpg", "caption": "View of the front", "reviewed": True},
@@ -86,17 +90,12 @@ def test_build_error_surfaces_real_message(client, tmp_path):
         ]}), encoding="utf-8")
 
     r = c.post("/api/jobs/JOB1/build")
-    # 400 rather than 500, changed 2026-09-03. Nothing crashed: the job is in a
-    # state the person in front of it can fix, and saying "server error" to
-    # Colleen for something she can undo herself is a lie about whose problem
-    # it is.
-    assert r.status_code == 400
-    detail = r.json()["detail"]
-    assert "missing.jpg" in detail
-    # The refusal has to carry a way through it. This is the dead end she met
-    # on 2026-09-03, where the only escape was editing the file by hand.
-    assert "Take that photograph out" in detail
-    assert not list(photos.glob("*.docx")), "a failed build leaves no document"
+
+    assert r.status_code == 200, "it refused over a photograph she cannot reach"
+    left = [e["file"] for e in json.loads(manifest.read_text())["photos"]]
+    assert "missing.jpg" not in left, "the entry is still there for the next build"
+    assert "a.jpg" in left, "a photograph that is really there was taken out"
+    assert list(photos.glob("*.docx")), "the report was not built"
 
 
 def test_build_no_manifest_gives_plain_english_error(client, tmp_path, monkeypatch):

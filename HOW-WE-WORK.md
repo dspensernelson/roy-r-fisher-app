@@ -73,6 +73,50 @@ when it does not fit rather than following it off a cliff.
 - **Never guess at a folder's name.** The exact name on disk is the job's
   identity. If we need to know what he calls it, ask him.
 
+## Six rules from 2026-09-16
+
+**An instruction he gave once stands until he retracts it.** The worst pattern
+of that day: rebuilding a thing from his newest sentence and silently dropping
+what he had already said about it. "The check is the glyph, not the words" was
+overwritten twice that way, and the photo button was put in the wrong row
+twice. Before rebuilding anything, re-read what he has already said about it.
+
+**He decides by moving things, not by reading descriptions.** An interactive
+page where he drags the pieces and gets a readout of what he changed was worth
+more than every mockup before it. Build the thing he can touch, early, and make
+it hand back numbers rather than impressions.
+
+**Options while he is deciding, then take them away.** He asked for four
+versions of a bar, picked one, and immediately wanted the picker gone. Delete
+the ones he did not pick rather than hiding them behind a default: scaffolding
+left standing beside a settled thing is how it gets reopened.
+
+**Never draw anything that claims to be the app without reading the app.** A
+mockup of the notifications was invented and showed stacked boxes, which was
+the exact thing he had already had removed. Read the source, copy the real
+tokens and the real markup, and say in the file where they came from.
+
+**He talks by voice, so read through the transcription.** "The sixth sense" was
+six cents. "A tilt" was a tilde. "3D review" was 3 to review. Taking the words
+literally wastes a turn and reads as not listening.
+
+**Look at it before publishing, not after.** Every visual defect that day
+reached him because it was published and then checked. Render it, measure the
+thing that matters, and only then publish. A cascade collision or a selector
+that matches nothing does not show up in a passing test suite.
+
+## Two facts that disagree is the bug, most of the time
+
+Nearly every serious defect on 2026-09-16 was one truth stored twice. The tab
+that could not find the app, because only the app that had exited knew the
+port. The screen saying "9 of 12 reviewed" while the box said everything was
+done, because written and reviewed were unrelated state. The build refusing
+over a photograph the screen had already dropped, because the two read one list
+two different ways.
+
+When something is wrong and the cause is not obvious, look first for a fact
+with two homes.
+
 ## The north star
 
 **It should behave like a real app.** Spenser, 2026-09-15, after a week of

@@ -836,6 +836,50 @@ def readme_text() -> str:
         "a photo of it.\n")
 
 
+ARCHIVE_NAME = "Archive"
+
+# What stays loose beside the newest package. `latest.json` is the file the
+# app reads to learn a version exists, so it is not a leftover.
+KEEP_LOOSE = {ARCHIVE_NAME, "latest.json", ".DS_Store"}
+
+
+def archive_the_old_packages(folder: Path, version: str) -> int:
+    """Move every package but the one just built into `Archive`. Returns how
+    many things moved.
+
+    Spenser asked for this on 2026-09-16, looking at twenty-five versions and
+    4.2 GB: *"When you make a new one, drag the old one to the archive."*
+
+    **It moves and it never deletes.** A package is the only copy of what was
+    handed over on a given day. If a name is already taken in the archive, the
+    incoming one is given a suffix rather than landing on top of it, because
+    two builds can carry the same version number and the older file is still
+    the record of what somebody actually received.
+
+    It is deliberately quiet about which version the office runs. It cannot
+    know that, and guessing would be the way a needed package went missing.
+    Anything wanted back is one drag out of `Archive`.
+    """
+    if not folder.is_dir():
+        return 0
+    archive = folder / ARCHIVE_NAME
+    archive.mkdir(exist_ok=True)
+    mine = "Roy R. Fisher v%s" % version
+    moved = 0
+    for path in sorted(folder.iterdir()):
+        if path.name in KEEP_LOOSE or path.name.startswith(mine):
+            continue
+        to = archive / path.name
+        if to.exists():
+            n = 2
+            while (archive / ("%s (%d)" % (path.name, n))).exists():
+                n += 1
+            to = archive / ("%s (%d)" % (path.name, n))
+        shutil.move(str(path), str(to))
+        moved += 1
+    return moved
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default="build/packages/Roy R. Fisher v%s"
@@ -854,6 +898,18 @@ def main() -> int:
         work = REPO / work
 
     build(out, work, args.offline)
+
+    # Last, and only once the package is whole. Tidying before the build could
+    # move the very thing a failed build was about to need.
+    #
+    # Keyed off the package just built, never off `VERSION`. Those two are the
+    # same in a release and are not the same when `--out` names something else,
+    # and reading the wrong one moved a package out from under the caller that
+    # had just asked for it. Found by the packaging tests on 2026-09-16.
+    moved = archive_the_old_packages(out.parent, out.name.split(" v")[-1])
+    if moved:
+        say("Moved %d older package files into %s. Nothing was deleted."
+            % (moved, out.parent / ARCHIVE_NAME))
     return 0
 
 

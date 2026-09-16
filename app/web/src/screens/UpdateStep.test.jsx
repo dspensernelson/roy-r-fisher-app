@@ -112,21 +112,76 @@ describe("while it runs", () => {
 });
 
 describe("how it ends", () => {
-  it("says the app is closing and names the Desktop icon", async () => {
+  it("waits quietly and promises nothing it cannot know", async () => {
+    // Before 2026-09-16 this tab was a dead end. It said "You can close this
+    // tab" and named a new tab that might never exist, because the app came
+    // back on a port the operating system had picked and this page had no
+    // way to learn it. The app now answers on the same number every time, so
+    // this page waits and becomes the new version itself.
     vi.spyOn(api, "startUpdate").mockResolvedValue({});
     vi.spyOn(api, "updateProgress").mockResolvedValue(
       progress({ running: false, stage: "Closing" }));
     open();
     await userEvent.click(screen.getByRole("button", { name: "Update now" }));
-    await waitFor(() => expect(screen.getByText("Installing the new version.")).toBeInTheDocument());
-    // It says the app closed itself on purpose, rather than leaving a person
-    // to guess why the screen stopped answering.
-    expect(screen.getByText(/The app has closed itself/)).toBeInTheDocument();
-    // And that this tab is finished with, which is the thing that was missing:
-    // it used to sit for ever over a job list that still looked usable.
-    expect(screen.getByText(/You can close this tab/)).toBeInTheDocument();
-    expect(screen.getByText(/Roy R\. Fisher icon on your Desktop/))
-      .toBeInTheDocument();
+    await waitFor(() => expect(
+      screen.getByText("Installing the new version.")).toBeInTheDocument());
+
+    expect(screen.getByText(/comes back on its own/)).toBeInTheDocument();
+    // Nothing about closing it, and nothing about another tab. Those were the
+    // two claims it could not stand behind.
+    expect(screen.queryByText(/You can close this tab/)).toBeNull();
+    expect(screen.queryByText(/new tab/)).toBeNull();
+    expect(screen.queryByText(/not answering/)).toBeNull();
+  });
+
+  it("becomes the new version when a different one answers", async () => {
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    vi.spyOn(api, "updateProgress").mockResolvedValue(
+      progress({ running: false, stage: "Closing" }));
+    const went = [];
+    const replace = vi.fn();
+    vi.stubGlobal("fetch", (url) => {
+      went.push(String(url));
+      if (String(url).includes("/api/version")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ version: "9.9.9" }) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+    const where = window.location;
+    delete window.location;
+    window.location = { replace };
+
+    open();
+    await userEvent.click(screen.getByRole("button", { name: "Update now" }));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/"), { timeout: 4000 });
+
+    // It announces itself on the way past, on the same route the loading page
+    // uses, so the new app does not open a tab beside this one.
+    expect(went.some((u) => u.includes("/api/loading-page"))).toBe(true);
+    window.location = where;
+    vi.unstubAllGlobals();
+  });
+
+  it("does not become a version that is the one already running", async () => {
+    // The old app answers right up until it goes. Reloading into it would put
+    // her back exactly where she started, on a page about to die again.
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    vi.spyOn(api, "updateProgress").mockResolvedValue(
+      progress({ running: false, stage: "Closing" }));
+    const replace = vi.fn();
+    vi.stubGlobal("fetch", () => Promise.resolve({
+      ok: true, json: () => Promise.resolve({ version: "0.5.3" }) }));
+    const where = window.location;
+    delete window.location;
+    window.location = { replace };
+
+    open();
+    await userEvent.click(screen.getByRole("button", { name: "Update now" }));
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(replace).not.toHaveBeenCalled();
+
+    window.location = where;
+    vi.unstubAllGlobals();
   });
 
   it("shows a failure as one sentence he can read", async () => {

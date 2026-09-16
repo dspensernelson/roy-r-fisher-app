@@ -242,6 +242,83 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+# The same number every time, so a tab that has lost the app can find it again
+# by asking the only address it already knows.
+#
+# **This is the whole fix for the orphan tab**, approved by Spenser on
+# 2026-09-16. Until now the number came from `free_port` and was different on
+# every start, so the tab he pressed Update in pointed at a number that would
+# never answer again, and nothing could tell it where to look: the only thing
+# that knew was the old app, and the old app is gone by then.
+#
+# **Why this number.** Windows hands out ephemeral ports from 49152 upward, so
+# a number below that will not be given to something else while we are not
+# running. 8765 is not a registered service and not one of the obvious ones a
+# developer tool grabs. It is arbitrary beyond that, and it may never change
+# once a version carrying it is installed, because an older copy looking for
+# the app would look here.
+USUAL_PORT = 8765
+
+# How long a tab that has lost the app waits before it says anything.
+#
+# Spenser on 2026-09-16: "make it wait 3 minutes". An update unpacks and copies
+# sixty megabytes and then starts a cold Python, and a slow office machine
+# genuinely takes that long. A sentence that arrives while the work is still
+# going is the app saying something it does not know.
+PATIENCE_SECONDS = 180
+
+
+# Set by `update_apply` on the copy it starts, and by nothing else.
+#
+# **Why the new app has to be told rather than work it out.** The only thing
+# that knows an update is happening is the thing doing it. From inside a
+# freshly started app, an update and a double-click look identical, and
+# guessing wrong either leaves her with two tabs or with none.
+HANDING_OVER = "RRF_HANDING_OVER"
+
+# How long the new app waits for the tab she pressed Update in to come back,
+# before deciding it is not coming and opening one of its own.
+#
+# Wider than the loading page's five seconds on purpose. A loading page is
+# already open and answers in milliseconds; a returning tab is waiting on a
+# whole app to finish starting, and the cost of being impatient is the exact
+# spare tab this work exists to remove.
+HANDOVER_FROM_UPDATE_SECONDS = 15.0
+
+
+def a_tab_is_coming_back() -> bool:
+    """Whether the copy that started this one said a tab is on its way.
+
+    Exactly `"1"` counts. A stale variable left in somebody's shell is not an
+    update in progress, and the cost of reading one as though it were is an app
+    that starts with nothing on screen.
+    """
+    return os.environ.get(HANDING_OVER) == "1"
+
+
+def the_usual_port() -> int:
+    """The number the app answers on when it can. Always the same one."""
+    return USUAL_PORT
+
+
+def pick_a_port() -> int:
+    """The usual number, or any free one if something else is holding it.
+
+    **The fallback is today's behaviour, deliberately.** If the usual number is
+    taken, the tab that pressed Update cannot find the new app and the new app
+    opens its own, exactly as it does now. That is the floor, and it is a floor
+    we already stand on, so the worst case of this change is no worse than the
+    best case before it. An app that refused to start because a number was busy
+    would be far worse than a spare tab.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((BIND_HOST, USUAL_PORT))
+        except OSError:
+            return free_port()
+        return USUAL_PORT
+
+
 # ------------------------------------------------------ the sibling check ---
 def sibling_folders(root: Path):
     """The other installed versions sitting beside this one.

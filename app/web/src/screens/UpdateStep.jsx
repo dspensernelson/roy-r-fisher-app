@@ -12,6 +12,21 @@ export function megabytes(bytes) {
 // download visibly moves, rare enough that it is not asking constantly.
 const POLL_MS = 700;
 
+// How often the closing tab asks whether the new version is up yet. The old
+// app is gone by then, so these are requests to nothing until the new one
+// answers, and a failed request to a dead port on your own machine is
+// instant and free.
+const WATCH_MS = 1000;
+
+// How long it watches in silence before it says anything at all.
+//
+// Spenser chose three minutes on 2026-09-16, and the reason it is that long
+// rather than ten seconds: an update unpacks and copies sixty megabytes and
+// then starts a cold Python, and a slow office machine genuinely takes
+// minutes. Anything said before the work can possibly have finished is the
+// app claiming to know something it does not.
+const PATIENCE_MS = 180 * 1000;
+
 /**
  * The step behind the "Update available" button.
  *
@@ -27,9 +42,52 @@ export default function UpdateStep({ version, available, size, onClose }) {
   const [run, setRun] = useState(null);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
+  const [stuck, setStuck] = useState(false);
   const timer = useRef(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  const closing = run && run.stage === "Closing";
+
+  // Watch for the new version on the address this tab already has, and become
+  // it. This is the whole reason the app now answers on the same number every
+  // time: this tab cannot be told anything once the old app exits, but it can
+  // keep asking the one address it already knows.
+  //
+  // It insists on a version different from the one running. Something
+  // answering is not enough, because the old app answers right up until it
+  // goes, and reloading into it would put her back where she started.
+  useEffect(() => {
+    if (!closing) return undefined;
+    let stop = false;
+    const giveUp = setTimeout(() => { if (!stop) setStuck(true); }, PATIENCE_MS);
+    let again = null;
+
+    const look = () => {
+      fetch("/api/version", { cache: "no-store" })
+        .then((answer) => (answer.ok ? answer.json() : null))
+        .then((found) => {
+          if (stop || !found || !found.version || found.version === version) {
+            throw new Error("not yet");
+          }
+          // Tell it we arrived, on the same route the loading page uses, so
+          // it does not open a tab of its own beside this one. Then become
+          // the new version. `replace` rather than `reload`: this tab's
+          // history should not offer a Back button to a dead app.
+          return fetch("/api/loading-page", { cache: "no-store" })
+            .catch(() => null)
+            .then(() => { window.location.replace("/"); });
+        })
+        .catch(() => { if (!stop) again = setTimeout(look, WATCH_MS); });
+    };
+    again = setTimeout(look, WATCH_MS);
+
+    return () => {
+      stop = true;
+      clearTimeout(giveUp);
+      clearTimeout(again);
+    };
+  }, [closing, version]);
 
   function poll() {
     updateProgress()
@@ -55,7 +113,6 @@ export default function UpdateStep({ version, available, size, onClose }) {
   }
 
   const stage = run && run.stage;
-  const closing = stage === "Closing";
   const failed = run && run.error;
 
   if (failed) {
@@ -89,23 +146,36 @@ export default function UpdateStep({ version, available, size, onClose }) {
     // on a screen full of jobs that could no longer be opened. The last thing
     // the app did before handing over was look broken.
     //
-    // Nothing here can poll for the new version. It arrives on a port the
-    // operating system picks, in a tab of its own, and this page has no
-    // server left to ask. So it says what will happen and what to do if it
-    // does not, and it stops pretending anything behind it still works.
+    // This tab is not a dead end any more. Since 2026-09-16 the app answers
+    // on the same number every time, so this page can keep asking the one
+    // address it already knows until the new version answers, and then
+    // become it. The effect for her is a screen that blanks for a moment and
+    // comes back as the new version. One tab, and nothing to close.
+    //
+    // It says nothing for three minutes. Spenser chose that length: an update
+    // copies sixty megabytes and starts a cold Python, and a sentence that
+    // arrives while that is still happening is the app claiming to know
+    // something it does not.
+    //
+    // The sentence it finally shows promises no other window, because from
+    // in here "the new app is somewhere else" and "the new app never started"
+    // are the same silence. The Desktop icon is true in both cases: it stops
+    // anything running and opens the app.
     return (
       <div className="closing-over-everything">
         <div className="closing-card">
           <p className="closing-title">Installing the new version.</p>
           <span className="loading-bar"><span /></span>
-          <p className="setting-fine" style={{ margin: "14px 0 0" }}>
-            The app has closed itself so its files can be replaced. The new
-            version opens in a new tab in a few seconds.
-          </p>
-          <p className="setting-fine" style={{ margin: "10px 0 0" }}>
-            <strong>You can close this tab.</strong> If nothing opens, use the
-            Roy R. Fisher icon on your Desktop.
-          </p>
+          {stuck ? (
+            <p className="setting-fine" style={{ margin: "14px 0 0" }}>
+              <strong>Roy R. Fisher is not answering.</strong> Open it from the
+              Desktop icon to carry on.
+            </p>
+          ) : (
+            <p className="setting-fine" style={{ margin: "14px 0 0" }}>
+              This page comes back on its own when the new version is ready.
+            </p>
+          )}
         </div>
       </div>
     );

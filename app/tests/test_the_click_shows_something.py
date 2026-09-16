@@ -158,7 +158,7 @@ def test_it_can_be_told_to_wait_longer_before_giving_up():
 
 def test_the_launcher_draws_one_screen_that_says_which_case_it_is():
     source = (APP / "run_app.py").read_text(encoding="utf-8")
-    assert "splash.show(port, version, saying=" in source
+    assert "splash.show(\n        port, version, saying=" in source
 
 
 # --- the order in run_app, which is the whole point ------------------------
@@ -176,7 +176,7 @@ def test_the_screen_goes_up_before_the_package_check():
 
 def test_the_port_is_known_before_the_screen_is_drawn():
     source = (APP / "run_app.py").read_text(encoding="utf-8")
-    assert source.index("startup.free_port()") < source.index("splash.show(")
+    assert source.index("startup.pick_a_port()") < source.index("splash.show(")
 
 
 def test_the_record_of_a_running_app_is_still_written_after_the_check():

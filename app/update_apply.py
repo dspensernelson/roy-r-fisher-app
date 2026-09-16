@@ -33,6 +33,7 @@ answer, this puts the way back on the Desktop and names it.
 
 Standard library only, like `install_windows.py` and `startup.py` beside it.
 """
+import os
 import subprocess
 import sys
 import time
@@ -43,6 +44,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "server"))
 
 import install_windows as installer  # noqa: E402  standard library only
+import startup                     # noqa: E402  standard library only
 
 # How long to wait for the app that started this to actually go. Generous: it
 # is closing a web server and Windows takes its own time about a console. Long
@@ -155,6 +157,19 @@ def start_new_version(launcher, spawn=None) -> bool:
         spawn = subprocess.Popen
     command = ["cmd.exe", "/c", str(launcher)]
     options = {"cwd": str(launcher.parent)}
+
+    # Tell it a tab is on its way back, so it does not open one of its own.
+    #
+    # The tab she pressed Update in is watching the app's address and will
+    # reload itself into the new version the moment it answers. Added
+    # 2026-09-16 with the fixed port: without this the new app opens its own
+    # tab as usual, her old tab arrives beside it, and the change that was
+    # meant to leave one tab leaves two.
+    #
+    # The whole environment is copied and one name added. Replacing it would
+    # take PATH with it, and then `cmd.exe` is not found and nothing starts.
+    options["env"] = dict(os.environ, **{startup.HANDING_OVER: "1"})
+
     flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
     if flags:
         options["creationflags"] = flags

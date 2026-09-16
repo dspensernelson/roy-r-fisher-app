@@ -123,7 +123,13 @@ def test_the_launcher_opens_the_app_when_nothing_arrived():
 
 def test_a_page_that_was_never_drawn_is_not_waited_for():
     """`splash.show` returning False means there is nobody to hear from, so
-    there is nothing to wait for and the app opens straight away."""
-    assert "showing = splash.show(" in RUN_APP
+    there is nothing to wait for and the app opens straight away.
+
+    Since 2026-09-16 there is a second thing that can hear from: the tab she
+    pressed Update in, which is watching this same address and will announce
+    itself on the same route. So the wait happens when either of those is out
+    there, and the tab opens only when neither is."""
+    assert "showing = False if coming_back else splash.show(" in RUN_APP
     branch = ast.dump(_the_handover_branch().test)
     assert "showing" in branch
+    assert "coming_back" in branch

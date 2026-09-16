@@ -163,8 +163,19 @@ def test_a_live_copy_of_this_version_is_still_found(tmp_path, monkeypatch):
 
 
 # --- what must not have changed -------------------------------------------
-def test_the_port_is_still_asked_for_rather_than_assumed():
-    assert "startup.free_port()" in RUN_APP
+def test_the_port_is_the_usual_one_with_a_fallback():
+    """Changed on 2026-09-16, and the old name of this test was the argument
+    for the old behaviour: the port used to be asked for so that nothing could
+    collide with it. The cost was that the tab she pressed Update in could
+    never find the app again, because the only thing that knew the new number
+    was the app that had just exited.
+
+    It now takes the same number every time, and still falls back to any free
+    one when something else holds it. Both halves have to be here: the fixed
+    number is the whole fix, and the fallback is what stops a busy port
+    becoming an app that will not start."""
+    assert "startup.pick_a_port()" in RUN_APP
+    assert "startup.free_port()" not in RUN_APP
 
 
 def test_two_versions_still_never_run_at_once():

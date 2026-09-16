@@ -49,7 +49,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [x] Make the launcher say what killed it instead of dying silently · Star 5
 - [x] Prove an update Spenser can take himself, end to end · Star 1
 - [x] Starting the app must open one tab, not two · Star 2
-- [ ] An update must leave one tab: the tab Update was pressed in never goes away · Star 1
+- [x] An update must leave one tab: the tab Update was pressed in never goes away · Star 1
 - [ ] Nothing tells you the new version started · Star 5
 - [ ] Check now must offer the update there and then, not point at another button · Star 5
 - [ ] Run the 28 by-hand checks on Windows · No star
@@ -61,7 +61,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 ## Waiting on Spenser
 
-- [ ] Confirm the fixed port is how we get to one tab · Star 1
+- [x] Confirm the fixed port is how we get to one tab · Star 1
 - [ ] How far back should the log go · No star
 - [ ] What does Reset put back · No star
 - [ ] Which job produced the 700 KB photographs · No star

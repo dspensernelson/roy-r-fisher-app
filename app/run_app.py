@@ -113,9 +113,15 @@ def _start() -> int:
     #    establish. Whatever is running is stopped, and this copy takes over.
     running = startup.copies_running(HOME)
 
-    # 2. Ask the operating system for a port. Only the asking: the file that
-    #    records it is written further down, after the package check.
-    port = startup.free_port()
+    # 2. Take the usual port, or any free one if something else holds it. Only
+    #    the taking: the file that records it is written further down, after
+    #    the package check.
+    #
+    #    The same number every time is what lets a tab that has lost the app
+    #    find it again. Step 1 above has already stopped any copy that was
+    #    running, so the only thing that can be holding the number is something
+    #    that is not us.
+    port = startup.pick_a_port()
 
     # 3. Say the click landed, before the slow part, and say which slow part it
     #    is. The page replaces itself with the app the moment the app answers,
@@ -125,13 +131,20 @@ def _start() -> int:
     #    What is recorded here is only whether the browser was given the page
     #    at all. False means there is nobody who could ever hand over, so step
     #    6 opens the app without waiting for a message that cannot come.
+    #    An update is the one time this is skipped. The tab she pressed Update
+    #    in is already open, already watching this exact address, and will
+    #    reload itself into this version the moment it answers. Opening a
+    #    loading page beside it would produce the second tab this work exists
+    #    to remove. If that tab is gone, step 6 waits and then opens one.
+    coming_back = startup.a_tab_is_coming_back()
     saying = None
     patience = None
     if running:
         saying = ("Closing the copy that is already open, then starting "
                   "version %s." % version)
         patience = int(splash.GIVE_UP_SECONDS + startup.STOP_TIMEOUT)
-    showing = splash.show(port, version, saying=saying, patience=patience)
+    showing = False if coming_back else splash.show(
+        port, version, saying=saying, patience=patience)
 
     # 4. Stop what is running, then carry on. `tell.say` reaches the console on
     #    the Mac; on Mark's machine there is none, and the loading page above is
@@ -187,7 +200,14 @@ def _start() -> int:
             # for. A page that is blocked cannot tell anybody anything, which
             # is why the absence of a message, and not any message, is what
             # opens the browser here.
-            if not (showing and startup.wait_for_the_loading_page(HANDOVER_SECONDS)):
+            # A tab coming back from an update announces itself on the same
+            # route the loading page uses, so one wait covers both. The window
+            # is wider for an update, because that tab is waiting on a whole
+            # app to start rather than on a page that is already drawn.
+            waiting = (startup.HANDOVER_FROM_UPDATE_SECONDS if coming_back
+                       else HANDOVER_SECONDS)
+            if not ((showing or coming_back)
+                    and startup.wait_for_the_loading_page(waiting)):
                 webbrowser.open("http://%s:%d" % (startup.HOST, port))
             threading.Timer(GOOD_AFTER_SECONDS, _record_last_good, (version,)).start()
         else:

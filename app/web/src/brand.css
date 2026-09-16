@@ -223,8 +223,11 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 .cut-caption.empty { color: var(--ink-muted); font-style: italic; }
 
 /* A question asked inside an action, before anything irreversible happens. */
+/* No max-width. Spenser asked for this on 2026-09-03 and again on 2026-09-16:
+   the box is not a narrow column on the left, it fills what it is given. The
+   page it sits in sets the measure; this does not set a second one. */
 .confirm { background: #FFFFFF; border: 1px solid var(--line); border-left: 3px solid var(--brand);
-  border-radius: 6px; padding: 16px 18px; max-width: 720px; font-size: 14.5px; }
+  border-radius: 6px; padding: 16px 18px; font-size: 14.5px; }
 
 /* Folder names read back off his disk, spelled exactly as they are there. */
 .found-list { margin: 0 0 14px; padding-left: 22px; font-size: 14.5px; line-height: 1.7; }
@@ -1049,7 +1052,10 @@ input::placeholder, textarea::placeholder {
    instead of only that something is happening. */
 .update-bar { width: 100%; max-width: 320px; }
 .update-bar span { width: 0; transition: width .25s linear; animation: none; }
-.update-step { max-width: 560px; }
+/* The 560px that used to be here sat on top of the 720px on `.confirm`, so
+   the update box was the narrowest thing on the screen and narrower than on
+   the day he complained about it. Both are gone. */
+.update-step { width: 100%; }
 
 /* The update's last screen. It covers everything, because behind it the app
    has stopped answering and a job list that cannot be opened is worse than a

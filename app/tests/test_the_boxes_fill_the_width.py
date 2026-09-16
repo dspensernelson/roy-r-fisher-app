@@ -1,0 +1,43 @@
+"""The update box and the confirm box are not narrow boxes on the left.
+
+Spenser, recorded 2026-09-03 and again on the checklist: *"The update box must
+fill the width, not sit in a narrow box on the left."* It was never fixed. A
+commit on 2026-09-15 titled "docs: the update box must fill the width" changed
+no CSS at all, which is why this is a test and not a commit message.
+
+It had got worse rather than better. `.confirm` capped at 720px and
+`.update-step` added a 560px cap on top of it, so by 2026-09-16 the box was
+narrower than on the day he complained.
+
+Read as text on purpose. Nothing here renders a browser, so what it can prove
+is that the caps are gone and did not come back.
+"""
+from pathlib import Path
+
+CSS = (Path(__file__).resolve().parents[1] / "web" / "src" / "brand.css"
+       ).read_text(encoding="utf-8")
+
+
+def _rule(selector: str) -> str:
+    at = CSS.index(selector + " {")
+    return CSS[at:CSS.index("}", at)]
+
+
+def test_the_confirm_box_is_not_capped():
+    assert "max-width" not in _rule(".confirm")
+
+
+def test_the_update_box_is_not_capped():
+    assert "max-width" not in _rule(".update-step")
+
+
+def test_the_update_box_still_has_a_rule_of_its_own():
+    """If the selector disappears the caps cannot come back through it, but
+    neither can anything else, and the next person should find it here."""
+    assert ".update-step {" in CSS
+
+
+def test_the_progress_bar_keeps_its_own_width():
+    """Not the same thing. A progress bar stretched across a wide screen reads
+    as a page element rather than as a thing that is moving."""
+    assert "max-width: 320px" in _rule(".update-bar")

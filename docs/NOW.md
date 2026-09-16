@@ -34,8 +34,8 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 ## Quick wins
 
-- [ ] The update box must fill the width, not sit in a narrow box on the left · No star
-- [ ] The confirm box needs that same width fix · No star
+- [x] The update box must fill the width, not sit in a narrow box on the left · No star
+- [x] The confirm box needs that same width fix · No star
 - [ ] The widget on the photographs screen must feel right-aligned, not left-aligned · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [ ] Say what planned workflows means, or stop using the phrase · Star 5

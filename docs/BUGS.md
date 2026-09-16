@@ -9,7 +9,29 @@ If nothing is broken, it is not a bug. It goes in `docs/FUTURES.md`.
 Found on 2026-09-03, in the first real day of use, by Colleen McDevitt Brown in
 Mark's office, on the COAL VALLEY_2377 US Highway 6 (Kennel) job.
 
+---
+
+## The audit of 2026-09-16
+
+Every entry below was read against the code on `working`, not against the
+commit that claimed to close it. **Thirteen of the sixteen were already fixed
+and nobody had checked.** Three are live: B4, B10 and B12.
+
+Commit messages were not trusted, and the reason is in B12: a commit titled
+"docs: the update box must fill the width" changed no CSS whatsoever.
+
+Two marks in this file were true and had gone stale. B7 and B9 both said
+"Fixed on branch, not yet shipped". Both are on `working` and both shipped to
+the office in 0.7.6 on 2026-09-16.
+
+Each entry now opens with a verdict line. A verdict without a `file:line`
+beside it is not a verdict.
+
+---
+
 ## One cause under four of these
+
+**FIXED, 2026-09-16.** Checked against the code at `app/server/photos.py:653-683`.
 
 **`Add a photo` writes the file to the top of the `Photos` folder. The report
 reads from the subfolder Mark's office chose.** So the app puts the photograph
@@ -26,6 +48,8 @@ Spenser worked this out on 2026-09-03 from the behaviour alone. Confirmed in
 ---
 
 ## B15. Every new version fails the first time it runs
+
+**FIXED, 2026-09-16.** Checked against the code at `app/run_app.py:238,256-258`, and 0.7.6 is at the office.
 
 **What happens.** A version that has never run before dies instantly at
 startup. No window, no message, nothing. Run it a second time and it works, and
@@ -84,6 +108,8 @@ and opens first time.
 
 ## B1. Generating captions deletes photographs you added
 
+**FIXED, 2026-09-16.** Checked against the code at `app/server/photos.py:549-591`.
+
 **What happens.** Add a photograph with `Add a photo`. Run captions. The
 photograph is gone. Building then fails saying it is not in the project.
 
@@ -97,6 +123,8 @@ photograph is the cause. Do not fix the message.
 
 ## B2. Taking out a photograph you added leaves a second copy behind
 
+**FIXED, 2026-09-16.** Checked against the code at `app/server/photos.py:1085-1123`.
+
 **What happens.** Take out a photograph added with the button. A duplicate
 appears in the folder it came from.
 
@@ -108,6 +136,8 @@ thing `HOW-WE-WORK.md` says it must never do.
 
 ## B3. Taking out one photograph takes the others with it
 
+**FIXED, 2026-09-16.** Checked against the code at `app/server/photos.py:1108-1119`.
+
 **What happens.** Two photographs added. One taken out. Both gone.
 
 **Who it hits.** Colleen. Loses work with no warning.
@@ -115,6 +145,9 @@ thing `HOW-WE-WORK.md` says it must never do.
 **How bad.** High.
 
 ## B4. A photograph you removed stays in the list and blocks everything
+
+**STILL LIVE, 2026-09-16.** Checked against the code at `app/server/main.py:1264` and `app/server/photos.py:479`.
+The half he called the dead end is gone. What remains is worse than the entry describes: the build still refuses and names a photograph, while `load_manifest` drops any entry whose file is missing before the screen sees it, so the photograph it tells her to take out has no tile to take out. No test covers that message or that path.
 
 **What happens.** The build refuses:
 
@@ -134,6 +167,8 @@ cannot start over either. From her log:
 
 ## B5. Photographs added with the button do not appear
 
+**FIXED, 2026-09-16.** Checked against the code at `app/server/photos.py:671-683`.
+
 **What happens.** They land at the top of `Photos`. The report points at a
 subfolder. The screen filters them straight back out.
 
@@ -142,6 +177,8 @@ subfolder. The screen filters them straight back out.
 **How bad.** High.
 
 ## B6. The photo screen sits on `Loading...` for ever and hides the reason
+
+**FIXED, 2026-09-16.** Checked against the code at `app/web/src/screens/PhotosScreen.jsx:438-446`.
 
 **What happens.** When the job's photo list cannot be read, the screen shows
 `Loading...` and never changes. On 2026-09-03 the only way out was deleting
@@ -166,6 +203,8 @@ Her log shows the read failing twice before she gave up:
 
 ## B7. `Show the log` opens a window behind everything and says nothing
 
+**FIXED, 2026-09-16.** Checked against the code at `app/server/main.py:631-648` and `app/web/src/screens/Settings.jsx:176-207`, shipped in 0.7.6.
+
 **What happens.** The folder opens behind the browser. Nothing on screen
 changes, so the button looks broken and gets clicked again. Each click starts
 another File Explorer. From the log of 2026-09-02, thirteen clicks in
@@ -187,6 +226,8 @@ which is the half of this that made thirteen clicks possible.
 
 ## B8. The app opens behind the black window
 
+**FIXED, 2026-09-16.** Checked against the code at `Start Roy R. Fisher.bat:17` and `app/install_windows.py:373-387`.
+
 **What happens.** The console window is in front when the app starts. Spenser's
 words on 2026-09-03: *"I just want the app to open like an app."*
 
@@ -204,6 +245,8 @@ downloaded it, checked it, installed it and closed the app. Everything below is
 about how that felt, not whether it worked.
 
 ## B9. `Check now` points at a button that is not on the screen
+
+**FIXED, 2026-09-16.** Checked against the code at `app/web/src/screens/Settings.jsx:94` and `app/web/src/App.jsx:110-112,354`, shipped in 0.7.6.
 
 **What happens.** Settings says "Version 0.6.4 is available. Use the Update
 available button at the top of the screen." There is no such button.
@@ -223,6 +266,9 @@ appears.
 
 ## B10. The screen never closes after an update
 
+**STILL LIVE, 2026-09-16.** Checked against the code at `app/web/src/screens/UpdateStep.jsx:96-111`.
+Half fixed. The panel is a full-screen cover now rather than a layer over a live job list. The tab still never closes and nothing confirms the new version started.
+
 **What happens.** The app says "Closing now", the server stops, and the tab
 sits there for ever showing that sentence on top of a job list that looks
 usable and is not. Nothing tells you the new version has started.
@@ -235,6 +281,8 @@ is no longer an app to replace it.
 broken.
 
 ## B11. The black window
+
+**FIXED, 2026-09-16.** Checked against the code at `app/server/tell.py:45-53` and `app/run_app.py:314-336`.
 
 **What happens.** A console window opens in front of the app, empty, and stays
 there the whole time it runs.
@@ -250,6 +298,9 @@ dialog box and a line in the log.
 anybody sees, every time.
 
 ## B12. The update box sits narrow on the left instead of spanning the screen
+
+**STILL LIVE, 2026-09-16.** Checked against the code at `app/web/src/brand.css:227` and `:1052`.
+**Worse than this entry says.** `.confirm` is still capped at 720px and `.update-step` now adds a 560px cap, so the box is narrower than when the bug was written. The commit `fab1192`, "docs: the update box must fill the width", changed no CSS at all.
 
 **What happens.** The "Update to version 0.6.5?" box stops at 720px and leaves
 open space to its right instead of filling the width Settings gives it.
@@ -271,6 +322,8 @@ update is available.
 
 ## B13. Typing a caption, then hitting `Mark reviewed` without clicking away first, throws the caption away
 
+**FIXED, 2026-09-16.** Checked against the code at `app/web/src/screens/PhotosScreen.jsx:301,410`.
+
 **What happens.** Type a caption. Do not click anywhere else. Click `Mark
 reviewed` while the cursor is still in the box. The caption reverts to
 whatever it was before you started typing.
@@ -291,6 +344,8 @@ reviewed` without clicking elsewhere first. Found by Spenser, 2026-09-07.
 throws away what was just typed, with no warning and nothing to undo it with.
 
 ## B14. Nothing happens for a few seconds after you click the icon
+
+**FIXED, 2026-09-16.** Checked against the code at `app/run_app.py:134` and `app/server/splash.py:198-213`.
 
 **What happens.** Double-click `Roy R. Fisher`. Nothing. No window, no
 hourglass, no sign the click landed. Some seconds later the browser opens.

@@ -159,16 +159,18 @@ amended in place, so this file holds one answer and never two.
   applied to this one output, not a new rule. Not implemented yet, and not
   by the session that recorded it.
 
-- **A newer Description of Improvements template is coming from Mark**, and
-  he intends to follow it from here on. Once received, that template is the
-  governing source of truth for that section's structure, wording, order,
-  fields, and formatting. The file he sends is preserved unchanged.
-  Historical delivered reports remain supporting evidence for data
-  variations and edge cases, and a historical majority pattern may not
-  overrule the new template. This is the one place where measuring the
-  corpus yields to a stated instruction from Mark, and it yields for this
-  section only. No Description of Improvements implementation plan is
-  approved until the actual template has been received and inspected.
+- **The Description of Improvements template is approved.** Amended in place
+  2026-09-16 by Spenser. This bullet first said a newer template was coming
+  from Mark, and that no implementation plan was approved until that file
+  arrived and was inspected. **That gate is struck.** No file came from Mark.
+  We authored the template ourselves from the Blaul Lofts report, and Spenser
+  approved it. `app/templates/Improvements.docx` on the `improvements-section`
+  branch is the governing source of truth for that section's structure,
+  wording, order, fields, and formatting. Historical delivered reports remain
+  supporting evidence for data variations and edge cases, and a historical
+  majority pattern may not overrule it. The layout is recorded in the plan
+  document on that branch: Blaul Lofts, plus the two blocks Blaul leaves out,
+  whose labels come from the 215 E 37th report.
 
 ## Decisions on record (2026-08-25, Spenser, in chat)
 

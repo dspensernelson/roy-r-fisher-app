@@ -36,10 +36,20 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 - [x] The update box must fill the width, not sit in a narrow box on the left · No star
 - [x] The confirm box needs that same width fix · No star
-- [ ] The widget on the photographs screen must feel right-aligned, not left-aligned · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [x] Say what planned workflows means, or stop using the phrase · Star 5
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
+
+## The photographs widget, approved 16 September
+
+- [ ] Build the widget to the approved design, saved at docs/design · No star
+- [ ] Record who wrote each caption, so written and reviewed are two counts · No star
+- [ ] Reviewed can never be more than written, read from one place · Star 5
+- [ ] Add photos becomes the photograph-and-plus icon · No star
+- [ ] Clear captions turns red and only appears when there is something to lose · No star
+- [ ] The money is always there: an estimate first, then what it cost · Star 5
+- [ ] Mark all as reviewed leaves the left and becomes the check in the box · No star
+- [ ] Decide whether A B C stay in the box, and whether they filter · No star
 
 ## To get a version to the office
 
@@ -67,7 +77,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] What is the black window that appears after an update · Star 4
 - [ ] What should the loading page say when it cannot reach the app · Star 5
 - [ ] Is description of improvements still the next major area · No star
-- [ ] Did Mark's template arrive, because no plan is approved until it is seen · No star
 - [ ] Is the parked description of improvements work brought forward or rebuilt · No star
 - [ ] Who wins when the assessor card and the inspection transcript disagree · No star
 - [ ] Is the 8 September Fable analysis the plan we build to · No star

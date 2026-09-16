@@ -1,0 +1,495 @@
+<title>Photographs Widget Bench</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap">
+<style>
+/* ── Two worlds, on purpose ──────────────────────────────────────────────
+   The STAGE is the app, reproduced from app/web/src/brand.css value for value.
+   The BENCH around it is deliberately not the app: graphite, condensed
+   grotesque, slate accent, never the firm's red.
+
+   Cut back on 2026-09-16 to one layout, his: 360 wide, 110 tall, both rows
+   right, the photo-plus icon at 23 with the plus at 2, gaps of 3. Every
+   control that let him arrive at that is gone, because he has arrived.
+
+   The bar is settled too, on 2026-09-16: "Leave it stationary at 3." Counts
+   as pills, then tick all, Clear captions and the money hard right. The other
+   three answers are gone rather than hidden, because scaffolding left standing
+   is how a settled thing gets reopened. */
+:root{
+  --ground:#FAF8F4; --paper:#FFFFFF; --paper-sunk:#F4F1EA;
+  --line:#E3E0D8; --line-strong:#D4CFC3;
+  --ink:#231F20; --ink-muted:#6E6E73; --brand:#8C0C04; --link:#1B6C99;
+  --go:#2F5D33; --hold:#C98A16;
+  --shadow-raised:0 1px 3px rgba(35,31,32,.12);
+  --bench:#1B1D21; --bench-2:#24272C; --bench-3:#2E3238;
+  --bench-ink:#E7E9EC; --bench-dim:#8C949E; --bench-line:#3A3F46;
+  --slate:#7FA8C9; --slate-deep:#4A6E8A;
+  --app-font:'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif;
+  --bench-font:'IBM Plex Sans Condensed','Helvetica Neue',Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --glyph:23px; --plus-x:2px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bench);color:var(--bench-ink);font:15px/1.5 var(--bench-font)}
+.sheet{max-width:1180px;margin:0 auto;padding:26px 22px 64px}
+header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid var(--bench-line)}
+h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.2px}
+.sub{color:var(--bench-dim);font-size:13.5px;margin-left:auto}
+
+.stage-wrap{margin:20px 0 0;border:1px solid var(--bench-line);border-radius:8px;
+  overflow:hidden;background:var(--bench-2)}
+.stage-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bench-3);
+  border-bottom:1px solid var(--bench-line);font-size:11.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--bench-dim);font-weight:600}
+.stage-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--slate)}
+.stage-scroll{overflow-x:auto}
+.stage{background:var(--ground);padding:0 28px 26px;min-width:1000px}
+
+/* ── the app, reproduced ─────────────────────────────────────────────── */
+.screen-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+  flex-wrap:nowrap;min-height:76px;margin:26px 0 12px;font-family:var(--app-font);color:var(--ink)}
+.made{min-width:0;flex:1 1 auto}
+.nameline{display:flex;align-items:baseline;gap:9px;min-width:0}
+.made h1{margin:0;font-size:19px;line-height:1.2;font-weight:700;letter-spacing:-.15px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--ink)}
+.linky{background:none;border:0;padding:0;font:inherit;font-size:12.5px;
+  color:var(--link);cursor:pointer;text-decoration:underline}
+
+/* Notifications, read out of the app rather than imagined. I drew stacked
+   amber boxes here first, which is exactly the thing he had removed: "the
+   green box is fucking annoying, and the red box is fucking annoying. Imagine
+   three or four of these piling up."
+
+   What the app actually does is `.quiet`: ONE line, 20px tall, always present
+   even when it says nothing, so the photographs below never move. A 7px dot
+   whose colour is the kind, the sentence, any action the note carries, and
+   "· N more" to step through the rest. One at a time, never a pile. */
+.figures{margin:2px 0 0;font-size:12.5px;line-height:1.3;color:var(--ink-muted);
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.figures .linky{margin-left:8px}
+.quiet{display:flex;align-items:center;gap:7px;height:20px;margin-top:5px;
+  font-size:12.5px;line-height:20px;color:#4E4E53;white-space:nowrap;overflow:hidden}
+.quiet .mark{flex:none;width:7px;height:7px;border-radius:999px;background:#C2BEB6}
+.quiet.k-standing .mark{background:#8A5200}
+.quiet.k-standing .said{color:#8A5200}
+.quiet .linky{margin-left:0;flex:none}
+.quiet .more{background:none;border:none;font:inherit;font-size:12.5px;
+  color:var(--ink-muted);cursor:pointer;padding:0;flex:none}
+
+.control-panel{flex:none;width:360px;min-width:0;height:110px;display:flex;flex-direction:column;
+  align-items:stretch;justify-content:space-between;padding:7px 14px;background:var(--paper);
+  border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow-raised);position:relative}
+/* The top row is spread, not right. That is what puts Build photo pages hard
+   against the left edge, which is what puts the photo button directly
+   underneath it on the row below. Right-justifying the row floats Build
+   inward and the button ends up under nothing, which is what it did until
+   2026-09-16. */
+.w-row{display:flex;align-items:center;gap:3px;height:30px;min-width:0;justify-content:space-between}
+.w-row.two{height:24px;gap:8px;justify-content:flex-end}
+.control-panel .button{border-radius:5px;font-size:12.5px;font-weight:700;line-height:1;
+  padding:8px 11px;white-space:nowrap;border:1px solid var(--brand);background:var(--brand);
+  color:#fff;cursor:pointer;font-family:var(--app-font)}
+.control-panel .button.secondary{background:var(--paper);color:var(--link);border-color:var(--line-strong)}
+.w-icon{display:inline-flex;align-items:center;justify-content:center;
+  height:calc(var(--glyph) + 9px);padding:0 5px;border:1px solid var(--line-strong);
+  border-radius:5px;background:var(--paper-sunk);color:#4A4A4A;cursor:pointer;margin-right:auto}
+.w-icon:hover{border-color:#B9B5AE;background:var(--paper)}
+.w-icon svg{display:block;height:var(--glyph);width:auto}
+.w-icon .plus{transform:translateX(var(--plus-x))}
+.w-sep{width:1px;height:16px;background:var(--line);flex:none}
+.w-name{font-size:11px;color:#6B6B6B}
+.values{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line-strong);
+  border-radius:5px;background:var(--paper-sunk)}
+.values button{font:inherit;font-size:11.5px;font-family:var(--app-font);width:22px;height:18px;
+  padding:0;border:0;border-radius:3px;background:transparent;color:var(--ink-muted);cursor:pointer}
+.values button.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-raised)}
+.switch{position:relative;width:32px;height:18px;flex:none;padding:0;cursor:pointer;
+  border-radius:999px;border:1px solid var(--line-strong);background:var(--paper-sunk)}
+.switch[aria-checked="true"]{background:var(--go);border-color:var(--go)}
+.switch .knob{position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:999px;
+  background:var(--paper);box-shadow:var(--shadow-raised);transition:left .12s ease}
+.switch[aria-checked="true"] .knob{left:15px}
+.w-chips{display:flex;gap:3px}
+.w-chip{font:inherit;font-family:var(--app-font);font-size:10px;font-weight:600;line-height:1;
+  width:18px;height:18px;padding:0;border-radius:999px;border:1px solid #D7D4CF;
+  background:var(--paper);color:#4A4A4A;cursor:pointer}
+body.bands-off .w-chips{visibility:hidden}
+body.chips-off .w-chips,
+body.chips-off .w-sep + .w-name,
+body.chips-off .switch{display:var(--chips-d,inline-flex)}
+body.chips-off .w-chips{display:none}
+
+/* ── the bar: how she gets to done ───────────────────────────────────── */
+.barline{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap;font-size:11.5px;
+  color:var(--ink-muted);margin:4px -14px -7px;padding:4px 14px;height:24px;
+  background:var(--paper-sunk);border-top:1px solid var(--line);border-radius:0 0 5px 5px}
+.barline b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* Clear captions: a link, red, and only when there is something to lose.
+   Immediately left of the money; the gap is pushed by this, so when it is
+   gone the money still holds the right edge. */
+.clear{font-size:12.5px;white-space:nowrap;flex:none;color:var(--brand);margin-left:auto;margin-right:2px}
+body.no-captions .clear{display:none}
+
+/* The money is always there. Before anything is generated it is an estimate
+   and wears a tilde; after, it is what the job has actually cost and the
+   tilde comes off. 2026-09-16, and I had it backwards: the estimate matters
+   most at the one moment I had been hiding it. */
+.money{flex:none;display:inline-flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:700;color:var(--go);font-variant-numeric:tabular-nums;
+  line-height:1;padding:3px 8px;border:1px solid rgba(47,93,51,.34);
+  background:rgba(47,93,51,.06);border-radius:999px;white-space:nowrap}
+body.no-captions .money{margin-left:auto}
+
+/* the four answers */
+/* One bar, fixed. He settled on it on 2026-09-16 and took the choice away:
+   "Get rid of this. Leave it stationary at 3." The other three were scaffolding
+   for a decision that has been made, and scaffolding left standing is how a
+   settled thing gets reopened by the next person who sees a switch. */
+.tally{display:inline-flex;align-items:center;gap:6px;flex:none;flex-wrap:nowrap}
+
+/* Pills, 2026-09-16: "all of these at the bottom here should be pills: 12
+   written, 3 to review... kind of like the six cents", and "stop letting 12
+   written and 3 to review wrap".
+
+   One shape for everything in the bar, taken from the money, which was the
+   first pill here and set the language: 999px, a 1px edge at a third, a
+   breath of the same colour behind, bold number, quiet word. Green means
+   done, amber means there is something to do.
+
+   Every one is flex:none and nowrap. Nothing in this bar may wrap or shrink;
+   if it does not fit, the bar has to be told, not folded. */
+/* `[hidden]` has to beat the display here, and it does not on its own: a
+   class selector setting display outranks the attribute's own UA rule. Stated
+   explicitly rather than leaning on whatever reset the page around it brings,
+   because a pill that will not hide is three claims on screen at once. */
+.pill[hidden]{display:none!important}
+.pill{display:inline-flex;align-items:center;gap:4px;flex:none;white-space:nowrap;
+  font-size:11.5px;line-height:1;padding:3px 8px;border-radius:999px;
+  font-variant-numeric:tabular-nums}
+.pill b{font-weight:700}
+/* Pressed, and done. Filled, because this is the only moment in the job where
+   every caption is written and every one has been looked at, and it is the
+   one thing in the bar that has finished rather than being offered. */
+.pill.done{color:#fff;background:var(--go);border:1px solid var(--go)}
+.pill.hold{color:#8A5200;border:1px solid rgba(138,82,0,.32);background:rgba(138,82,0,.06)}
+/* The one pill that does something rather than says something, so it is
+   filled rather than outlined. It is the only filled thing in the bar. */
+/* `font: inherit` is a shorthand and it resets line-height with everything
+   else, which stood this pill 3px taller than its neighbours and knocked it
+   out of line. Line-height is set again after it, on purpose. */
+/* Light green until it is pressed, 2026-09-16. It is an offer, not a
+   result, and a filled pill reads as something that already happened. So
+   it wears the same quiet green as the money until she acts on it. */
+.pill.act{color:var(--go);background:rgba(47,93,51,.06);border:1px solid rgba(47,93,51,.34);cursor:pointer;
+  font:inherit;font-size:11.5px;font-family:var(--app-font);font-weight:700;
+  line-height:1;padding:3px 9px;text-decoration:none}
+.pill.act:hover{background:rgba(47,93,51,.13);border-color:rgba(47,93,51,.55)}
+
+/* ── bench controls ──────────────────────────────────────────────────── */
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
+.tool{background:var(--bench-2);border:1px solid var(--bench-line);border-radius:7px;padding:13px 14px}
+.tool h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--bench-dim);font-weight:700}
+.row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.row label{font-size:12.5px;color:var(--bench-dim);min-width:74px}
+.ghost{font:inherit;font-size:13px;padding:8px 12px;border-radius:5px;cursor:pointer;
+  background:transparent;border:1px solid var(--bench-line);color:var(--bench-ink)}
+.ghost:hover{border-color:var(--slate-deep);color:#fff}
+.ghost.on{background:var(--slate-deep);border-color:var(--slate-deep);color:#fff}
+.says{margin:9px 0 0;font-size:12.5px;color:var(--bench-dim)}
+.num{font-family:var(--mono);font-size:12.5px;color:var(--bench-ink);
+  font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+input[type=range]{flex:1;accent-color:var(--slate)}
+.readout{margin-top:18px;background:var(--bench-2);border:1px solid var(--bench-line);
+  border-radius:7px;padding:14px}
+.readout h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--bench-dim);font-weight:700}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--bench-ink);
+  white-space:pre-wrap;word-break:break-word}
+.note{margin:16px 0 0;font-size:13.5px;color:var(--bench-dim);max-width:66ch}
+.note b{color:var(--bench-ink);font-weight:600}
+.piece{cursor:grab;position:relative}
+.piece.moved{outline:1px dashed var(--slate-deep);outline-offset:3px}
+.piece.dragging{cursor:grabbing;z-index:9;outline:1px solid var(--slate-deep)}
+body.armed .piece::after{content:"";position:absolute;inset:-4px;border-radius:4px}
+body.armed .piece:hover::after{background:rgba(74,110,138,.12)}
+button:focus-visible,input:focus-visible,.piece:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="sheet">
+  <header class="top">
+    <h1>Photographs Widget Bench</h1>
+    <span class="sub">Your layout, and your bar.</span>
+  </header>
+
+  <div class="stage-wrap">
+    <div class="stage-bar"><span class="dot"></span>The photographs screen, header row</div>
+    <div class="stage-scroll"><div class="stage">
+      <div class="screen-head">
+        <div class="made">
+          <div class="nameline">
+            <h1>Bettendorf_1215 Middle Road Photos (Complete).docx</h1>
+            <button class="linky">Not right?</button>
+          </div>
+          <p class="figures">12 photographs &middot; 4 pages &middot; from
+            <strong>Original Photos_1215 Middle Road</strong>
+            <button class="linky">Use a different folder</button></p>
+          <div class="quiet k-standing" role="status" aria-live="polite">
+            <span class="mark"></span>
+            <span class="said" id="said">2 photographs are waiting for a band</span>
+          </div>
+        </div>
+
+        <div class="control-panel" id="panel">
+          <div class="w-row" id="rowOne">
+            <span class="piece" data-name="Build photo pages" tabindex="0">
+              <button class="button">Build photo pages</button></span>
+            <span class="piece" data-name="Generate captions" tabindex="0">
+              <button class="button secondary">Generate captions (8)</button></span>
+          </div>
+
+          <div class="w-row two" id="rowTwo">
+            <button class="piece w-icon" data-name="Add photos" tabindex="0"
+                    aria-label="Add photos" title="Add photos">
+              <svg viewBox="0 0 23 15" fill="none" aria-hidden="true">
+                <rect x="0.6" y="2.6" width="11.8" height="9.8" rx="1.4"
+                      stroke="currentColor" stroke-width="1.2"/>
+                <circle cx="4" cy="6" r="1.15" fill="currentColor"/>
+                <path d="M1.4 11.2 4.9 8.1l2.3 2 2.1-1.7 2.1 2.2" stroke="currentColor"
+                      stroke-width="1.2" stroke-linejoin="round" fill="none"/>
+                <g class="plus"><path d="M16.6 4.6v4.8M14.2 7h4.8" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round"/></g>
+              </svg>
+            </button>
+            <span class="piece" data-name="Per page" tabindex="0"><span class="w-name">Per page</span></span>
+            <span class="piece values" data-name="3 or 6" tabindex="0">
+              <button>3</button><button class="on">6</button></span>
+            <span class="w-sep"></span>
+            <span class="piece" data-name="Bands label" tabindex="0"><span class="w-name">Bands</span></span>
+            <span class="piece switch" role="switch" aria-checked="true" data-name="Bands switch" tabindex="0">
+              <span class="knob"></span></span>
+            <span class="piece w-chips" data-name="Band letters" tabindex="0">
+              <button class="w-chip">A</button><button class="w-chip">B</button><button class="w-chip">C</button>
+            </span>
+          </div>
+
+          <!-- 3. Everything counted, nothing ranked. -->
+          <div class="piece barline b3" data-name="The bar" tabindex="0">
+            <span class="tally">
+              <span class="pill hold" id="pWritten"><b>0</b>&nbsp;written</span>
+              <button class="pill act" id="pMark" hidden>&#10003;&nbsp;all</button>
+              <span class="pill hold" id="pReviewed"><b>0</b>&nbsp;reviewed</span>
+              <span class="pill done" id="pAllDone" hidden>&#10003;&nbsp;All reviewed</span>
+            </span>
+            <button class="clear linky">Clear captions</button>
+            <span class="money">~6&cent;</span>
+          </div>
+
+      </div>
+    </div></div>
+  </div>
+
+  <div class="tools">
+    <div class="tool">
+      <h2>State of the job</h2>
+      <div class="row" style="margin-top:0"><label for="caps">Written</label>
+        <input id="caps" type="range" min="0" max="12" value="0">
+        <span class="num" id="capsOut">0 of 12</span></div>
+      <div class="row"><label for="revs">Reviewed</label>
+        <input id="revs" type="range" min="0" max="12" value="0">
+        <span class="num" id="revsOut">0 of 12</span></div>
+      <div class="row"><label for="bands">Bands</label>
+        <button class="ghost on" id="bands" style="flex:1">On</button></div>
+      <div class="row"><label for="chips">Band letters</label>
+        <button class="ghost on" id="chips" style="flex:1">In the box</button></div>
+    </div>
+
+    <div class="tool">
+      <h2>Bench</h2>
+      <div class="row" style="margin-top:0;gap:8px;flex-wrap:wrap">
+        <button class="ghost on" id="arm">Dragging on</button>
+        <button class="ghost" id="reset">Put it back</button>
+      </div>
+      <p class="says">Drag any piece. Arrow keys move a focused piece by 1px,
+        with Shift by 8px.</p>
+    </div>
+  </div>
+
+  <div class="readout">
+    <h2>What you changed</h2>
+    <pre id="out">Everything is where you left it.</pre>
+  </div>
+
+  <p class="note"><b>The left side is now read out of the app, not imagined.</b>
+  I had drawn stacked amber boxes, which is the thing you had already removed.
+  What the app does is one line, 20px tall, always there even when it says
+  nothing so the photographs never move: a dot for the kind, the sentence, any
+  action that note carries, and <b>&middot; 1 more</b> to step through the
+  rest. Press it. One at a time, never a pile.</p>
+
+  <p class="note"><b>And that turns up something.</b> <b>Mark all as reviewed
+  already has a home</b> &mdash; it is the action attached to the "9 of 12
+  reviewed" note, on the left, today. So the question is not where to put it.
+  It is whether it moves into the box and leaves the left, or stays where it
+  is and the box does not carry it at all.</p>
+
+  <p class="note"><b>The money is always there now.</b> Before anything is
+  generated it is an estimate and wears the tilde. After, it is what the job
+  has cost, every run and every tranche, and the tilde comes off. Flip Captions
+  to see both. I had this backwards: I was hiding the price at the one moment
+  she most wants to know it.</p>
+
+  <p class="note"><b>The words are examples.</b> What the bar finally says is
+  yours. So is the one open question on the letters: leaving A B C in the box
+  costs the space it takes, and you floated using them to filter instead, which
+  would make them worth that space. Nothing here decides it.</p>
+</div>
+
+<script>
+(function(){
+  var panel=document.getElementById('panel'), out=document.getElementById('out');
+  var moved=new Map(), armed=true;
+
+  function label(el){ return el.getAttribute('data-name'); }
+  function get(el){ return moved.get(el)||{x:0,y:0}; }
+  function put(el,p){
+    if(!p.x&&!p.y){ moved.delete(el); el.style.transform=''; el.classList.remove('moved'); }
+    else { moved.set(el,p); el.style.transform='translate('+p.x+'px,'+p.y+'px)'; el.classList.add('moved'); }
+    say();
+  }
+  function where(v,pos,neg){ return v>0? v+'px '+pos : Math.abs(v)+'px '+neg; }
+  function press(id,v){
+    document.querySelectorAll('#'+id+' button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.v===v); });
+  }
+
+  function say(){
+    var lines=[];
+    lines.push(written+' written, '+reviewed+' reviewed, of '+TOTAL);
+    if(document.body.classList.contains('no-captions'))
+      lines.push('Captions: none written yet, so Clear captions is gone and the price is an estimate');
+    if(document.body.classList.contains('bands-off')) lines.push('Bands: off');
+    if(document.body.classList.contains('chips-off')) lines.push('Band letters: out of the box');
+    var said={};
+    moved.forEach(function(p,el){
+      var name=label(el); if(said[name]) return; said[name]=true;
+      var bits=[];
+      if(p.x) bits.push(where(p.x,'right','left'));
+      if(p.y) bits.push(where(p.y,'down','up'));
+      lines.push(name+': moved '+bits.join(' and '));
+    });
+    // Measured on what is actually on screen, not on scrollHeight. The bar is
+    // a full-bleed strip with a negative bottom margin, and scrollHeight reads
+    // that as a two-pixel overflow when nothing is clipped at all. A warning
+    // that cries wolf is worse than no warning.
+    var box=panel.getBoundingClientRect(), over=0;
+    panel.querySelectorAll('.w-row, .barline').forEach(function(el){
+      if(!(el.offsetWidth||el.offsetHeight)) return;
+      var r=el.getBoundingClientRect();
+      over=Math.max(over, Math.round(r.bottom-box.bottom), Math.round(r.right-box.right));
+    });
+    if(over>0) lines.push('Something is hanging '+over+'px outside the box.');
+    out.textContent=lines.join('\n');
+  }
+
+  var live=null;
+  panel.addEventListener('pointerdown',function(e){
+    if(!armed) return;
+    var el=e.target.closest('.piece'); if(!el) return;
+    e.preventDefault();
+    var p=get(el);
+    live={el:el,sx:e.clientX-p.x,sy:e.clientY-p.y};
+    el.classList.add('dragging'); el.setPointerCapture&&el.setPointerCapture(e.pointerId);
+  });
+  panel.addEventListener('pointermove',function(e){
+    if(live) put(live.el,{x:Math.round(e.clientX-live.sx),y:Math.round(e.clientY-live.sy)});
+  });
+  ['pointerup','pointercancel'].forEach(function(t){
+    panel.addEventListener(t,function(){ if(live){ live.el.classList.remove('dragging'); live=null; } });
+  });
+  panel.addEventListener('keydown',function(e){
+    var el=e.target.closest('.piece'); if(!el) return;
+    var step=e.shiftKey?8:1, p=get(el), hit=true;
+    if(e.key==='ArrowLeft') p={x:p.x-step,y:p.y};
+    else if(e.key==='ArrowRight') p={x:p.x+step,y:p.y};
+    else if(e.key==='ArrowUp') p={x:p.x,y:p.y-step};
+    else if(e.key==='ArrowDown') p={x:p.x,y:p.y+step};
+    else hit=false;
+    if(hit){ e.preventDefault(); put(el,p); }
+  });
+
+  document.getElementById('bands').addEventListener('click',function(){
+    var off=document.body.classList.toggle('bands-off');
+    this.textContent=off?'Off':'On'; this.classList.toggle('on',!off);
+    document.querySelector('.switch').setAttribute('aria-checked',String(!off)); say();
+  });
+  document.getElementById('chips').addEventListener('click',function(){
+    var off=document.body.classList.toggle('chips-off');
+    this.textContent=off?'Out of the box':'In the box'; this.classList.toggle('on',!off); say();
+  });
+  document.getElementById('arm').addEventListener('click',function(){
+    armed=!armed; this.textContent=armed?'Dragging on':'Dragging off';
+    this.classList.toggle('on',armed); document.body.classList.toggle('armed',armed);
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    moved.forEach(function(p,el){ el.style.transform=''; el.classList.remove('moved'); });
+    moved.clear();
+    document.body.classList.remove('bands-off','chips-off');
+    written=0; reviewed=0; document.getElementById('caps').value=0;
+    var b=document.getElementById('bands'); b.textContent='On'; b.classList.add('on');
+    var h=document.getElementById('chips'); h.textContent='In the box'; h.classList.add('on');
+    document.querySelector('.switch').setAttribute('aria-checked','true');
+    draw();
+  });
+
+  /* ── the theory, 2026-09-16 ───────────────────────────────────────────
+     Two facts, and they are not the same fact. WRITTEN is how many captions
+     exist. REVIEWED is how many Mark has ticked. Reviewed can never be more
+     than written, and the two are read from one place, so the left of the
+     screen and the box can never disagree the way they did.
+
+     A slot changes job when its job is finished. While captions are still
+     being written the first pill reports writing. The moment every one is
+     written, writing has nothing left to say, so that slot stops reporting
+     and starts offering: tick all. The glyph, not the words. He said so on
+     2026-09-16 and I wrote the words back in when I rebuilt this, which is
+     the second time the same instruction has been overwritten. Reviewed keeps counting
+     beside it. When reviewed catches up, the offer goes and one pill is left
+     saying it is done.
+
+     That note used to live on the left as well. It does not any more. One
+     home, and this is it. */
+  var TOTAL=12, written=0, reviewed=0;
+  var pW=document.getElementById('pWritten'), pM=document.getElementById('pMark'),
+      pR=document.getElementById('pReviewed'), pA=document.getElementById('pAllDone');
+
+  function draw(){
+    if(reviewed>written) reviewed=written;          // the invariant, enforced here
+    var allWritten=written===TOTAL, allDone=allWritten&&reviewed===TOTAL;
+    pW.hidden=allWritten;
+    pM.hidden=!(allWritten&&!allDone);
+    pR.hidden=allDone;
+    pA.hidden=!allDone;
+    pW.innerHTML='<b>'+written+'</b>&nbsp;written';
+    pR.innerHTML='<b>'+reviewed+'</b>&nbsp;reviewed';
+    document.body.classList.toggle('no-captions', written===0);
+    document.querySelectorAll('.money').forEach(function(m){
+      m.textContent=(written===0?'~':'')+'6¢'; });
+    document.getElementById('caps').value=written;
+    document.getElementById('revs').value=reviewed;
+    document.getElementById('capsOut').textContent=written+' of '+TOTAL;
+    document.getElementById('revsOut').textContent=reviewed+' of '+TOTAL;
+    say();
+  }
+  pM.addEventListener('click',function(){ reviewed=TOTAL; draw(); });
+  document.getElementById('caps').addEventListener('input',function(){
+    written=parseInt(this.value,10); draw(); });
+  document.getElementById('revs').addEventListener('input',function(){
+    reviewed=parseInt(this.value,10); draw(); });
+
+  document.body.classList.add('armed');
+  draw();
+}());
+</script>

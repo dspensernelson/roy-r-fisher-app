@@ -44,7 +44,7 @@ import updates
 # It is the Worker's base address with no path. `PATH` is added below, the same
 # shape `updates.bucket_url` and `updates.file_url` already use, so the one
 # route the service accepts is written once.
-ENDPOINT = ""
+ENDPOINT = "https://rrf-app-send-the-log.d-spensernelson.workers.dev"
 
 # The only route the Worker accepts. The test in `test_the_worker.py` reads the
 # Worker source and checks it agrees with this.

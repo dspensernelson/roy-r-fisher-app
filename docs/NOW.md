@@ -32,7 +32,6 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 
 ## Waiting on Spenser
 
-- [ ] Cloudflare setup so Send the log to Spenser works
 - [ ] How far back should the log go
 - [ ] What does Reset put back
 - [ ] Which job produced the 700 KB photographs
@@ -52,6 +51,7 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 - [x] Settings, two columns, in his order
 - [x] Close the app moved into the nav bar
 - [x] The send-the-log button, built and merged
+- [x] Send the log to Spenser, connected end to end and proved with a real send
 - [x] The installer stops a running copy
 - [x] The keystroke storm, the caption the tick ate, the price asked twice
 - [x] Version numbering: four numbers for test builds, three for the office

@@ -219,3 +219,17 @@ describe("classifying many files at once", () => {
     expect(await screen.findAllByRole("button", { name: "Classify" })).toHaveLength(4);
   });
 });
+
+describe("planned workflows", () => {
+  it("does not name a phrase nobody can explain", async () => {
+    // Spenser, 2026-09-04, click 2: "What are planned workflows? I don't
+    // understand what that part even is". Taken off the page 2026-09-16
+    // until the work on it starts. It named a thing she could not act on and
+    // used a phrase nobody could define.
+    render(<JobHome job={JOB} onOpenPhotos={() => {}} onEditSections={() => {}} />);
+    await screen.findByRole("heading", { name: JOB });
+    expect(screen.queryByText(/Planned workflows/i)).toBeNull();
+    expect(screen.queryByText(/Not available in this pilot/i)).toBeNull();
+    expect(screen.queryByText(/Description of Improvements/i)).toBeNull();
+  });
+});

@@ -38,8 +38,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [x] The confirm box needs that same width fix · No star
 - [ ] The widget on the photographs screen must feel right-aligned, not left-aligned · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
-- [ ] Say what planned workflows means, or stop using the phrase · Star 5
-- [ ] Move description of improvements to the right, where the report is · No star
+- [x] Say what planned workflows means, or stop using the phrase · Star 5
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
 
 ## To get a version to the office

@@ -21,8 +21,8 @@ published page, not from this file. Detail lives in `docs/BUGS.md`,
 - [x] Fix it, which ticks north star 1 and 2: start the background jobs after the web server
 - [x] Make the launcher say what killed it instead of dying silently
 - [x] Prove an update Spenser can take himself, end to end
-- [ ] Starting the app must open one tab, not two
-- [ ] An update must not leave the old version's tabs behind: three were open after one
+- [x] Starting the app must open one tab, not two
+- [ ] An update must leave one tab, not two: the tab Update was pressed in never goes away
 - [ ] The widget on the photographs screen must feel right-aligned, not left-aligned
 - [ ] Everything on the photographs screen must be readable the way it is at 90 per cent
 - [ ] Check now must offer the update there and then, not point at another button

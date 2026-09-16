@@ -175,10 +175,21 @@ def _element(source: str, label: str) -> str:
     appear. The fixed window broke once a comment above a different button
     mentioned this one by name, which made the test read the wrong element and
     fail for a reason that had nothing to do with the behaviour it guards.
+
+    Walking back from the words broke again on 2026-09-16, when comments
+    around the rebuilt widget named this button several times and the last
+    mention was in prose. So it now walks the buttons themselves and returns
+    the first whose own text carries the label. A comment cannot be mistaken
+    for an element that way, however many times it says the words.
     """
-    at = source.index(">%s<" % label) if ">%s<" % label in source else source.rindex(label)
-    start = source.rindex("<button", 0, at)
-    return source[start:at]
+    at = 0
+    while True:
+        start = source.index("<button", at)
+        end = source.index("</button>", start)
+        element = source[start:end]
+        if label in element:
+            return element
+        at = end + 1
 
 
 def test_generating_captions_is_genuinely_disabled_when_there_is_no_key():

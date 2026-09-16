@@ -36,19 +36,20 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 - [x] The update box must fill the width, not sit in a narrow box on the left · No star
 - [x] The confirm box needs that same width fix · No star
+- [ ] Every message box fills the width, the red error box included · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [x] Say what planned workflows means, or stop using the phrase · Star 5
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
 
 ## The photographs widget, approved 16 September
 
-- [ ] Build the widget to the approved design, saved at docs/design · No star
+- [x] Build the widget to the approved design, saved at docs/design · No star
 - [ ] Record who wrote each caption, so written and reviewed are two counts · No star
-- [ ] Reviewed can never be more than written, read from one place · Star 5
-- [ ] Add photos becomes the photograph-and-plus icon · No star
-- [ ] Clear captions turns red and only appears when there is something to lose · No star
-- [ ] The money is always there: an estimate first, then what it cost · Star 5
-- [ ] Mark all as reviewed leaves the left and becomes the check in the box · No star
+- [x] Reviewed can never be more than written, read from one place · Star 5
+- [x] Add photos becomes the photograph-and-plus icon · No star
+- [x] Clear captions turns red and only appears when there is something to lose · No star
+- [x] The money is always there: an estimate first, then what it cost · Star 5
+- [x] Mark all as reviewed leaves the left and becomes the check in the box · No star
 - [ ] Decide whether A B C stay in the box, and whether they filter · No star
 
 ## To get a version to the office
@@ -60,7 +61,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [x] Starting the app must open one tab, not two · Star 2
 - [x] An update must leave one tab: the tab Update was pressed in never goes away · Star 1
 - [ ] Nothing tells you the new version started · Star 5
-- [ ] Check now must offer the update there and then, not point at another button · Star 5
+- [ ] When Check now finds a version, an Update button appears beside it · Star 5
 - [ ] Run the 28 by-hand checks on Windows · No star
 - [x] Upload to the office · No star
 

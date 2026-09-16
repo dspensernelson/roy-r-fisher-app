@@ -547,7 +547,26 @@ export default function PhotosScreen({ job }) {
   // if one of them is a moment stale.
   const reviewedCount = inPhotos.filter((x) => x.p.reviewed).length;
   const allReviewed = inPhotos.length > 0 && reviewedCount === inPhotos.length;
-  const reviewText = `${reviewedCount} of ${inPhotos.length} reviewed`;
+
+  // Written and reviewed are two facts and they are both read from here, so
+  // the bar and anything else on the screen cannot disagree about them. They
+  // were unrelated state once, which is how the left of the screen said
+  // "9 of 12 reviewed" while the box said everything was done. 2026-09-16.
+  const allWritten = inPhotos.length > 0
+                     && inPhotos.every((x) => (x.p.caption || "").trim());
+
+  // What it costs, in the smallest true form. An estimate until money has
+  // actually been spent, and then what was spent. Cents while it is pennies,
+  // because "about 6 cents" reads as a number and "$0.06" reads as a form.
+  const spentTotal = spent && spent.calculated_cost !== null
+                     && spent.calculated_cost !== undefined
+                     ? spent.calculated_cost : null;
+  const estimate = quote && quote.estimate ? quote.estimate.total : null;
+  const money = (function () {
+    const n = written > 0 && spentTotal !== null ? spentTotal : estimate;
+    if (n === null || n === undefined) return null;
+    return n < 1 ? `${Math.round(n * 100)}\u00A2` : `$${n.toFixed(2)}`;
+  }());
 
   // Everything the server told us about this run, read before anything that
   // depends on it. Declared out of order once and the whole screen went blank
@@ -681,16 +700,10 @@ export default function PhotosScreen({ job }) {
     x: () => setSpent(null),
   });
   if (cutNote) notes.push({ kind: "done", said: cutNote, x: () => setCutNote("") });
-  if (inPhotos.length > 0 && !allReviewed) notes.push({
-    kind: "standing",
-    said: reviewText,
-    acts: (
-      <button className="linky" disabled={!!busy}
-              onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
-        Mark all as reviewed
-      </button>
-    ),
-  });
+  // The reviewed count and its action used to stand here. They moved into the
+  // widget's bar on 2026-09-16, and they did not stay in both places: two
+  // homes for one fact is how the left said "9 of 12 reviewed" while the box
+  // said everything was done. The bar is where reviewing is answered now.
   if (waiting > 0) notes.push({ kind: "standing", said: waitingText });
   const note = notes.length ? notes[Math.min(at, notes.length - 1)] : null;
 
@@ -802,15 +815,25 @@ export default function PhotosScreen({ job }) {
           </div>
         </div>
 
-        {/* THE WIDGET. One object, upper right, holding everything he can do
-            and the two settings that shape what comes out. Its width and its
-            height are pinned in the stylesheet, so no state inside it can
-            move anything on the screen. */}
+        {/* THE WIDGET. One object, upper right, holding everything she can
+            do, the two settings that shape what comes out, and a bar along
+            the bottom that answers how she gets to done.
+
+            Spenser approved this on 2026-09-16 after moving every piece
+            himself. `docs/design/photos-widget.html` is the design and it
+            wins over any judgement here; `photos-widget.md` beside it says
+            why, in his numbers.
+
+            The top row is SPREAD, not right. That is what puts Build photo
+            pages against the left edge, which is what puts the photo button
+            directly underneath it on the row below. Right-justifying floats
+            Build inward and the button sits under nothing. */}
         <div className="screen-actions control-panel">
           <div className="w-row">
             {/* Filled red: it writes a Word document into a folder Mark
-                keeps, and that cannot be taken back. The screen's one red
-                fill. The colour law of 2026-09-08, docs/ROADMAP.md. */}
+                keeps, and that cannot be taken back. One of the two reds on
+                this screen, and both are things that cannot be undone. The
+                colour law of 2026-09-08, docs/ROADMAP.md. */}
             <span className="act-wrap">
               <button className={`button${buildReady ? "" : " is-off"}`} onClick={onBuild}
                       disabled={!!busy || !buildReady}>
@@ -818,8 +841,9 @@ export default function PhotosScreen({ job }) {
               </button>
               <span className="why" data-has={buildWhy ? "yes" : "no"}>{buildWhy}</span>
             </span>
-            {/* Blue: it spends money, but a caption is a draft he can retype,
-                clear or run again. Money is not the axis; being stuck is. */}
+            {/* Blue: it spends money, but a caption is a draft she can
+                retype, clear or run again. Money is not the axis; being
+                stuck is. */}
             <span className="act-wrap">
               <button className={`button secondary${canGenerate ? "" : " is-off"}`} onClick={openChooser}
                       disabled={!!busy || !canGenerate}>
@@ -827,30 +851,30 @@ export default function PhotosScreen({ job }) {
               </button>
               <span className="why" data-has={generateWhy ? "yes" : "no"}>{generateWhy}</span>
             </span>
-            <button className="linky w-add" onClick={() => filePicker.current?.click()}>
-              Add photos
-            </button>
-            {/* Nothing to clear keeps its place rather than closing the gap,
-                the way the band chips do. A widget that changes width when a
-                caption is typed is what moved this whole block down and to
-                the left on 2026-09-07. */}
-            <button className={`linky w-add${written > 0 ? "" : " is-spare"}`}
-                    disabled={!!busy || written === 0}
-                    aria-hidden={written === 0} tabIndex={written === 0 ? -1 : 0}
-                    onClick={() => { setClearing(true); setDone(null); setError(null); }}>
-              Clear captions
+          </div>
+
+          <div className="w-row two">
+            {/* The photograph with a plus, not the words. It is pushed hard
+                left so it lands under Build photo pages. */}
+            <button className="w-icon" onClick={() => filePicker.current?.click()}
+                    aria-label="Add photos" title="Add photos">
+              <svg viewBox="0 0 23 15" fill="none" aria-hidden="true">
+                <rect x="0.6" y="2.6" width="11.8" height="9.8" rx="1.4"
+                      stroke="currentColor" strokeWidth="1.2" />
+                <circle cx="4" cy="6" r="1.15" fill="currentColor" />
+                <path d="M1.4 11.2 4.9 8.1l2.3 2 2.1-1.7 2.1 2.2" stroke="currentColor"
+                      strokeWidth="1.2" strokeLinejoin="round" fill="none" />
+                <g className="plus">
+                  <path d="M16.6 4.6v4.8M14.2 7h4.8" stroke="currentColor"
+                        strokeWidth="1.5" strokeLinecap="round" />
+                </g>
+              </svg>
             </button>
             <input ref={filePicker} type="file" multiple accept="image/*,.heic" style={{ display: "none" }}
               onChange={(e) => onFiles(e.target.files)} />
-          </div>
-          {/* Two questions, so two controls that do not look like each other.
-              Bands is on or off, so it is a switch. Photographs to a page is
-              a value, so it is a track of values. They were identical pills,
-              which is why they read as noise rather than as two questions.
-              The caption style is not here: it is picked on the window that
-              spends the money, and Spenser, 2026-09-14: *"this doesn't need
-              to be here if it's in the generate screen that pops up"*. */}
-          <div className="w-row two">
+            {/* Two questions, so two controls that do not look like each
+                other. Bands is on or off, so it is a switch. Photographs to a
+                page is a value, so it is a track of values. */}
             <span className="w-name">Per page</span>
             <span className="values" role="group" aria-label="Photographs to a page">
               <button className={perPage === 3 ? "on" : ""}
@@ -864,16 +888,11 @@ export default function PhotosScreen({ job }) {
             </span>
             <span className="w-sep" />
             <span className="w-name">Bands</span>
-            {/* Turning it off keeps every band and every click, so it is
-                never a thing he is afraid to press. Spenser, 2026-09-07. */}
             <button className="switch" role="switch" aria-checked={bandsOn}
                     aria-label="Bands" disabled={!!busy}
                     onClick={() => onBands({ bands_on: !bandsOn })}>
               <span className="knob" />
             </button>
-            {/* The bands' own chips beside the switch. Spenser, 2026-09-14:
-                *"flip the band toggle and the per page so the A,B,C is by the
-                bands toggle"*. */}
             <span className={`w-chips${bandsOn ? "" : " off"}`}>
               {chips.map((b) => (
                 <button key={b.letter} className="w-chip"
@@ -883,6 +902,52 @@ export default function PhotosScreen({ job }) {
                 </button>
               ))}
             </span>
+          </div>
+
+          {/* THE BAR. How she gets to done, and nothing else. It is not a
+              notification pane: those stay on the left, one quiet line at a
+              time. The moment the two merge, this box becomes something to
+              clear rather than something to read.
+
+              Written and reviewed are two facts, not one, and both are read
+              from the manifest here so they cannot disagree. A slot changes
+              job when its job is finished: while captions are still being
+              written the first pill reports writing; the moment every one is
+              written, writing has nothing left to say, so it starts offering
+              the tick instead. */}
+          <div className="barline">
+            {allWritten ? (
+              allReviewed ? (
+                <span className="pill done">&#10003;&nbsp;All reviewed</span>
+              ) : (
+                <button className="pill act" disabled={!!busy}
+                        aria-label="Mark every caption as reviewed"
+                        onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
+                  &#10003;&nbsp;all
+                </button>
+              )
+            ) : (
+              <span className="pill hold"><b>{written}</b>&nbsp;written</span>
+            )}
+            {!allReviewed && (
+              <span className="pill hold"><b>{reviewedCount}</b>&nbsp;reviewed</span>
+            )}
+            {/* Red, and a link rather than a button: "the same exact thing,
+                just red". It is not here at all until there is something to
+                lose, and the gap to the money is pushed by this, so when it
+                goes the money still holds the right edge. */}
+            {written > 0 && (
+              <button className="clear linky" disabled={!!busy}
+                      onClick={() => { setClearing(true); setDone(null); setError(null); }}>
+                Clear captions
+              </button>
+            )}
+            {/* Always there. Before anything is generated it is the estimate
+                and wears a tilde, which is the one moment she most wants it.
+                After, it is what the job has cost and the tilde comes off. */}
+            {money !== null && (
+              <span className="money">{written === 0 ? "~" : ""}{money}</span>
+            )}
           </div>
         </div>
       </div>

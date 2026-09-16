@@ -251,7 +251,11 @@ describe("after a build", () => {
 describe("build is gated on review", () => {
   it("is off until every caption has been read", async () => {
     await show();
-    expect(await screen.findByText(/0 of 3 reviewed/)).toBeInTheDocument();
+    // The count moved into the widget's bar on 2026-09-16 and left the quiet
+    // line. It used to read "0 of 3 reviewed" on the left; it is two pills in
+    // the bar now, because written and reviewed are two facts.
+    const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
+    expect(bar.textContent).toMatch(/0\s*reviewed/);
     expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
   });
 
@@ -264,8 +268,13 @@ describe("build is gated on review", () => {
     await show();
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
-    expect(screen.queryByText(/reviewed/)).toBeNull();
+    // The quiet line still goes empty: nothing is happening, so it says
+    // nothing. What changed on 2026-09-16 is that the bar does say something,
+    // because "every one is written and every one is read" is the one state
+    // this job is working towards and it is worth one pill.
     expect(document.querySelector(".quiet").textContent).toBe("");
+    expect(document.querySelector(".control-panel .barline").textContent)
+      .toMatch(/All reviewed/);
   });
 });
 
@@ -627,7 +636,10 @@ describe("the bands switch", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mark all as reviewed, behind a warning.
+// The tick, behind a warning. It was a link on the left called "Mark all as
+// reviewed" until 2026-09-16, when it moved into the widget's bar and became
+// the glyph. It only appears once every caption is written: there is nothing
+// to review until there is something written to review.
 //
 // Spenser's rule, 2026-09-03, in his own words: it is very important that
 // humans review everything AI does. So this is never a plain button. The
@@ -647,14 +659,14 @@ describe("marking every caption reviewed", () => {
 
   it("offers it while something is still unread", async () => {
     await show();
-    expect(await screen.findByRole("button", { name: "Mark all as reviewed" }))
+    expect(await screen.findByRole("button", { name: "Mark every caption as reviewed" }))
       .toBeInTheDocument();
   });
 
   it("asks first, and calls nobody until he says yes", async () => {
     const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Mark every caption as reviewed" }));
     expect(await screen.findByText(/removes the human check/)).toBeInTheDocument();
     expect(all).not.toHaveBeenCalled();
   });
@@ -662,7 +674,7 @@ describe("marking every caption reviewed", () => {
   it("backs out without calling anybody", async () => {
     const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue({});
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Mark every caption as reviewed" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(all).not.toHaveBeenCalled();
     expect(screen.queryByText(/removes the human check/)).not.toBeInTheDocument();
@@ -672,7 +684,7 @@ describe("marking every caption reviewed", () => {
     const all = vi.spyOn(api, "markAllReviewed").mockResolvedValue(
       manifest({ photos: UNREAD.map((p) => ({ ...p, reviewed: true })) }));
     await show();
-    await userEvent.click(await screen.findByRole("button", { name: "Mark all as reviewed" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Mark every caption as reviewed" }));
     await userEvent.click(screen.getByRole("button", { name: "Mark them all" }));
     expect(all).toHaveBeenCalledWith(JOB);
     await waitFor(() =>
@@ -685,7 +697,7 @@ describe("marking every caption reviewed", () => {
     await show();
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
-    expect(screen.queryByRole("button", { name: "Mark all as reviewed" }))
+    expect(screen.queryByRole("button", { name: "Mark every caption as reviewed" }))
       .not.toBeInTheDocument();
   });
 });
@@ -1101,11 +1113,17 @@ describe("one widget, upper right", () => {
     const widget = document.querySelector(".screen-actions.control-panel");
     const rows = widget.querySelectorAll(".w-row");
     expect(rows).toHaveLength(2);
-    const acts = [...rows[0].querySelectorAll("button")].map((b) => b.textContent);
-    expect(acts.slice(0, 3)).toEqual(
-      ["Build photo pages", "Generate captions (3)", "Add photos"]);
+    // Two actions on the top row, spread, so Build sits hard left and the
+    // photo button lands directly under it on the row below. Add photos is an
+    // icon on the second row now, not words on the first.
+    const acts = [...rows[0].querySelectorAll("button")]
+      .map((b) => b.textContent).filter((t) => t.trim());
+    expect(acts).toEqual(["Build photo pages", "Generate captions (3)"]);
     const settings = [...rows[1].children].map((el) => el.className.split(" ")[0]);
-    expect(settings).toEqual(["w-name", "values", "w-sep", "w-name", "switch", "w-chips"]);
+    expect(settings).toEqual(
+      ["w-icon", "", "w-name", "values", "w-sep", "w-name", "switch", "w-chips"]);
+    // and the bar underneath both of them
+    expect(widget.querySelector(".barline")).toBeTruthy();
   });
 
   it("asks its two questions with two different controls", async () => {
@@ -1143,8 +1161,14 @@ describe("a message has one of two homes", () => {
 
   it("says what is happening on that one line, not in a box", async () => {
     await show();
-    expect(await screen.findByText(/0 of 3 reviewed/))
-      .toHaveClass("said");
+    // Whatever the quiet line is carrying, it carries it as one line with a
+    // dot and a sentence, never as a box. The reviewed count is no longer one
+    // of the things it can carry: that moved into the widget's bar on
+    // 2026-09-16 and did not stay in both places.
+    const quiet = document.querySelector(".quiet");
+    expect(quiet).toBeTruthy();
+    expect(quiet.textContent).not.toMatch(/reviewed/);
+    expect(document.querySelectorAll(".note-row, .callout").length).toBe(0);
   });
 
   it("says what blocks the Build button on the Build button", async () => {
@@ -1173,7 +1197,8 @@ describe("a message has one of two homes", () => {
     };
 
     await show();
-    await screen.findByText(/0 of 3 reviewed/);
+    await waitFor(() => expect(
+      document.querySelector(".control-panel .barline")).toBeTruthy());
     const settled = shape();
     expect(settled).toEqual({
       kids: ["made", "screen-actions control-panel"],

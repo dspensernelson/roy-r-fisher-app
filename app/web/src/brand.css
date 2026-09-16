@@ -529,16 +529,28 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    captions carrying a three-digit count, which is the 131-photograph job.
    516 is that number with 8px left over. The settings row needs 257.8 and
    sits inside it, so nothing there can move anything either. */
+/* 360 by 110, and both numbers are his. He arrived at them on 2026-09-16 by
+   moving the pieces himself. `docs/design/photos-widget.html` is the design.
+
+   The height is pinned, not a floor: nothing inside this box may push the
+   photographs down the screen, which is the fault the 76px pin was added for
+   in the first place. */
 .screen-actions.control-panel {
-  flex: none; width: 516px; height: 76px;
+  flex: none; width: 360px; min-width: 0; height: 110px;
   display: flex; flex-direction: column; align-items: stretch;
   justify-content: space-between; gap: 0;
   padding: 7px 14px;
   background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
   box-shadow: var(--shadow-raised);
 }
-.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 9px; height: 30px; }
-.screen-actions.control-panel .w-row.two { height: 24px; gap: 8px; }
+/* Spread, not right. This is what puts Build photo pages hard against the
+   left edge, which is what puts the photo button directly underneath it on
+   the row below. Right-justifying floats Build inward and the button lands
+   under nothing. Got wrong twice on 2026-09-16. */
+.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 3px;
+  height: 30px; min-width: 0; justify-content: space-between; }
+.screen-actions.control-panel .w-row.two { height: 24px; gap: 8px;
+  justify-content: flex-end; }
 .screen-actions.control-panel .linky { margin-left: 0; }
 /* Written at the panel's own specificity so it beats the roomier
    `.screen-actions .button` below, which NewJob still uses. */
@@ -1069,3 +1081,90 @@ input::placeholder, textarea::placeholder {
   max-width: 520px; }
 .closing-title { margin: 0 0 16px; font-weight: 700; font-size: 18px; }
 
+
+
+/* ── The photographs widget, approved 2026-09-16 ──────────────────────────
+   `docs/design/photos-widget.html` is the design and it wins over judgement
+   here. `photos-widget.md` beside it says why, in his numbers and his words.
+*/
+
+/* Add photos is a photograph with a plus, not the words. Pushed hard left so
+   it lands under Build photo pages. Built in the widget's own vocabulary:
+   the same edge, radius and sunk fill as the 3-or-6 control next to it. */
+.w-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 5px; margin-right: auto;
+  border: 1px solid var(--line-strong); border-radius: 5px;
+  background: var(--paper-sunk); color: #4A4A4A; cursor: pointer;
+}
+.w-icon:hover { border-color: #B9B5AE; background: var(--paper); }
+.w-icon svg { display: block; height: 23px; width: auto; }
+.w-icon .plus { transform: translateX(2px); }
+
+/* The bar. How she gets to done, joined to the bottom edge of the box.
+   Nothing in it wraps or shrinks: if it stops fitting it has to say so
+   rather than fold. */
+.control-panel .barline {
+  display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: nowrap;
+  font-size: 11.5px; color: var(--ink-muted);
+  margin: 4px -14px -7px; padding: 4px 14px; height: 24px;
+  background: var(--paper-sunk); border-top: 1px solid var(--line);
+  border-radius: 0 0 5px 5px;
+}
+
+/* One shape for everything in the bar, taken from the money, which was the
+   first pill here and set the language. */
+.pill[hidden] { display: none !important; }
+.pill {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  white-space: nowrap; font-size: 11.5px; line-height: 1;
+  padding: 3px 8px; border-radius: 999px; font-variant-numeric: tabular-nums;
+}
+.pill b { font-weight: 700; }
+.pill.hold { color: var(--needs-ink); border: 1px solid rgba(138, 82, 0, 0.32);
+  background: rgba(138, 82, 0, 0.06); }
+
+/* Light green until it is pressed. It is an offer, not a result, and a filled
+   pill reads as something that already happened. `font: inherit` is a
+   shorthand and resets line-height with everything else, so line-height is
+   set again after it, on purpose. */
+.pill.act {
+  color: #2F5D33; background: rgba(47, 93, 51, 0.06);
+  border: 1px solid rgba(47, 93, 51, 0.34); cursor: pointer;
+  font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
+  padding: 3px 9px; text-decoration: none;
+}
+.pill.act:hover { background: rgba(47, 93, 51, 0.13); border-color: rgba(47, 93, 51, 0.55); }
+.pill.act:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Filled, because this is the only moment in the job where every caption is
+   written and every one has been looked at. */
+.pill.done { color: #FFFFFF; background: #2F5D33; border: 1px solid #2F5D33; }
+
+/* Red, and a link rather than a button: "the same exact thing, just red." The
+   gap to the money is pushed by this, so when there is nothing to clear the
+   money still holds the right edge. */
+/* Scoped to the panel because `.screen-actions.control-panel .linky` sets
+   `margin-left: 0` and outranks a two-class selector. The push-right silently
+   did nothing until 2026-09-16, and the money sat 91px short of the edge. */
+.control-panel .barline .clear {
+  font-size: 12.5px; white-space: nowrap; flex: none;
+  color: var(--brand); margin-left: auto; margin-right: 2px;
+}
+
+/* Money is green, because it is money. The same green as the offer, so the
+   quiet green in that bar is one thing and not two that nearly match. */
+.money {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700; color: #2F5D33;
+  font-variant-numeric: tabular-nums; line-height: 1; padding: 3px 8px;
+  border: 1px solid rgba(47, 93, 51, 0.34); background: rgba(47, 93, 51, 0.06);
+  border-radius: 999px; white-space: nowrap;
+  /* It always holds the right edge. `:first-of-type` was tried and does not
+     work: it matches on element type, not class, so it never fired whenever a
+     pill came before the money, which is every state but one. */
+  margin-left: auto;
+}
+/* Except when Clear captions is there, which pushes them both right as a pair
+   and keeps the gap between them fixed. */
+.control-panel .barline .clear + .money { margin-left: 0; }

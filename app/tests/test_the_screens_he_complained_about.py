@@ -219,6 +219,40 @@ def test_the_widget_gives_its_contents_room_at_the_sides():
 
 
 def test_the_widget_keeps_the_fixed_height_that_stops_the_screen_bouncing():
+    """The number changed on 2026-09-16 and the property did not.
+
+    It was 76 by 516 and it is 110 by 360, because he moved the pieces
+    himself and a bar was added along the bottom. What matters here is not
+    either number: it is that both are pinned, so nothing inside this box can
+    push the photographs down the screen. A `min-height` would not do, which
+    is why this insists on `height`.
+    """
     panel = block(".screen-actions.control-panel")
-    assert re.search(r"height:\s*76px", panel)
-    assert re.search(r"width:\s*\d+px", panel), "its width is pinned too"
+    assert re.search(r"[^-]height:\s*\d+px", panel), "its height is not pinned"
+    assert re.search(r"[^-]width:\s*\d+px", panel), "its width is not pinned"
+
+
+def test_the_money_holds_the_right_edge_of_the_bar():
+    """Two rules do it, and both were wrong once on 2026-09-16.
+
+    `.money` takes `margin-left: auto` unconditionally. It was written as
+    `:first-of-type`, which matches on element type rather than class, so it
+    never fired whenever a pill came before the money, which is every state
+    but one.
+
+    Clear captions overrides it, so the pair travel right together with a
+    fixed gap between them. That override has to outrank
+    `.screen-actions.control-panel .linky { margin-left: 0 }`, which is three
+    classes; scoped to the panel it does, and unscoped it silently did
+    nothing and left the money 91px short of the edge.
+    """
+    money = block(".money")
+    assert re.search(r"margin-left:\s*auto", money), "the money does not hold the edge"
+
+    css = CSS.read_text()
+    # The selector, not the word. The rule's own comment names it, which is
+    # the point of the comment, so asking whether the words appear anywhere
+    # would fail on the explanation rather than on the mistake.
+    assert ".money:first-of-type" not in css, "that selector matches on type, not class"
+    assert ".control-panel .barline .clear + .money { margin-left: 0; }" in css, \
+        "Clear captions no longer pushes the pair right as one"

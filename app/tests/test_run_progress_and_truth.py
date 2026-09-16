@@ -335,10 +335,17 @@ def test_marking_them_all_is_only_ever_offered_behind_a_warning():
     does. So the shortcut exists and the warning in front of it is the part
     that must never quietly disappear, which is why this test outlived the
     rule it was written for.
+
+    On 2026-09-16 the shortcut moved into the widget's bar and became a
+    glyph: a light green tick reading "all", offered only once every caption
+    is written. The words it used to be called are gone, so this asks for the
+    thing by the name the screen gives it, and the warning is still the part
+    that must never quietly disappear.
     """
     screen = (WEB / "screens" / "PhotosScreen.jsx").read_text()
     assert "Mark reviewed" in screen, "one at a time is still how it is done"
-    assert "Mark all as reviewed" in screen
+    assert "Mark every caption as reviewed" in screen, "the shortcut is gone"
+    assert "setMarkingAll(true)" in screen, "it no longer opens the warning"
     assert "removes the human check" in screen, "the shortcut lost its warning"
 
 

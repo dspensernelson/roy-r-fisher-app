@@ -47,14 +47,14 @@ def test_every_line_in_the_file_is_a_heading_an_item_or_a_note():
 def test_no_item_carries_a_code():
     """`B15` reached the page once. He read it and did not know what it was."""
     for heading, items in sections():
-        for _, text in items:
+        for _, text, _ in items:
             assert not re.search(r"\b[A-Z]\d+\b", text), (
                 "%s, under %s, has a code in it" % (text, heading))
 
 
 def test_every_item_is_one_line():
     for heading, items in sections():
-        for _, text in items:
+        for _, text, _ in items:
             assert "\n" not in text
             assert len(text) <= build.LONG_ITEM, (
                 "%d characters under %s, it will wrap: %s"
@@ -90,10 +90,10 @@ def test_the_page_says_nothing_the_file_does_not():
 def test_every_item_reaches_the_page_with_its_state():
     made = page()
     for _, items in sections():
-        for done, text in items:
+        for done, text, _ in items:
             import html
             assert html.escape(text) in made, "%s is not on the page" % text
-    ticked = sum(1 for _, items in sections() for done, _ in items if done)
+    ticked = sum(1 for _, items in sections() for done, _, _ in items if done)
     assert len(re.findall(r'type="checkbox" id="c\d+" checked>', made)) == ticked
 
 
@@ -107,7 +107,7 @@ def test_the_first_two_sections_are_open_and_the_rest_fold():
 
 
 def test_an_item_with_html_in_it_cannot_break_the_page():
-    made = build.build([("A heading", [(False, 'a <script>alert(1)</script> item')])])
+    made = build.build([("A heading", [(False, 'a <script>alert(1)</script> item', "")])])
     assert "<script>alert" not in made
     assert "&lt;script&gt;" in made
 
@@ -116,7 +116,64 @@ def test_the_complaint_is_a_warning_and_never_a_refusal():
     """A build that refuses could stop a session publishing at all, and the
     page being slightly wrong beats the page being absent or stale."""
     import io
-    bad = [("A heading", [(False, "B15 " + "x" * 200)])]
+    bad = [("A heading", [(False, "B15 " + "x" * 200, "")])]
     said = build.complain(bad, out=io.StringIO())
     assert len(said) == 2
     assert "<details" in build.build(bad)
+
+
+# --- the star, put into everything ------------------------------------------
+
+def test_every_item_outside_the_north_star_names_the_star_it_serves():
+    """He asked for this on 2026-09-16: the star goes into everything. An item
+    with nothing said either way is the failure this catches, because silence
+    reads as "nobody thought about it", which is exactly what it is."""
+    for heading, items in list(sections())[1:]:
+        for _, text, star in items:
+            assert star, "%s, under %s, says nothing about the star" % (text, heading)
+            assert star == build.NO_STAR or star in build.STARS, (
+                "%s is not one of the five and is not %s: %s"
+                % (star, build.NO_STAR, text))
+
+
+def test_the_north_star_itself_carries_no_star():
+    """The five are what everything else points at. A line pointing at itself
+    is noise."""
+    for _, _, star in sections()[0][1]:
+        assert not star
+
+
+def test_the_star_is_beside_the_words_and_never_inside_them():
+    """It is laid out, not written into the sentence. If it ever reached the
+    text, the item would read as though he had said it."""
+    for heading, items in sections():
+        for _, text, _ in items:
+            assert build.MARK not in text
+            assert not text.endswith(build.NO_STAR)
+
+
+def test_a_star_reaches_the_page_as_its_own_thing():
+    made = build.build([("A heading", [(False, "an item", "Star 3"),
+                                       (False, "another", build.NO_STAR)])])
+    assert '<span class="star">Star 3</span>' in made
+    assert '<span class="star none">No star</span>' in made
+
+
+def test_nothing_appears_under_two_headings():
+    """Crossover. He asked for it by name on 2026-09-16. The same work in two
+    places is how a thing gets built twice or argued about twice."""
+    import io as _io
+    said = [one for one in build.complain(sections(), out=_io.StringIO())
+            if one.startswith("crossover")]
+    assert not said, "\n".join(said)
+
+
+def test_the_quick_wins_come_before_the_far_off_ones():
+    """The order of the sections is the argument he reads. Small and close at
+    the top, things nobody has confirmed at the bottom."""
+    headings = [h.lower() for h, _ in sections()]
+    assert "north star" in headings[0]
+    assert "quick wins" in headings[1]
+    assert headings.index("quick wins") < headings.index("the report, section by section")
+    assert (headings.index("the report, section by section")
+            < headings.index("ideas nobody has confirmed with him"))

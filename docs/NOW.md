@@ -53,7 +53,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Nothing tells you the new version started · Star 5
 - [ ] Check now must offer the update there and then, not point at another button · Star 5
 - [ ] Run the 28 by-hand checks on Windows · No star
-- [ ] Upload to the office · No star
+- [x] Upload to the office · No star
 
 ## Bugs still open
 

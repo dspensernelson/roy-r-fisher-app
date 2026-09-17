@@ -29,6 +29,42 @@ describe("Check now", () => {
     expect(onUpdateChecked).toHaveBeenCalled();
   });
 
+  it("offers the update beside Check now when it finds one", async () => {
+    // Spenser, 2026-09-16: "When Check now finds a version, an Update button
+    // appears beside it." The button is the masthead's own, word for word,
+    // and it hands back to the handler the masthead uses. The sentence loses
+    // its pointer to the top of the screen, because the button is right here.
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "0.6.4" });
+    const onUpdate = vi.fn();
+
+    render(<Settings workspace={WORKSPACE} version="0.6.3"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}}
+                     onUpdateChecked={() => Promise.resolve()} onUpdate={onUpdate} />);
+    const check = await screen.findByRole("button", { name: "Check now" });
+    expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
+    await userEvent.click(check);
+
+    const update = await screen.findByRole("button", { name: "Update available" });
+    expect(update.parentElement).toBe(check.parentElement);
+    expect(update).toHaveClass("button");
+    expect(update).not.toHaveClass("linky");
+    expect(screen.getByText("Version 0.6.4 is available.")).toBeInTheDocument();
+    expect(screen.queryByText(/top of the screen/)).toBeNull();
+
+    await userEvent.click(update);
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no update button when there is nothing newer", async () => {
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "" });
+    render(<Settings workspace={WORKSPACE} version="0.6.4"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}}
+                     onUpdate={() => {}} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Check now" }));
+    await screen.findByText("You are on the newest version.");
+    expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
+  });
+
   it("still works when nothing is listening", async () => {
     vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "" });
     render(<Settings workspace={WORKSPACE} version="0.6.4"

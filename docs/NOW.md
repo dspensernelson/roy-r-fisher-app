@@ -68,6 +68,8 @@ are in its phases.
 
 ## Close the tab, or press Close the app: everything closes
 
+- [ ] Closing the tab stops nothing: the app keeps running behind it · Star 3
+- [ ] Close the app stops the app but leaves its tab open · Star 3
 - [x] Close the app moved into the nav bar · Star 3
 
 ## Never shown an old screen or an old message

@@ -56,10 +56,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Which job produced the 700 KB photographs · No star
 - [ ] What is the black window that appears after an update · Star 4
 - [ ] What should the loading page say when it cannot reach the app · Star 5
-- [ ] Is description of improvements still the next major area · No star
-- [ ] Is the parked description of improvements work brought forward or rebuilt · No star
-- [ ] Who wins when the assessor card and the inspection transcript disagree · No star
-- [ ] Is the 8 September Fable analysis the plan we build to · No star
 - [x] Confirm the fixed port is how we get to one tab · Star 1
 
 ## Get the office a working update
@@ -73,7 +69,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Run the 28 by-hand checks on Windows · No star
 - [ ] The photographs cover the bar of buttons on the photographs screen · No star
 - [ ] Record who wrote each caption, so written and reviewed are two counts · No star
-- [ ] Decide whether A B C stay in the box, and whether they filter · No star
 - [x] The update box must fill the width, not sit in a narrow box on the left · No star
 - [x] The confirm box needs that same width fix · No star
 - [x] Say what planned workflows means, or stop using the phrase · Star 5
@@ -115,31 +110,13 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] The parked work is 142 versions behind and conflicts in four files · No star
 - [ ] The job screen knows one section by name and needs a real list · No star
 - [ ] Name the finished Word file the way the photo file is named · No star
-- [ ] Save the 28 August measurement before the parked branch is lost · No star
+- [x] Save the 28 August measurement before the parked branch is lost · No star
 
 ## The report, section by section
 
-- [ ] One definition of what a report section is, written down once · No star
-- [ ] One record of what the app knows about a job · No star
-- [ ] A ledger of facts that says where each value came from · No star
-- [ ] One place that reads the source documents · No star
-- [ ] One model call, not one for every section · No star
-- [ ] One Word engine, not one for every section · No star
-- [ ] One review screen that every section uses · No star
-- [ ] Checks on the finished document, run when it is built · No star
-- [ ] Whichever section comes second forces all of the above · No star
-- [ ] The map and picture pages: aerial, neighborhood, plat, sketch, comp map · No star
-- [ ] The four boilerplate sections whose templates already exist · No star
-- [ ] Salient facts, which needs the workbook and a grid together · No star
-- [ ] The three approaches: cost, sales and income · No star
-- [ ] Mark dictates and the app drafts the words into blanks he edits · No star
-- [ ] The engagement letter fills itself in from the job · No star
-- [ ] He drops all the documents in at once and the app sorts them · No star
-- [ ] The whole report: assembly, contents, addenda, the delivered file · No star
-- [ ] Rebuild one delivered job of each report shape, next to the original · No star
+- [ ] Re-run the Fable analysis once description of improvements reaches Mark · No star
+- [ ] The report, phase by phase, is in the roadmap · No star
 - [ ] Mark unzips once and double-clicks a shortcut for ever · Star 2
-- [ ] Mark gets everything through phase three in one handoff, not a drip · No star
-- [ ] The short form and the other report shapes, each from its own recipe · No star
 
 ## You asked for it and it is not built
 
@@ -147,40 +124,25 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Spenser reads the log without asking Colleen to send it · No star
 - [ ] A way past it, wherever the app says no · No star
 - [ ] A layout pass over the job screen · No star
-- [ ] The app suggests what a file is from its name, for him to confirm · No star
 - [ ] He types a band name and the band appears · No star
 - [ ] He drags a band into place, renames it, or takes one away · No star
 - [ ] A short list in the upper right saying what still needs doing · No star
-- [ ] Stop the green and red boxes piling up · Star 4
-- [ ] Say which callout he has to act on · No star
-- [ ] Offer to move a file to the part of the report it belongs in · No star
-- [ ] Subfolders, and labelling several files at once · No star
+- [ ] Subfolders · No star
 - [ ] Read the city and address out of the job brief instead of refusing · No star
 - [ ] The update screen feels up to date, the way TurboTax feels · No star
-- [ ] Mark uses his own key eventually, not Spenser's · No star
-- [ ] A goal conversation before each change, and a stop at the end of each phase · No star
 - [ ] Adopt the design system before there are more screens · No star
-- [ ] A walk of the photo screen with him before anything was designed on it · No star
 - [ ] A harness that renders a real screen out of the app, so a mockup is true · No star
 - [ ] New job as two centred boxes · No star
 - [ ] Manage active jobs · No star
-- [ ] The app guesses a job's name rather than asking him to type it · No star
 - [ ] A log line at every step of starting up · Star 5
+- [x] Stop the green and red boxes piling up · Star 4
+- [x] Mark uses his own key eventually, not Spenser's · No star
 
 ## Ideas nobody has confirmed with you
 
 - [ ] Click a photograph and see it bigger · No star
 - [ ] Take several photographs out at once · No star
-- [ ] Select photographs across more than one folder · No star
-- [ ] A strip holding the photographs still waiting for a band · No star
-- [ ] Remember band names from the last job · No star
 - [ ] Ask Mark's office to stop shrinking photographs by hand · No star
-- [ ] What happens when captions overflow a six-photograph page · No star
-- [ ] Its own web address for updates instead of Cloudflare's · No star
-- [ ] Sign the package so it proves who built it · No star
-- [ ] The job screen says what information a job still needs · No star
-- [ ] Measure how often a name's prefix would be guessed wrong · No star
-- [ ] Find out which band names the office types, and whether clicking beat dragging · No star
 
 ## Housekeeping
 

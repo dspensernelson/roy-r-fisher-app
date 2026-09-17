@@ -68,6 +68,25 @@ def test_an_unknown_cost_still_moves_nothing(tmp_path, monkeypatch):
     assert cost.rate_including("b", None, 12) == pytest.approx(cost.STARTING_RATE)
 
 
+def test_the_quote_rounds_up_to_the_cent_once_the_rate_leaves_the_nickel(tmp_path, monkeypatch):
+    """Spenser, 2026-09-17: round up, to the cent, never to a nickel.
+
+    The prior rate is itself a nickel, so the change is invisible until the
+    rate has learned off it. At the rate the real paid run produced, twelve
+    photographs price at $0.5759: a nickel showed $0.60, a cent shows $0.58.
+    """
+    monkeypatch.setenv("RRF_USAGE_FILE", str(tmp_path / "usage.json"))
+    usage_store.open_bucket("b")
+    usage_store.record_run({"run_id": "r1", "photos_captioned": RUN_ONE_PHOTOS,
+                            "calculated_cost": RUN_ONE_COST, "status": "completed"}, "b")
+    assert cost.estimate(12, "b")["total"] == 0.58
+    assert cost.estimate(60, "b")["total"] == 2.88
+    # Still a maximum: never below the arithmetic it came from.
+    for n in (1, 12, 60):
+        shown = cost.estimate(n, "b")
+        assert shown["total"] >= shown["raw_total"] - 1e-9
+
+
 def test_the_second_run_was_priced_at_the_learned_rate(tmp_path, monkeypatch):
     """The estimate Mark saw for run two was 2 x $0.0480, not 2 x $0.0500.
     The learning is visible in the number he reads, not only in a file."""

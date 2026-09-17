@@ -339,19 +339,97 @@ def test_every_row_carries_a_notes_control_left_of_the_star():
             assert at < star, "the notes control is right of the star"
 
 
-def test_the_notes_control_carries_the_same_key_as_the_tick():
-    """One key ties a note to its item, and it is the key the tick already
-    uses. A second key scheme is a fact with two homes."""
+def note_keys(made):
+    return re.findall(r'class="note" data-n="([^"]+)"', made)
+
+
+def key_for(made, text):
+    """The note key beside one item's words."""
+    import html
+    got = re.search(
+        r'<span class="t">%s</span><button type="button" class="note" data-n="([^"]+)"'
+        % re.escape(html.escape(text)), made)
+    assert got, "no notes control beside %s" % text
+    return got.group(1)
+
+
+def test_a_note_is_keyed_on_the_items_own_words_and_nothing_else():
+    """The words are what the note is about. Where the item sits, which
+    heading it is under, which star it names and whether it is ticked all
+    change while the item stays the same thing."""
+    here = build.build([("A heading", [(False, "the item with the note", "Star 1")])])
+    there = build.build([("Another heading",
+                          [(True, "the item with the note", build.NO_STAR)])])
+    assert key_for(here, "the item with the note") == key_for(
+        there, "the item with the note")
+
+
+def test_a_note_follows_its_item_to_a_different_heading():
+    """Items moved between headings four times on 2026-09-16 and will again.
+    A note keyed on where an item sat would land on a stranger."""
+    before = build.build([("Get the office a working update",
+                           [(False, "the item with the note", build.NO_STAR)])])
+    after = build.build([("A heading", [(False, "something else", build.NO_STAR)]),
+                         ("Housekeeping",
+                          [(False, "the item with the note", build.NO_STAR)])])
+    assert key_for(before, "the item with the note") == key_for(
+        after, "the item with the note")
+
+
+def test_a_note_follows_its_item_when_items_are_added_above_it():
+    """Items are added to `docs/NOW.md` the moment he asks for something, and
+    they are added wherever they belong, not at the bottom."""
+    before = build.build([("A heading",
+                           [(False, "the item with the note", build.NO_STAR)])])
+    after = build.build([("A heading", [(False, "one added above", build.NO_STAR),
+                                        (False, "and another", build.NO_STAR),
+                                        (False, "the item with the note",
+                                         build.NO_STAR)])])
+    assert key_for(before, "the item with the note") == key_for(
+        after, "the item with the note")
+    # And the tick's own key does move, which is exactly why the note may not
+    # borrow it.
+    assert re.search(r'data-k="c1"', before)
+    assert 'data-k="c3"' in after
+
+
+def test_rewording_an_item_orphans_its_note():
+    """Correct, and better than the note quietly landing on a stranger. The
+    note keeps the item's whole line, which is how an orphan is found."""
+    before = build.build([("A heading", [(False, "the item", build.NO_STAR)])])
+    after = build.build([("A heading", [(False, "the item, reworded", build.NO_STAR)])])
+    assert key_for(before, "the item") != key_for(after, "the item, reworded")
+
+
+def test_the_note_key_is_never_the_tick_key():
+    """Two keys doing two jobs. The tick's counts down the page and moves
+    when anything above it moves; the note's is the item's own words."""
     for one in labels(page()):
-        tick = re.search(r'data-k="(c\d+)"', one).group(1)
-        note = re.search(r'class="note" data-n="(c\d+)"', one).group(1)
-        assert tick == note
+        assert re.search(r'data-k="c\d+"', one)
+        assert not re.search(r'class="note" data-n="c\d+"', one)
+
+
+def test_every_item_has_its_own_note_key():
+    """No two items share one. The file already forbids two items with the
+    same words; this is the other half of that."""
+    keys = set(note_keys(page()))
+    texts = set(t for _, items in sections() for _, t, _ in items)
+    assert len(keys) == len(texts)
+
+
+def test_a_note_key_is_a_legal_place_to_put_a_document():
+    """The store takes letters, digits and a short list of marks, and never a
+    bare dot. A key it refuses loses the note with no way to see why."""
+    for k in set(note_keys(page())):
+        assert re.match(r"^[A-Za-z0-9_.~:@+-]{1,200}$", k), k
+        assert k not in (".", "..")
 
 
 def test_both_copies_of_a_ticked_item_share_one_note():
-    """A ticked item is on the page twice. One note, not two."""
+    """A ticked item is on the page twice. One note, not two. Same words,
+    same key, so it falls out rather than being arranged."""
     made = page()
-    keys = re.findall(r'class="note" data-n="(c\d+)"', made)
+    keys = note_keys(made)
     ticks = sum(1 for _, items in sections() for d, _, _ in items if d)
     assert len(keys) - len(set(keys)) == ticks
 

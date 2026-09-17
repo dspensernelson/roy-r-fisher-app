@@ -35,7 +35,9 @@ and once in `Done`. The line at the end of each heading swaps which of the two
 you can see, so nothing is open in two places at once.
 
 **Notes, asked for on 2026-09-16.** Every row carries a small control to the
-left of its star. He clicks it, types a note about that item, and it is read
+left of its star. A note is keyed on the item's own words, not on where the
+item sits, so it follows the item when the list is reordered or the item moves
+to another heading. See `note_key`. He clicks it, types a note about that item, and it is read
 back out of the store with a tool call, so he never copies anything. The note
 goes to the artifact's own database when the page is published and to the
 browser when it is opened as a file, which is what he does on his Mac. It is
@@ -52,6 +54,7 @@ to get a version to the office are the two he opens the page to see.
 Standard library only. It runs on the Mac, not on Windows, and it is not part
 of the package.
 """
+import hashlib
 import html
 import io
 import json
@@ -98,6 +101,29 @@ DONE = "Done"
 # does, there is no store at all and the note stays in that browser. Saying so
 # is the fifth north-star line: a note shown as kept when it is not is the app
 # telling him something it does not know.
+def note_key(text):
+    """A note's own key: the item's exact words, not where the item sits.
+
+    The tick's key counts down the page, so it moves the moment anything
+    above it moves. A note keyed on that would follow the position and land
+    on a stranger, and items move between headings several times a day.
+
+    The words are what a note is about. They survive reordering, moving an
+    item to another heading, ticking it, and changing the star it names,
+    which is every one of the things that shifts around an item while the
+    item stays the same thing. `docs/NOW.md` already forbids two items with
+    the same words and a test holds that, so the words are a key.
+
+    Rewording an item orphans its note. That is correct: better a note that
+    is plainly about a line nobody can find than one silently attached to a
+    different item. The note carries the item's whole line for that reason.
+
+    The star is not part of it. It is written after the middle dot and is
+    already stripped off by `read` before this sees the text.
+    """
+    return "n" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
 KEPT_HERE = "This browser only"
 NOT_KEPT = "Not saved"
 FURNITURE = set(re.findall(r"[A-Za-z]{4,}", KEPT_HERE + " " + NOT_KEPT))
@@ -245,8 +271,8 @@ input:checked~.star{color:var(--line);border-color:var(--line)}
     was=text;
     if(text)mine[k]=text;else delete mine[k];
     mark();
-    // The item's own line and where it sat go with the note, so a note still
-    // reads back if the keys are ever numbered differently.
+    // The item's own line and where it sat go with the note. The key is the
+    // words, so this is what finds an orphan when an item is reworded.
     var body={text:text,item:row.querySelector('.t').textContent,
       section:row.getAttribute('data-h'),star:row.getAttribute('data-s'),
       at:new Date().toISOString()};
@@ -395,9 +421,10 @@ def build(sections):
             # which is how he sees at a glance where he left one.
             body = ('<input type="checkbox" data-k="c%d"%s>'
                     '<span class="t">%s</span>'
-                    '<button type="button" class="note" data-n="c%d">&#9998;&#xFE0E;</button>'
+                    '<button type="button" class="note" data-n="%s">&#9998;&#xFE0E;</button>'
                     '%s'
-                    % (n, " checked" if done else "", html.escape(text), n, chip))
+                    % (n, " checked" if done else "", html.escape(text),
+                       note_key(text), chip))
             # A note says which heading and which star its item sat under, so
             # it still reads back as something rather than as a sentence about
             # nothing. The row is the only place that knows.

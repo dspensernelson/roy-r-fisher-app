@@ -28,28 +28,17 @@ describe("what he is told before he agrees", () => {
     expect(screen.getByText(/You are on version 0\.5\.3/)).toBeInTheDocument();
   });
 
-  it("says his work is not inside the app", () => {
-    open();
-    expect(screen.getByText(/not kept inside the app and are not touched/))
-      .toBeInTheDocument();
-  });
-
-  it("says what the checksum does and does not prove", () => {
-    // The same honesty the manifest check is already held to. Without code
-    // signing this catches a damaged download, not somebody who can rewrite
-    // the file and the checksum together.
-    open();
-    expect(screen.getByText(/does not prove who made/)).toBeInTheDocument();
-    expect(screen.getByText(/damaged or incomplete download/)).toBeInTheDocument();
-    // Plain words. "Checksum" is a term he would not recognise, and
-    // HOW-WE-WORK calls that a defect in the writing.
+  it("says the app restarts and his settings stay, in his words", () => {
+    // Spenser's own wording, 2026-09-17. The paragraph about what the check
+    // proves is gone at his request: three words, not ten.
+    const { container } = open();
+    const text = container.textContent.replace(/\s+/g, " ");
+    expect(text).toContain(
+      "You are on version 0.5.3. The download is about 53 MB. The app closes " +
+      "itself and opens again as a new version. Your settings remain the same.");
+    expect(text).not.toMatch(/exactly what was published/);
+    expect(text).not.toMatch(/not kept inside the app/);
     expect(screen.queryByText(/checksum/i)).toBeNull();
-  });
-
-  it("says nothing changes if it goes wrong", () => {
-    open();
-    expect(screen.getByText(/the version you have now is not touched/i))
-      .toBeInTheDocument();
   });
 
   it("does not start anything until he clicks", () => {

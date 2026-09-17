@@ -1297,3 +1297,43 @@ describe("the lines he had taken out on 2026-09-15", () => {
     expect(said).not.toMatch(/saved as each one finishes/);
   });
 });
+
+// Found on 2026-09-17. Clearing blanked every caption and left every tick
+// standing, so the bar said "0 written" while Build photo pages sat there in
+// solid red for a report with no words in it. The tick comes off with the
+// words now, on the server, so what the screen is handed is already honest
+// and these hold that it reads it that way.
+describe("clearing the captions", () => {
+  const READ = manifest({ photos: photos(3, "View of something") });
+  const CLEARED = { ...manifest({ photos: photos(3) }), cleared: 3 };
+
+  async function clearThem() {
+    api.getManifest.mockResolvedValue(READ);
+    vi.spyOn(api, "clearCaptions").mockResolvedValue(CLEARED);
+    await show();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: "Clear captions" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Clear 3 captions" }));
+  }
+
+  it("stops offering the build", async () => {
+    await clearThem();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled());
+  });
+
+  it("says nothing is written and nothing is reviewed", async () => {
+    await clearThem();
+    const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
+    expect(bar.textContent).toMatch(/0\s*written/);
+    expect(bar.textContent).toMatch(/0\s*reviewed/);
+    expect(bar.textContent).not.toMatch(/All reviewed/);
+  });
+
+  it("leaves no tick on a photograph", async () => {
+    await clearThem();
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: "Reviewed" })).toHaveLength(0));
+  });
+});

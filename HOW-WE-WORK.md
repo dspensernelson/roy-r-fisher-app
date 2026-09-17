@@ -206,6 +206,14 @@ fast; padding costs him time on every visit, forever. Reassurance is the worst
 offender, because it feels kind and it is just noise the tenth time he sees it.
 Say it once, in the fewest words that are still true, or do not say it.
 
+**Text fills the box it sits in.** Spenser, 2026-09-17, on the update box:
+*"you randomly wrap the text one-third of the way over."* Nothing caps the
+width of words. If a line is too long to read, the box is too wide: narrow the
+box, never the text. It happened because a line-length habit from print
+typography was applied by reflex, hid inside a style borrowed from the
+Settings cards, and was checked by reading a rule instead of looking at a
+screen. A test now refuses any width in `ch` or `em`.
+
 **Five kinds of thing, and each gets one home.** Spenser's theory, approved
 2026-09-14, after a night of fixes that each answered one screenshot and added
 up to nothing. Every screen is built against this, not against the last picture

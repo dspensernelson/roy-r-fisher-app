@@ -12,10 +12,11 @@ narrower than on the day he complained.
 Read as text on purpose. Nothing here renders a browser, so what it can prove
 is that the caps are gone and did not come back.
 """
+import re
 from pathlib import Path
 
-CSS = (Path(__file__).resolve().parents[1] / "web" / "src" / "brand.css"
-       ).read_text(encoding="utf-8")
+SRC = Path(__file__).resolve().parents[1] / "web" / "src"
+CSS = (SRC / "brand.css").read_text(encoding="utf-8")
 
 
 def _rule(selector: str) -> str:
@@ -41,3 +42,51 @@ def test_the_progress_bar_keeps_its_own_width():
     """Not the same thing. A progress bar stretched across a wide screen reads
     as a page element rather than as a thing that is moving."""
     assert "max-width: 320px" in _rule(".update-bar")
+
+
+# Text fills the box it sits in. Spenser, 2026-09-17, looking at the update
+# box: *"Look how big this box is because you randomly wrap the text
+# one-third of the way over."* The box had no cap by then. Its paragraphs
+# did: they borrowed `.setting-fine` from the Settings cards, which carried
+# `max-width: 62ch`, and so did `.setting-body`. The tests above read only
+# the box's own rule, so they passed while the screen was wrong.
+#
+# A width in `ch`, `em` or `rem` is a measure for words, not for a box. If a
+# line is too long to read, the box is too wide: narrow the box, never the
+# text. Pixel caps on containers are a different question and are not
+# policed here.
+TEXT_MEASURE = re.compile(r"\d(?:\.\d+)?\s*(?:ch|r?em)\b")
+
+
+def _declarations(css: str):
+    """Every max-width a rule sets. Media query conditions are not rules and
+    are skipped: `@media (max-width: 40em)` narrows nothing."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"@media[^{]*\{", "{", css)
+    return [m.group(1).strip() for m in
+            re.finditer(r"max-(?:width|inline-size)\s*:\s*([^;}]+)", css)]
+
+
+def test_no_rule_caps_the_width_of_words():
+    capped = [v for v in _declarations(CSS) if TEXT_MEASURE.search(v)]
+    assert capped == [], "max-width in a text measure: %s" % capped
+
+
+def test_no_inline_style_caps_the_width_of_words():
+    capped = []
+    for path in sorted(SRC.rglob("*.js*")):
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"maxWidth\s*:\s*([\"'`][^\"'`]*[\"'`])", text):
+            if TEXT_MEASURE.search(m.group(1)):
+                capped.append("%s: %s" % (path.name, m.group(0)))
+    assert capped == [], "inline maxWidth in a text measure: %s" % capped
+
+
+def test_the_check_would_see_a_text_cap():
+    """A check that cannot fail proves nothing. This is the shape that hid
+    since the first commit. A comment or a media query is not."""
+    assert _declarations(".x { color: red; max-width: 62ch; }") == ["62ch"]
+    assert TEXT_MEASURE.search("40em")
+    assert not TEXT_MEASURE.search("720px")
+    assert _declarations("@media (max-width: 40em) { .x { color: red; } }") == []
+    assert _declarations("/* max-width: 62ch */ .x { }") == []

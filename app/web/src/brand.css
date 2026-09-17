@@ -981,52 +981,82 @@ input::placeholder, textarea::placeholder {
    narrowest the grid can make it, because `auto-fill minmax(200px, 1fr)`
    never goes under 200 while there is room for a column at all.
 
-   What made it fit is the row's own gap, not the circles. The gap is a
-   property of the row; the circles are untouched, and they measure 26 by 26
-   in a browser with this rule in force. 8px between six things is 40px of air
-   on a 200px tile, and at that gap the row needs 223.7px and runs off the
-   picture. At 3px it needs 198.7px and it does not. 3px is already this
-   app's own tightest gap: the widget's top row already uses it.
+   What made it fit is the row's own spacing, not the circles. The circles are
+   untouched and measure 26 by 26 in a browser with these rules in force. The
+   row's floor gap came down from 8px to 3px, which is already this app's
+   tightest: the widget's top row uses it. The refresh pill gave up 2px of
+   side padding and 1px of inside gap when its mark grew.
 
-   Measured in a browser against this stylesheet, with the tick, three bands,
-   Back and refresh at the real price of one photograph today:
+   What the row needs, laid end to end at the floor gap, is 195.98px: five
+   26px circles, the 50.98px refresh pill, and five 3px gaps. Measured in a
+   browser against this stylesheet, at the real price of one photograph today:
 
-       tile 216px  -> the row occupies 216.00px, nothing past the edge
-       tile 200px  -> the row occupies 198.70px, 1.30px to spare
+       tile 216px  -> the row occupies 216.00px, five gaps of 7.00px
+       tile 200px  -> the row occupies 200.00px, five gaps of 3.80px
 
-   Back's `margin-left: auto` is what takes up the slack on the wider tile, so
-   the row ends exactly on the picture's right edge rather than growing past
-   it. 216px is what the screen draws at Mark's window size; 200px is the
-   narrowest column `auto-fill minmax(200px, 1fr)` can produce while there is
-   room for a column at all, measured by sweeping the grid's width from
-   1400px down to 180px.
+   Both fill the tile exactly, because `space-between` hands the spare width
+   to the gaps rather than to one end. Nothing crosses the picture's right
+   edge at either, and the row stays one line. 216px is what the screen draws
+   at Mark's window size; 200px is the narrowest column `auto-fill
+   minmax(200px, 1fr)` can produce while there is room for a column at all,
+   measured by sweeping the grid's width from 1400px down to 180px.
 
    `flex-wrap` is the backstop and not the plan, and it is there because two
    things are not bounded. A job can be given more bands than A, B and C, and
    nothing says how many. And the price inside refresh is a learned figure: at
    `~5` it is three glyphs and at two digits it is four, which is about 6px
-   more and more than the 1.30px the narrowest tile has spare. In both cases
+   more and more than the 4.02px the narrowest tile has spare. In both cases
    the row folds onto a second line inside the photograph. That is the honest
    answer; running past the picture's edge is not. */
-.review-line { gap: 3px; flex-wrap: wrap; }
-/* What backs him out goes right, which is also what absorbs the slack on a
-   wider tile so the row never grows past the picture. */
-.back-dot { margin-left: auto; }
+.review-line {
+  gap: 3px; flex-wrap: wrap;
+  /* Evenly spaced, edge to edge. Spenser, 2026-09-17: *"Can we space those
+     all out so they're evenly spaced? The check, the A, B, and the C refresh
+     are all evenly spaced."* Back used to carry `margin-left: auto`, which
+     put every spare pixel into one gap and left the other four at 3px: five
+     controls bunched on the left and one stranded on the right.
+
+     `space-between` gives the leftovers to every gap equally, so the tick
+     holds the picture's left edge, refresh holds its right, and the four gaps
+     between are the same number as each other whatever the tile is. `gap` is
+     no longer the spacing; it is the floor under it, for the narrowest tile
+     where there is nothing spare to share out.
+
+     What this does with bands OFF has not been put in front of him. The row
+     is then three things, not six, and the same spare width shared between
+     two gaps instead of five makes them 83.18px on a 269px tile, with Back
+     alone in the middle. It is evenly spaced, which is what he asked for, and
+     it is sparse. Measured 2026-09-17 and reported rather than quietly
+     capped: a cap would be a number nobody chose. */
+  justify-content: space-between;
+}
 .back-dot svg { display: block; height: 13px; width: auto; margin: 0 auto; }
 /* The only one that is not a circle. Its skin is the widget's own icon
    button, `.w-icon`: a line-strong edge, the sunk paper behind it, #4A4A4A
-   ink. Its height is the row's height and never anything else. */
+   ink. Its height is the row's height and never anything else.
+
+   Spenser, 2026-09-17: *"Can we make the refresh arrow or circle arrow
+   bigger? Make the 5 cents just a bit smaller."* It is the smallest mark on
+   the row and it is the only control that spends money, so the mark grew from
+   12px to 16px and the price came down from 11.5px to 10.5px. The pill's
+   height did not move and cannot: it is a `.dot`, and every control on this
+   row is 26px tall.
+
+   The side padding came down with them, from 8px to 6px, and the gap inside
+   from 4px to 3px. That is not decoration: the mark grew by more than the
+   price shrank, and without those two the pill went to 56px and the row
+   needed 201px on a 200px tile. */
 .refresh-dot {
-  width: auto; padding: 0 8px; gap: 4px; white-space: nowrap;
+  width: auto; padding: 0 6px; gap: 3px; white-space: nowrap;
   display: inline-flex; align-items: center; justify-content: center;
   border-color: var(--line-strong); background: var(--paper-sunk); color: #4A4A4A;
 }
 .refresh-dot:hover { border-color: #B9B5AE; background: var(--paper); }
-.refresh-dot svg { display: block; height: 12px; width: auto; }
+.refresh-dot svg { display: block; height: 16px; width: auto; }
 /* The price, in the money's own green and the money's own figures, so the
    green in this app is one thing and not two that nearly match. */
 .refresh-dot .price {
-  font-size: 11.5px; font-weight: 700; color: #2F5D33;
+  font-size: 10.5px; font-weight: 700; color: #2F5D33;
   font-variant-numeric: tabular-nums;
 }
 

@@ -18,6 +18,7 @@ network: the model is stood in for, which is one of the three conditions
 """
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -408,3 +409,81 @@ def test_the_price_is_read_through_the_pricing_code(client, home):
     import cost
     quote = client.get("/api/jobs/%s/caption-estimate" % JOB).json()
     assert quote["one_photo"]["total"] == cost.estimate(1)["total"]
+
+
+# ------------------------------------------- the shape of the row he asked --
+# These read the stylesheet. They do not measure pixels: the two row widths are
+# measured in a browser and written into the rule's own comment, and how it
+# looks is checked by eye on the real app. What these guard is that each rule
+# exists at all, because each was a thing Spenser asked for in words on
+# 2026-09-17 and each could be undone without anything else noticing.
+CSS = Path(__file__).resolve().parents[1] / "web" / "src" / "brand.css"
+
+
+def rules(selector: str) -> list:
+    """Every rule in the stylesheet with exactly this selector.
+
+    Every one, not the first and not the last. `.review-line` is written three
+    times: where it was born, where it is fitted inside the photograph, and
+    inside a media query. A test that reads one of the three at random is a
+    test that passes for the wrong reason.
+
+    Comments come out first. These rules explain themselves at length and name
+    the very declarations they no longer have, so a test looking for a
+    declaration would find it in the sentence saying it was taken away.
+    """
+    css = re.sub(r"/\*.*?\*/", "", CSS.read_text(), flags=re.S)
+    found, at = [], 0
+    while True:
+        try:
+            at = css.index(selector + " {", at)
+        except ValueError:
+            return found
+        shut = css.index("}", at)
+        found.append(css[at:shut])
+        at = shut
+
+
+def test_the_row_is_evenly_spaced_edge_to_edge():
+    """Spenser: *"Can we space those all out so they're evenly spaced? The
+    check, the A, B, and the C refresh are all evenly spaced."*
+    `space-between` is what does it: every gap gets the same share of the
+    spare width, so no single gap can swallow it."""
+    written = rules(".review-line")
+    assert written, "the row has no rule of its own"
+    assert any("space-between" in one for one in written), \
+        "nothing spreads the row across the photograph"
+
+
+def test_nothing_on_the_row_pushes_itself_to_one_end():
+    """An automatic margin on this row is the fault he saw: it takes all the
+    spare width into one gap and leaves the other four at the floor. It is
+    the whole reason the row looked unevenly spaced."""
+    for selector in (".review-line", ".dot", ".back-dot", ".refresh-dot",
+                     ".tick-dot", ".band-dot"):
+        for one in rules(selector):
+            assert "margin-left: auto" not in one, \
+                "%s pushes itself to one end again" % selector
+
+
+def test_the_refresh_mark_is_bigger_than_the_price_beside_it():
+    """He asked for the mark bigger and the number smaller in one sentence, so
+    they are read as the pair he said."""
+    mark = int(re.search(r"height:\s*(\d+)px", rules(".refresh-dot svg")[0]).group(1))
+    price = float(re.search(r"font-size:\s*([\d.]+)px",
+                            rules(".refresh-dot .price")[0]).group(1))
+    assert mark >= 16, "the refresh mark is the smallest thing on the row again"
+    assert price <= 11, "the price is not smaller than it was"
+    assert mark > price
+
+
+def test_every_control_on_the_row_is_the_same_height():
+    """The circles are 26 by 26 and the refresh pill is 26 tall because it is
+    a `.dot` too. Nothing on this row may set a height of its own, which is
+    the only way one of them could stop being level with the rest."""
+    circle = rules(".dot")[0]
+    assert "height: 26px" in circle and "width: 26px" in circle
+    for selector in (".back-dot", ".refresh-dot"):
+        for one in rules(selector):
+            assert "height:" not in one, \
+                "%s sets a height, so it can stop matching the circles" % selector

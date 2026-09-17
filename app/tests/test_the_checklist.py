@@ -10,6 +10,13 @@ not opening the markdowns and that a bug number means nothing to him. Prose got
 onto it twice before that. So: one line per item, no codes, and nothing on the
 page that `docs/NOW.md` does not say.
 
+On 2026-09-16 the `Done` heading came out of the file. Every ticked item stays
+under the heading it belongs to, and the page gathers them into a `Done`
+section it generates itself. The rules that used to be a person's memory are
+tested here instead: the file has no `Done` heading, the page has one, it holds
+every ticked item and only those, and each of those items is also under its own
+heading, hidden until that heading's own line pulls it up.
+
 Nothing here reaches the network or publishes anything.
 """
 import re
@@ -79,6 +86,23 @@ def visible(made):
     return re.sub(r"<[^>]+>", " ", made)
 
 
+def rows(made):
+    """Every item row: (its classes, the rest of its attributes, its words)."""
+    return [(m.group(1), m.group(2), m.group(3)) for m in re.finditer(
+        r'<label class="(row[^"]*)"([^>]*)>.*?<span class="t">(.*?)</span>',
+        made, re.S)]
+
+
+def section_of(made, heading):
+    """The one `details` block under that heading, or None."""
+    import html
+    for m in re.finditer(r"<details\b.*?</details>", made, re.S):
+        got = re.search(r"<summary>(.*?)<span", m.group(0), re.S)
+        if got and got.group(1) == html.escape(heading):
+            return m.group(0)
+    return None
+
+
 def test_the_page_says_nothing_the_file_does_not():
     """The build may escape and lay out. It may not add a word. A session
     adding its own wording to his checklist is a recorded fault."""
@@ -94,7 +118,8 @@ def test_every_item_reaches_the_page_with_its_state():
             import html
             assert html.escape(text) in made, "%s is not on the page" % text
     ticked = sum(1 for _, items in sections() for done, _, _ in items if done)
-    assert len(re.findall(r'type="checkbox" id="c\d+" checked>', made)) == ticked
+    # Twice: once under its own heading and once in the generated Done.
+    assert len(re.findall(r'checkbox" data-k="c\d+" checked>', made)) == ticked * 2
 
 
 def test_the_first_two_sections_are_open_and_the_rest_fold():
@@ -102,7 +127,7 @@ def test_the_first_two_sections_are_open_and_the_rest_fold():
     and the office. Everything else may be folded away or the page stops
     being readable at a glance."""
     made = page()
-    assert made.count("<details") == len(sections())
+    assert made.count("<details") == len(sections()) + 1, "the file's headings and the generated Done"
     assert made.count(" open>") == min(build.ALWAYS_OPEN, len(sections()))
 
 
@@ -168,11 +193,11 @@ def test_nothing_appears_under_two_headings():
     assert not said, "\n".join(said)
 
 
-def test_the_headings_are_his_nine_in_time_order():
+def test_the_headings_are_his_eight_in_time_order():
     """The order he approved on 2026-09-16: soonest first, the north star at
-    the top because everything else is measured against it, finished work last.
-    He could not tell what was next from the headings before these, because
-    they sorted on three different questions at once."""
+    the top because everything else is measured against it. He could not tell
+    what was next from the headings before these, because they sorted on three
+    different questions at once. `Done` is not among them: the page makes it."""
     assert [h for h, _ in sections()] == [
         "The north star",
         "What needs you",
@@ -182,14 +207,86 @@ def test_the_headings_are_his_nine_in_time_order():
         "You asked for it and it is not built",
         "Ideas nobody has confirmed with you",
         "Housekeeping",
-        "Done",
     ]
 
 
-def test_every_ticked_item_is_under_done():
-    """Finished work is last and it is only there. A tick left further up the
-    page is how a finished thing keeps reading as next."""
+# --- Done is generated, not written --------------------------------------
+
+def test_the_file_has_no_done_heading():
+    """A person had to remember to move an item to `Done` when they ticked it,
+    and nobody is reminded of that rule. The file keeps every item under the
+    heading it belongs to, which is the only place that knows where a done
+    item came from, and the page gathers them."""
+    for heading, _ in sections():
+        assert heading != build.DONE, "`%s` is written in the file again" % build.DONE
+
+
+def test_a_ticked_item_sits_at_the_bottom_of_its_heading():
+    """Below the open ones. What is left to do is what he reads first."""
     for heading, items in sections():
+        states = [done for done, _, _ in items]
+        assert states == sorted(states), (
+            "a done item is above an open one under %s" % heading)
+
+
+def test_the_page_has_a_done_section_holding_every_ticked_item_and_only_those():
+    made = page()
+    body = section_of(made, build.DONE)
+    assert body is not None, "the page has no %s section" % build.DONE
+    inside = [text for _, _, text in rows(body)]
+    import html
+    want = [html.escape(t) for _, items in sections() for d, t, _ in items if d]
+    assert inside == want, "%s holds the wrong items" % build.DONE
+
+
+def test_every_ticked_item_is_also_under_its_own_heading_hidden_on_load():
+    """It is not moved. It is in both places, and the heading's own line
+    decides which of the two you can see."""
+    import html
+    made = page()
+    for heading, items in sections():
+        body = section_of(made, heading)
+        put = {text: kind for kind, _, text in rows(body)}
         for done, text, _ in items:
-            assert done == (heading == "Done"), (
-                "%s is under %s" % (text, heading))
+            here = html.escape(text)
+            assert here in put, "%s is not under %s" % (text, heading)
+            assert (put[here] == "row away") == done, (
+                "%s under %s is shown the wrong way round" % (text, heading))
+
+
+def test_nothing_is_open_in_two_places_when_the_page_loads():
+    """A ticked item is on the page twice. Exactly one of the two is in view
+    until he asks for the other."""
+    made = page()
+    shown = [text for kind, _, text in rows(made) if kind == "row"]
+    assert len(shown) == len(set(shown)), (
+        "in view twice: %s" % sorted(t for t in set(shown) if shown.count(t) > 1))
+    assert len(shown) == sum(len(items) for _, items in sections())
+
+
+def test_a_heading_with_done_items_carries_a_line_saying_how_many():
+    """A line, not a button, at the end of the heading. Clicking it pulls that
+    heading's done items up out of `Done`."""
+    made = page()
+    for at, (heading, items) in enumerate(sections()):
+        done = sum(1 for d, _, _ in items if d)
+        line = '<div class="pull" data-for="%d">%d done</div>' % (at, done)
+        assert (line in made) == bool(done), (
+            "%s has %d done items and the line does not match" % (heading, done))
+
+
+def test_the_done_rows_say_which_heading_they_came_from():
+    """The file is the only place that knows, so the page has to carry it."""
+    made = page()
+    body = section_of(made, build.DONE)
+    came = [re.search(r'data-from="(\d+)"', attrs).group(1)
+            for _, attrs, _ in rows(body)]
+    want = [str(at) for at, (_, items) in enumerate(sections())
+            for d, _, _ in items if d]
+    assert came == want
+
+
+def test_no_ticked_item_and_no_done_section_when_nothing_is_ticked():
+    made = build.build([("A heading", [(False, "an item", build.NO_STAR)])])
+    assert build.DONE not in made
+    assert made.count("<details") == 1

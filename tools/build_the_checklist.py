@@ -17,7 +17,22 @@ who is tired.
   its ending on 2026-09-15.
 - No bug numbers and no codes. `B15` means nothing to him and he said so.
 - Nothing is invented here. The text is whatever `docs/NOW.md` says, escaped
-  and nothing else. This file must never add a word.
+  and nothing else. This file must never add a word. The two it does put on
+  the page, `Done` and `done`, are the name of the section it generates and
+  the count on the line that pulls a heading's own done items up, and both
+  words are written in `docs/NOW.md` where the arrangement is explained.
+
+**`Done` is generated, and that is the point.** There is no `Done` heading in
+`docs/NOW.md`. Every item stays under the heading it belongs to, ticked or
+not, and this file gathers the ticked ones into a section at the end. A person
+had to remember to move an item when they ticked it and nobody is reminded of
+that rule, and the file is the only place that knows where a done item came
+from. Generating it means neither fact can be forgotten or lost. Spenser asked
+for it on 2026-09-16.
+
+A ticked item is on the page twice: once under its own heading, out of view,
+and once in `Done`. The line at the end of each heading swaps which of the two
+you can see, so nothing is open in two places at once.
 
 **What it adds that the old inline version did not:** a count on every heading,
 so the shape of the work is visible without reading it, and headings that fold.
@@ -59,6 +74,10 @@ NO_STAR = "No star"
 # The five, in the order they appear in the first section of `docs/NOW.md`.
 STARS = ["Star %d" % n for n in range(1, 6)]
 
+# The section this file makes. It is not a heading in `docs/NOW.md` and a test
+# checks that it never becomes one again.
+DONE = "Done"
+
 PAGE = """<title>Roy R. Fisher: Checklist</title>
 <style>
 :root{--ground:#FAF8F4;--ink:#231F20;--muted:#6E6E73;--line:#E3E0D8;--brand:#8C0C04;--sunk:#F2EFE8}
@@ -86,6 +105,13 @@ span.t{font-size:15.5px;flex:1}
   border:1px solid var(--brand);border-radius:2px;padding:1px 5px;opacity:.85}
 .star.none{color:var(--line);border-color:var(--line);opacity:1}
 input:checked~.star{color:var(--line);border-color:var(--line)}
+.row.away{display:none}
+.pull{display:flex;align-items:baseline;cursor:pointer;-webkit-user-select:none;user-select:none;
+  padding:13px 0 3px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:700;border-top:1px solid var(--line)}
+.pull::after{content:"+";margin-left:auto;font-size:15px;letter-spacing:0;color:var(--line)}
+.pull.on::after{content:"\\2013"}
+.pull:hover{color:var(--brand)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --ground:#1A1817;--ink:#F2EFE8;--muted:#9A948C;--line:#33302C;--brand:#E4675C;--sunk:#221F1D}}
 :root[data-theme="dark"]{--ground:#1A1817;--ink:#F2EFE8;--muted:#9A948C;--line:#33302C;--brand:#E4675C;--sunk:#221F1D}
@@ -98,19 +124,39 @@ input:checked~.star{color:var(--line);border-color:var(--line)}
     localStorage.setItem('rrf',JSON.stringify(s));}catch(e){}};
   var held={};try{held=JSON.parse(localStorage.getItem('rrf')||'{}');}catch(e){}
   document.querySelectorAll('input').forEach(function(x){
-    if(held[x.id]!==undefined)x.checked=held[x.id];
-    x.addEventListener('change',function(){save(x.id,x.checked);tally();});
+    var k=x.getAttribute('data-k');
+    if(held[k]!==undefined)x.checked=held[k];
+    x.addEventListener('change',function(){
+      save(k,x.checked);
+      document.querySelectorAll('[data-k="'+k+'"]').forEach(function(y){y.checked=x.checked;});
+      tally();
+    });
   });
   document.querySelectorAll('details').forEach(function(d){
     if(held[d.id]!==undefined)d.open=held[d.id];
     d.addEventListener('toggle',function(){save(d.id,d.open);});
   });
+  document.querySelectorAll('.pull').forEach(function(p){
+    p.addEventListener('click',function(){
+      var at=p.getAttribute('data-for'),up=!p.classList.contains('on');
+      p.classList.toggle('on',up);
+      document.querySelectorAll('.row[data-home="'+at+'"]').forEach(function(r){
+        r.classList.toggle('away',!up);});
+      document.querySelectorAll('.row[data-from="'+at+'"]').forEach(function(r){
+        r.classList.toggle('away',up);});
+      tally();
+    });
+  });
   function tally(){
     document.querySelectorAll('details').forEach(function(d){
-      var b=d.querySelectorAll('input'),n=0;
-      b.forEach(function(x){if(x.checked)n++;});
+      var seen=0,n=0;
+      d.querySelectorAll('.row').forEach(function(r){
+        if(r.classList.contains('away'))return;
+        var x=r.querySelector('input');
+        if(!x)return;
+        seen++;if(x.checked)n++;});
       var c=d.querySelector('.count');
-      if(c)c.textContent=b.length?(n+' of '+b.length):'';
+      if(c)c.textContent=seen?(n+' of '+seen):'';
     });
   }
   tally();
@@ -150,6 +196,11 @@ def complain(sections, out=sys.stderr):
     for at, (heading, items) in enumerate(sections):
         if not items:
             said.append("%s has no items" % heading)
+        if heading == DONE:
+            said.append("%s is generated, it is not a heading in the file" % DONE)
+        states = [d for d, _, _ in items]
+        if states != sorted(states):
+            said.append("a done item sits above an open one under %s" % heading)
         for _, text, star in items:
             if len(text) > LONG_ITEM:
                 said.append("%d characters, will wrap: %s" % (len(text), text))
@@ -176,24 +227,48 @@ def complain(sections, out=sys.stderr):
 
 
 def build(sections):
+    """The page. The last section is made here, not read from the file.
+
+    A ticked item is written twice: once under its own heading, out of view,
+    and once in the generated section at the end. The line at the end of the
+    heading swaps which of the two is shown, so the same item is never open in
+    two places at once. Both copies carry the same key, so ticking either one
+    ticks the other and the page holds one answer rather than two.
+    """
     n = 0
     blocks = []
+    finished = []
     for at, (heading, items) in enumerate(sections):
         rows = []
+        mine = 0
         for done, text, star in items:
             n += 1
             chip = ""
             if star:
                 chip = '<span class="star%s">%s</span>' % (
                     " none" if star == NO_STAR else "", html.escape(star))
-            rows.append(
-                '<label class="row"><input type="checkbox" id="c%d"%s>'
-                '<span class="t">%s</span>%s</label>'
-                % (n, " checked" if done else "", html.escape(text), chip))
+            body = ('<input type="checkbox" data-k="c%d"%s>'
+                    '<span class="t">%s</span>%s'
+                    % (n, " checked" if done else "", html.escape(text), chip))
+            if not done:
+                rows.append('<label class="row">%s</label>' % body)
+                continue
+            mine += 1
+            rows.append('<label class="row away" data-home="%d">%s</label>' % (at, body))
+            finished.append('<label class="row" data-from="%d">%s</label>' % (at, body))
+        if mine:
+            # A line, not a button, saying how many of the finished items at
+            # the end of the page belong to this heading. Clicking it brings
+            # them up here, still ticked, and clicking it again sends them back.
+            rows.append('<div class="pull" data-for="%d">%d done</div>' % (at, mine))
         blocks.append(
             '<details id="s%d"%s><summary>%s<span class="count"></span></summary>%s</details>'
             % (at, " open" if at < ALWAYS_OPEN else "",
                html.escape(heading), "".join(rows)))
+    if finished:
+        blocks.append(
+            '<details id="sdone"><summary>%s<span class="count"></span></summary>%s</details>'
+            % (html.escape(DONE), "".join(finished)))
     return PAGE % "".join(blocks)
 
 

@@ -7,6 +7,17 @@ Every item is one line. No paragraphs, no bug numbers: he works from the
 published page, not from this file. `tools/build_the_checklist.py` turns this
 file into that page and `app/tests/test_the_checklist.py` holds the rules.
 
+**Every item stays under the heading it belongs to, ticked or not.** A ticked
+item sits at the bottom of its own heading, below the open ones. There is no
+`Done` heading in this file and nothing is ever moved out of a heading.
+
+**The page generates the `Done` section.** It gathers every ticked item and
+shows them together at the end, and each heading gets a line at its end that
+pulls its own done items back up into it. It is generated because a person had
+to remember to move an item when they ticked it, and nobody is reminded of that
+rule. This file is the only place that knows where a done item came from, so
+the file keeps it and the page does the gathering.
+
 **Every item names the north-star line it serves**, after a middle dot, or says
 `No star`. He asked for that on 2026-09-16 and the honest half of it is the
 items where the answer is nothing: the star describes an app that behaves like
@@ -20,7 +31,7 @@ thing gets built twice or argued about twice, and the test catches it.
 because everything else is measured against it. Then what needs a decision from
 him, then the update the office is waiting for, then the area of the report
 being built now, then the work he has asked for and not got, then ideas nobody
-has confirmed, then housekeeping. What is finished is last.
+has confirmed, then housekeeping.
 
 Spenser asked for this order on 2026-09-16, because he could not tell what was
 next. The old headings sorted on three different questions at once: how big a
@@ -49,6 +60,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Is the parked description of improvements work brought forward or rebuilt · No star
 - [ ] Who wins when the assessor card and the inspection transcript disagree · No star
 - [ ] Is the 8 September Fable analysis the plan we build to · No star
+- [x] Confirm the fixed port is how we get to one tab · Star 1
 
 ## Get the office a working update
 
@@ -62,6 +74,40 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] The photographs cover the bar of buttons on the photographs screen · No star
 - [ ] Record who wrote each caption, so written and reviewed are two counts · No star
 - [ ] Decide whether A B C stay in the box, and whether they filter · No star
+- [x] The update box must fill the width, not sit in a narrow box on the left · No star
+- [x] The confirm box needs that same width fix · No star
+- [x] Say what planned workflows means, or stop using the phrase · Star 5
+- [x] Build the widget to the approved design, saved at docs/design · No star
+- [x] Reviewed can never be more than written, read from one place · Star 5
+- [x] Add photos becomes the photograph-and-plus icon · No star
+- [x] Clear captions turns red and only appears when there is something to lose · No star
+- [x] The money is always there: an estimate first, then what it cost · Star 5
+- [x] Mark all as reviewed leaves the left and becomes the check in the box · No star
+- [x] Find out why every new version dies the first time it runs · Star 2
+- [x] Start the background jobs after the web server, which is what killed it · Star 2
+- [x] Make the launcher say what killed it instead of dying silently · Star 5
+- [x] Prove an update Spenser can take himself, end to end · Star 1
+- [x] Starting the app must open one tab, not two · Star 2
+- [x] Upload to the office · No star
+- [x] A photograph you removed stays in the list and blocks everything · Star 5
+- [x] The photographs screen, rebuilt to the approved design · No star
+- [x] Settings, two columns, in his order · No star
+- [x] Close the app moved into the nav bar · Star 3
+- [x] The send-the-log button, built and merged · No star
+- [x] Send the log to Spenser, connected end to end and proved with a real send · No star
+- [x] The installer stops a running copy · Star 2
+- [x] The keystroke storm, the caption the tick ate, the price asked twice · No star
+- [x] Add a photo puts the photograph where the report cannot see it · No star
+- [x] Generating captions deletes photographs you added · No star
+- [x] Taking out a photograph you added leaves a second copy behind · No star
+- [x] Taking out one photograph takes the others with it · No star
+- [x] Photographs added with the button do not appear · No star
+- [x] The photo screen sits on Loading for ever and hides the reason · Star 5
+- [x] Show the log opens a window behind everything and says nothing · Star 5
+- [x] Check now points at a button that is not on the screen · Star 5
+- [x] A console window sits in front of the app and stays there · Star 2
+- [x] Hitting Mark reviewed with the cursor in the box throws the caption away · No star
+- [x] Nothing happens for a few seconds after you click the icon · Star 2
 
 ## Description of improvements
 
@@ -142,45 +188,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] A failed download says nothing until you have tried three times · Star 5
 - [ ] Three plans on disk still have closeout tasks unticked · No star
 - [ ] Nothing stops a version being published before the test machine has run it · No star
-
-## Done
-
-- [x] The update box must fill the width, not sit in a narrow box on the left · No star
-- [x] The confirm box needs that same width fix · No star
-- [x] Say what planned workflows means, or stop using the phrase · Star 5
-- [x] Build the widget to the approved design, saved at docs/design · No star
-- [x] Reviewed can never be more than written, read from one place · Star 5
-- [x] Add photos becomes the photograph-and-plus icon · No star
-- [x] Clear captions turns red and only appears when there is something to lose · No star
-- [x] The money is always there: an estimate first, then what it cost · Star 5
-- [x] Mark all as reviewed leaves the left and becomes the check in the box · No star
-- [x] Find out why every new version dies the first time it runs · Star 2
-- [x] Start the background jobs after the web server, which is what killed it · Star 2
-- [x] Make the launcher say what killed it instead of dying silently · Star 5
-- [x] Prove an update Spenser can take himself, end to end · Star 1
-- [x] Starting the app must open one tab, not two · Star 2
-- [x] Upload to the office · No star
-- [x] A photograph you removed stays in the list and blocks everything · Star 5
-- [x] Confirm the fixed port is how we get to one tab · Star 1
-- [x] The photographs screen, rebuilt to the approved design · No star
-- [x] Settings, two columns, in his order · No star
-- [x] Close the app moved into the nav bar · Star 3
-- [x] The send-the-log button, built and merged · No star
-- [x] Send the log to Spenser, connected end to end and proved with a real send · No star
-- [x] The installer stops a running copy · Star 2
-- [x] The keystroke storm, the caption the tick ate, the price asked twice · No star
 - [x] Version numbering: four numbers for test builds, three for the office · No star
 - [x] The checklist page is built by a file, not from memory · No star
 - [x] Every recorded bug checked against the code: thirteen of sixteen fixed · No star
-- [x] Add a photo puts the photograph where the report cannot see it · No star
-- [x] Generating captions deletes photographs you added · No star
-- [x] Taking out a photograph you added leaves a second copy behind · No star
-- [x] Taking out one photograph takes the others with it · No star
-- [x] Photographs added with the button do not appear · No star
-- [x] The photo screen sits on Loading for ever and hides the reason · Star 5
-- [x] Show the log opens a window behind everything and says nothing · Star 5
-- [x] Check now points at a button that is not on the screen · Star 5
-- [x] A console window sits in front of the app and stays there · Star 2
-- [x] Hitting Mark reviewed with the cursor in the box throws the caption away · No star
-- [x] Nothing happens for a few seconds after you click the icon · Star 2
-

@@ -80,14 +80,14 @@ are in its phases.
 
 ## The app never says anything it does not know
 
-- [ ] Clear captions leaves the ticks on, so Build is offered with no captions · Star 5
-- [ ] What should the loading page say when it cannot reach the app · Star 5
 - [ ] Nothing tells you the new version started · Star 5
-- [ ] When Check now finds a version, an Update button appears beside it · Star 5
-- [ ] A failed update's reason is never written to the log · Star 5
 - [ ] The Make the Word file button does nothing, nothing is wired behind it · Star 5
 - [ ] A log line at every step of starting up · Star 5
 - [ ] A failed download says nothing until you have tried three times · Star 5
+- [x] Clear captions leaves the ticks on, so Build is offered with no captions · Star 5
+- [x] What should the loading page say when it cannot reach the app · Star 5
+- [x] When Check now finds a version, an Update button appears beside it · Star 5
+- [x] A failed update's reason is never written to the log · Star 5
 - [x] Say what planned workflows means, or stop using the phrase · Star 5
 - [x] Reviewed can never be more than written, read from one place · Star 5
 - [x] The money is always there: an estimate first, then what it cost · Star 5
@@ -107,12 +107,12 @@ are in its phases.
 
 ## Get the office a working update
 
-- [ ] Every message box fills the width, the red error box included · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
 - [ ] Run the 28 by-hand checks on Windows · No star
 - [ ] Record who wrote each caption, so written and reviewed are two counts · No star
-- [ ] The written count includes photographs taken out of the report · No star
+- [x] Every message box fills the width, the red error box included · No star
+- [x] The written count includes photographs taken out of the report · No star
 - [x] The photographs cover the bar of buttons on the photographs screen · No star
 - [x] The update box must fill the width, not sit in a narrow box on the left · No star
 - [x] The confirm box needs that same width fix · No star
@@ -171,11 +171,11 @@ are in its phases.
 
 ## Housekeeping
 
-- [ ] A test writes into the real log file instead of a temporary one · No star
 - [ ] The photographs widget runs off the right edge at phone width · No star
 - [ ] Packaging a version silently breaks whatever was pointed at the old one · No star
 - [ ] Three plans on disk still have closeout tasks unticked · No star
 - [ ] Nothing stops a version being published before the test machine has run it · No star
+- [x] A test writes into the real log file instead of a temporary one · No star
 - [x] Version numbering: four numbers for test builds, three for the office · No star
 - [x] The checklist page is built by a file, not from memory · No star
 - [x] Every recorded bug checked against the code: thirteen of sixteen fixed · No star

@@ -432,22 +432,25 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .empty-note .state { font-size: 12.5px; color: var(--ink-muted); margin-top: 4px; }
 
 /* ---- THE HEADER, approved by Spenser 2026-09-15 --------------------------
-   Two things, one row, one fixed height. On the left what is being made, its
-   numbers and the quiet line. On the right the one widget. The height is set
-   here and never read from the row's contents, so nothing inside it can push
-   the photographs down.
+   Two things, one row. On the left what is being made, its numbers and the
+   quiet line. On the right the one widget. The row has a floor, not a pin, so
+   it is always as tall as the widget; the widget's own height is pinned, so
+   the row is the same height in every state and the photographs never move.
+   It was pinned at 76px until 2026-09-17, and when the widget grew to 110px
+   the first row of photographs covered its bottom. The floor is the design's,
+   `docs/design/photos-widget.html`.
 
    It keeps the name `.screen-head` it has had since 2026-09-07, because the
    rule fought for that day is still the rule: the head does not wrap, the
    title takes the squeeze, and the actions never drop below the title. */
 .screen-head {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 24px; flex-wrap: nowrap; height: 76px; margin: 26px 0 12px;
+  gap: 24px; flex-wrap: nowrap; min-height: 76px; margin: 26px 0 12px;
 }
 .screen-head > :first-child { min-width: 0; }
-/* The folder question is asked before any document is in view, so that state
-   is not this fixed row. */
-.screen-head.is-asking { height: auto; margin-bottom: 20px; }
+/* The folder question is asked before any document is in view and holds no
+   widget, so it takes no floor. */
+.screen-head.is-asking { min-height: 0; margin-bottom: 20px; }
 
 /* What is being made. */
 .made { min-width: 0; flex: 1 1 auto; }

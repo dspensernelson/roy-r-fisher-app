@@ -12,6 +12,7 @@ worse than the window ever was.
 
 These prove the failure still arrives when there is nowhere to print.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -101,14 +102,28 @@ def test_nothing_here_ever_raises(monkeypatch):
     to fail in a way that hides its own message."""
     def explode(*_a, **_k):
         raise RuntimeError("no windowing system")
-    monkeypatch.setattr(tell, "_dialog", explode)
-    with NoConsole():
-        with pytest.raises(RuntimeError):
-            tell._dialog("x", 0)          # the stand-in really does raise
+
+    # Putting the real dialog back is scoped to this block. It used to be
+    # `monkeypatch.undo()`, which does not undo one thing: it undoes
+    # everything that one `monkeypatch` has done, and `never_touch_the_real_home`
+    # in conftest.py shares it. So the line below, which has nowhere to go but
+    # the log, went into Spenser's own ~/.rrf-app.log on every full run of this
+    # suite. Found 2026-09-17, by reading the last lines of his file.
+    with pytest.MonkeyPatch.context() as swapped:
+        swapped.setattr(tell, "_dialog", explode)
+        with NoConsole():
+            with pytest.raises(RuntimeError):
+                tell._dialog("x", 0)      # the stand-in really does raise
+
     # and the real one swallows it
-    monkeypatch.undo()
     with NoConsole():
         tell.problem("This must not raise.")
+
+    # Where it landed, which is the half of this test that was missing. A line
+    # nobody looks for is a line nobody notices in the wrong file.
+    log = Path(os.environ["RRF_LOG_FILE"])
+    assert "This must not raise." in log.read_text()
+    assert log.parent != Path.home()
 
 
 def test_the_web_server_can_start_with_no_console():

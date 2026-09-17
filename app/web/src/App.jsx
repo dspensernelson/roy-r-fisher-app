@@ -122,6 +122,9 @@ export default function App() {
   }
 
   const offered = !!(update && update.available);
+  // The one way into the update step. The masthead button and the button
+  // beside Check now on Settings both press this, so they cannot drift.
+  const openUpdate = () => setUpdating(true);
 
   const updateStep = updating && (
     <UpdateStep version={version} available={update.available} size={update.size}
@@ -159,7 +162,7 @@ export default function App() {
       {/* Quiet until there is something to say. A click leads to a step: the
           question about whether to update is asked inside the action. */}
       {offered && (
-        <button className="version version-update" onClick={() => setUpdating(true)}
+        <button className="version version-update" onClick={openUpdate}
                 title={`You are on version ${version}`}>
           Update available
         </button>
@@ -351,7 +354,8 @@ export default function App() {
           <Settings workspace={ws} version={version}
                     onChangeFolder={() => setView({ screen: "choose", job: null })}
                     onWorkspaceChanged={(saved) => { setWs(saved); toJobs(); }}
-                    onUpdateChecked={refreshUpdate} />
+                    onUpdateChecked={refreshUpdate}
+                    onUpdate={offered ? openUpdate : undefined} />
         )}
       </div>
       </div>

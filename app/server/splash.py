@@ -30,8 +30,8 @@ from pathlib import Path
 
 import startup            # standard library only, same as this module
 
-# How long the page waits before it stops saying "starting" and starts
-# pointing somewhere else.
+# How long the page waits before it stops saying "starting" and says the app
+# is not answering.
 #
 # It was 150 seconds, on the reasoning that the wait had to cover the slowest
 # possible good start. That reasoning fell on 2026-09-14: on Mark's Windows
@@ -85,9 +85,9 @@ def page(port: int, version: str, saying: str = None, patience: int = None) -> s
     and the screen should not describe it wrongly.
 
     `patience` is how long it waits before it stops saying "starting" and
-    points at the other tab. It is longer when a copy is being stopped first,
-    since that wait is legitimate and pointing him at another tab in the middle
-    of it would point him at the copy being closed.
+    says the app is not answering. It is longer when a copy is being stopped
+    first, since that wait is legitimate and telling him to close this tab in
+    the middle of it would interrupt a start that is going fine.
     """
     url = "http://127.0.0.1:%d/" % int(port)
     # Two addresses, and the difference is the point. The page asks on the
@@ -147,13 +147,9 @@ TEMPLATE = """<!doctype html>
   <p class="say">{{SAY}}</p>
   <div class="bar"><span></span></div>
   <div class="late">
-    <p><strong>Roy R. Fisher has probably opened in another tab.</strong></p>
-    <p>This window could not reach it, which on some computers is just how the
-       browser is set up. Look along the top of your browser for the other tab
-       and carry on there. You can close this one.</p>
-    <p>If there is no other tab, double-click the Roy R. Fisher icon on your
-       Desktop again. If that does not work either, send Spenser this whole
-       window.</p>
+    <p><strong>Roy R. Fisher is not answering.</strong></p>
+    <p>Close this tab and double-click the icon.</p>
+    <p>If that does not work either, send Spenser this whole window.</p>
   </div>
 </div>
 <script>
@@ -165,7 +161,7 @@ TEMPLATE = """<!doctype html>
   function look() {
     // Giving up changes what this says, not what it is doing. It keeps
     // asking, more slowly, so a start that was merely slow still lands here
-    // rather than leaving the person to find the other tab by hand.
+    // rather than leaving the person to start it again by hand.
     if (Date.now() > stop) { document.body.className = "is-late"; wait = {{LATE}}; }
     // no-cors, because this page is a file on disk and the app is a server.
     // The answer is opaque and that is fine: reaching it at all is the news,

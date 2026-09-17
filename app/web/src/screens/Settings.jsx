@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, logSend } from "../api.js";
 import CloseX from "../CloseX.jsx";
 
-export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked }) {
+export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked, onUpdate }) {
   const [state, setState] = useState(null);
   const [typed, setTyped] = useState("");
   const [replacing, setReplacing] = useState(false);
@@ -14,6 +14,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
   // answers either way, because he did.
   const [looking, setLooking] = useState(false);
   const [looked, setLooked] = useState(null);
+  const [newer, setNewer] = useState(false);
   const [logNote, setLogNote] = useState(null);
   // What the server says would be sent, once she has asked to see it. Never
   // fetched at load: reading the log costs two file reads and she has not
@@ -85,16 +86,23 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
       </p>
       <div className="setting-actions">
         <button className="button secondary" disabled={looking} onClick={async () => {
-          setLooking(true); setLooked(null);
+          setLooking(true); setLooked(null); setNewer(false);
           try {
             const found = await checkForUpdate();
             // The masthead holds its own copy of this answer and only ever
             // asked once, at load. Without this it goes on saying nothing
             // while this screen says a newer version is there.
             if (onUpdateChecked) await onUpdateChecked();
+            setNewer(!!found.available);
+            // Three answers, and the words are this screen's own. Nothing the
+            // update server sent reaches here, only whether it answered.
+            // "Newest" is said only when it did: Spenser, 2026-09-17, after it
+            // was said when the server could not be reached at all.
             setLooked(found.available
-              ? `Version ${found.available} is available. Use the Update available button at the top of the screen.`
-              : "You are on the newest version.");
+              ? `Version ${found.available} is available.`
+              : found.could_not_check
+                ? "Could not check for a new version."
+                : "You are on the newest version.");
           } catch {
             setLooked("The update service could not be reached just now. Nothing has changed.");
           }
@@ -102,6 +110,16 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
         }}>
           Check now
         </button>
+        {/* Spenser, 2026-09-16: "When Check now finds a version, an Update
+            button appears beside it." The masthead's own words and the
+            masthead's own handler, so there is one way into the update and
+            this is a second door to it, not a second route. A button, not a
+            link: it leads to a step. */}
+        {newer && onUpdate && (
+          <button className="button secondary" onClick={onUpdate}>
+            Update available
+          </button>
+        )}
         {looking && (
           <span className="working">
             <span className="loading-bar"><span /></span>

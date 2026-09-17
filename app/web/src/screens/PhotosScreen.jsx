@@ -527,11 +527,18 @@ export default function PhotosScreen({ job }) {
   const count = manifest.photos.length;
   // Only captions with something in them can be cleared, so this is the
   // number the confirmation quotes and the number the server will act on.
-  const written = manifest.photos.filter((p) => (p.caption || "").trim()).length;
+  // Every caption in the job, taken out or not, because clearing blanks them
+  // all. It is not the written count: that one is below, and counts only
+  // what is still in the report.
+  const captioned = manifest.photos.filter((p) => (p.caption || "").trim()).length;
   // A cut photo keeps its place in the array. These two views are only ever
   // filters of that one list, so nothing is reordered by cutting.
   const inPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => !x.p.cut);
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
+  // Written, counted the way every other count here is: only photographs
+  // still in the report. It counted every caption until 2026-09-17, so it
+  // could say more was written than the report holds.
+  const written = inPhotos.filter((x) => (x.p.caption || "").trim()).length;
   // How many photographs share a page. The server normalises this on the way
   // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
   // a guard for a manifest that never came from the server, not a second copy
@@ -563,7 +570,7 @@ export default function PhotosScreen({ job }) {
                      ? spent.calculated_cost : null;
   const estimate = quote && quote.estimate ? quote.estimate.total : null;
   const money = (function () {
-    const n = written > 0 && spentTotal !== null ? spentTotal : estimate;
+    const n = captioned > 0 && spentTotal !== null ? spentTotal : estimate;
     if (n === null || n === undefined) return null;
     return n < 1 ? `${Math.round(n * 100)}\u00A2` : `$${n.toFixed(2)}`;
   }());
@@ -936,7 +943,7 @@ export default function PhotosScreen({ job }) {
                 just red". It is not here at all until there is something to
                 lose, and the gap to the money is pushed by this, so when it
                 goes the money still holds the right edge. */}
-            {written > 0 && (
+            {captioned > 0 && (
               <button className="clear linky" disabled={!!busy}
                       onClick={() => { setClearing(true); setDone(null); setError(null); }}>
                 Clear captions
@@ -946,7 +953,7 @@ export default function PhotosScreen({ job }) {
                 and wears a tilde, which is the one moment she most wants it.
                 After, it is what the job has cost and the tilde comes off. */}
             {money !== null && (
-              <span className="money">{written === 0 ? "~" : ""}{money}</span>
+              <span className="money">{captioned === 0 ? "~" : ""}{money}</span>
             )}
           </div>
         </div>
@@ -1207,7 +1214,7 @@ export default function PhotosScreen({ job }) {
         <div className="sheet-back" onClick={(e) => { if (e.target === e.currentTarget) setClearing(false); }}>
           <div className="sheet" role="dialog" aria-modal="true"
                aria-label="Clear the captions?">
-            <h2>Clear {written} {written === 1 ? "caption" : "captions"}?</h2>
+            <h2>Clear {captioned} {captioned === 1 ? "caption" : "captions"}?</h2>
             <p className="fine">
               The photographs, their order and the caption style are unchanged.
               Cleared captions cannot be recovered.
@@ -1215,7 +1222,7 @@ export default function PhotosScreen({ job }) {
             <div className="sheet-acts">
               <button className="linky" onClick={() => setClearing(false)}>Cancel</button>
               <button className="button final" onClick={onClearCaptions} disabled={!!busy}>
-                Clear {written} {written === 1 ? "caption" : "captions"}
+                Clear {captioned} {captioned === 1 ? "caption" : "captions"}
               </button>
             </div>
           </div>

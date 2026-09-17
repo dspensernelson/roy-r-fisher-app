@@ -19,7 +19,7 @@ function photo(n, { caption = "", reviewed = false } = {}) {
   return { file: `IMG_${n}.jpeg`, caption, reviewed };
 }
 
-function setUp({ written = 0, reviewed = 0, total = 12 } = {}) {
+function setUp({ written = 0, reviewed = 0, total = 12, taken = [] } = {}) {
   const photos = [];
   for (let i = 0; i < total; i += 1) {
     photos.push(photo(i, {
@@ -27,6 +27,11 @@ function setUp({ written = 0, reviewed = 0, total = 12 } = {}) {
       reviewed: i < reviewed,
     }));
   }
+  // Photographs taken out of the report. They keep their captions and their
+  // place in the list, which is exactly what a real cut does.
+  taken.forEach((one, n) => {
+    photos.push({ ...photo(total + n, one), cut: true });
+  });
   vi.spyOn(api, "getManifest").mockResolvedValue({
     job: JOB, photos, caption_style: "view", bands_on: true, bands: ["A", "B", "C"],
     per_page: 6, report_year: 2026,
@@ -78,6 +83,39 @@ describe("the bar, and the two counts", () => {
     expect(bar().textContent).toMatch(/5\s*written/);
   });
 
+  it("counts written only among the photographs still in the report", async () => {
+    // Every other count on the screen counts only what is still in. Written
+    // counted every caption, so it could say more was written than the report
+    // holds. Two taken out, both with captions, one of them reviewed.
+    setUp({ written: 5, reviewed: 2, taken: [
+      { caption: "Taken out, written", reviewed: true },
+      { caption: "Taken out, also written" },
+    ] });
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(bar().textContent).toMatch(/(?<!\d)5\s*written/);
+    expect(bar().textContent).toMatch(/(?<!\d)2\s*reviewed/);
+  });
+
+  it("never shows more reviewed than written, with photographs taken out", async () => {
+    // docs/NOW.md: reviewed can never be more than written, read from one
+    // place. Both now read the photographs still in the report.
+    setUp({ written: 3, reviewed: 3, taken: [
+      { caption: "Taken out", reviewed: true },
+      { caption: "Taken out", reviewed: true },
+    ] });
+    await waitFor(() => expect(bar()).toBeTruthy());
+    const count = (word) => Number(bar().textContent.match(new RegExp(`(\\d+)\\s*${word}`))[1]);
+    expect(count("written")).toBe(3);
+    expect(count("reviewed")).toBeLessThanOrEqual(count("written"));
+  });
+
+  it("offers the check when every photograph in the report is written", async () => {
+    // A photograph taken out without a caption does not hold the check back.
+    setUp({ written: 12, reviewed: 3, taken: [{ caption: "" }] });
+    expect(await screen.findByRole("button", { name: /mark every caption as reviewed/i }))
+      .toBeInTheDocument();
+  });
+
   it("says it is done, and stops offering, once everything is reviewed", async () => {
     setUp({ written: 12, reviewed: 12 });
     await waitFor(() => expect(bar()).toBeTruthy());
@@ -99,6 +137,17 @@ describe("what only appears when it is true", () => {
     setUp({ written: 1 });
     await waitFor(() => expect(bar().querySelector(".clear")).toBeTruthy());
     expect(bar().querySelector(".clear").textContent).toMatch(/Clear captions/);
+  });
+
+  it("still offers to clear, and quotes, every caption the server will clear", async () => {
+    // Clearing blanks every caption in the job, including those on
+    // photographs taken out. The confirmation quotes what the server acts on,
+    // so it keeps counting those too, even though the written pill does not.
+    setUp({ written: 0, taken: [{ caption: "Taken out, written" }] });
+    await waitFor(() => expect(bar().querySelector(".clear")).toBeTruthy());
+    expect(bar().textContent).toMatch(/(?<!\d)0\s*written/);
+    await userEvent.click(bar().querySelector(".clear"));
+    expect(screen.getByRole("heading", { name: "Clear 1 caption?" })).toBeInTheDocument();
   });
 
   it("shows the price before anything is generated, as an estimate", async () => {

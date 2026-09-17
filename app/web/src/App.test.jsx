@@ -84,6 +84,33 @@ describe("the notice in the masthead", () => {
   });
 });
 
+describe("the update button on Settings", () => {
+  it("opens the same update step as the masthead", async () => {
+    // Spenser, 2026-09-16: "When Check now finds a version, an Update button
+    // appears beside it." One route into the update, not two.
+    quiet();
+    vi.spyOn(api, "getSettings").mockResolvedValue({ key_set: false, ends_with: "" });
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "0.5.4" });
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    const check = await screen.findByRole("button", { name: "Check now" });
+
+    // The server now remembers the newer version, as it does after a look.
+    api.updateStatus.mockResolvedValue({
+      version: "0.5.3", available: "0.5.4", size: 55939858, looked: true,
+      run: { running: false, stage: "", done: 0, total: 0, error: "" },
+    });
+    await userEvent.click(check);
+
+    const beside = await within(check.parentElement)
+      .findByRole("button", { name: "Update available" });
+    expect(screen.queryByText(/Update to version 0\.5\.4\?/)).toBeNull();
+    await userEvent.click(beside);
+    expect(screen.getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
+    expect(screen.getByText(/about 53 MB/)).toBeInTheDocument();
+  });
+});
+
 describe("the bar at the top", () => {
   const JOB = "DAVENPORT_2840 Brady Street - 2026 Tax";
 

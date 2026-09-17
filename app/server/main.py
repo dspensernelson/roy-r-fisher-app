@@ -266,6 +266,8 @@ def create_app() -> FastAPI:
                 "available": offer.get("version", ""),
                 "size": offer.get("size", 0),
                 "looked": updates.looked(),
+                # True or false and nothing more. Settings words it itself.
+                "could_not_check": updates.could_not_check(),
                 "run": updates.run_state()}
 
     @app.get("/api/update")

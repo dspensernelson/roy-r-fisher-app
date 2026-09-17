@@ -82,6 +82,63 @@ def test_check_now_looks_and_answers_either_way(client, fake_bucket):
     assert answered["available"] == "0.5.4"
 
 
+def test_check_now_says_when_it_could_not_check(client, monkeypatch):
+    """Spenser, 2026-09-17. Settings said "You are on the newest version" when
+    the update server could not be reached, which the app did not know. The
+    screen has to be told which case it was."""
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", "http://127.0.0.1:9")   # nothing listens
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == ""
+    assert answered["could_not_check"] is True
+    # and the status route, which the masthead reads, carries the same answer
+    assert client.get("/api/update").json()["could_not_check"] is True
+
+
+def test_a_bucket_with_nothing_usable_is_a_check_that_did_not_happen(client,
+                                                                     fake_bucket):
+    """No pointer file, so nothing was learned about versions at all."""
+    answered = client.post("/api/update/check").json()
+    assert answered["could_not_check"] is True
+
+
+def test_check_now_that_found_nothing_newer_says_it_checked(client, fake_bucket):
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(dict(OFFER, version="0.5.3")))
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == ""
+    assert answered["could_not_check"] is False
+
+
+def test_check_now_that_found_one_says_it_checked(client, fake_bucket):
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(OFFER))
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == "0.5.4"
+    assert answered["could_not_check"] is False
+
+
+def test_a_check_that_works_again_clears_the_failure(client, fake_bucket,
+                                                     monkeypatch):
+    real = fake_bucket.url
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", "http://127.0.0.1:9")
+    assert client.post("/api/update/check").json()["could_not_check"] is True
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", real)
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(dict(OFFER, version="0.5.3")))
+    assert client.post("/api/update/check").json()["could_not_check"] is False
+
+
+def test_nothing_the_update_server_says_reaches_the_answer(client, fake_bucket):
+    """The sentence on screen is fixed text. What the server sends back is
+    read, never passed through."""
+    fake_bucket.put(updates.LATEST_NAME, "<html>SERVER SAYS SOMETHING ODD</html>")
+    answered = client.post("/api/update/check")
+    assert "SERVER SAYS" not in answered.text
+    assert answered.json()["could_not_check"] is True
+
+
+def test_nothing_has_been_checked_before_anything_has_looked(client):
+    """Not looked yet is not a failure to check. Nothing is said either way."""
+    assert client.get("/api/update").json()["could_not_check"] is False
+
+
 def test_a_checkout_is_never_offered_an_update(client, fake_bucket, monkeypatch):
     (main.PROGRAM / "app" / "tests").mkdir(parents=True)
     fake_bucket.put(updates.LATEST_NAME, json.dumps(OFFER))
@@ -168,6 +225,71 @@ def test_anything_unexpected_still_reads_as_a_sentence(client, monkeypatch):
     assert "nobody predicted this" in found["error"]
     assert "this app still works" in found["error"]
     assert client.get("/api/update").status_code == 200
+
+
+def _log_lines():
+    import applog
+    path = applog.log_file()
+    return path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+
+
+def test_a_refused_update_writes_its_sentence_to_the_log(client, monkeypatch):
+    """Found 2026-09-16. A log showed three failed update attempts and could
+    not say what any of them had told her, because the sentence lived only on
+    the screen. One line, in the shape of the check's own lines, whatever
+    shape the sentence had on screen."""
+    def refuse(*_a, **_k):
+        raise updates.UpdateRefused(
+            "The update did not arrive intact and was not installed.\n"
+            "What arrived is not what was published.\n"
+            "Nothing has changed. Try again.")
+
+    monkeypatch.setattr(updates, "prepare", refuse)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    said = [line for line in _log_lines() if " update did not finish " in line]
+    assert len(said) == 1, "the failure is not in the log exactly once"
+    assert "version=0.5.4" in said[0]
+    assert ("said=The update did not arrive intact and was not installed. "
+            "What arrived is not what was published. "
+            "Nothing has changed. Try again.") in said[0]
+
+
+def test_an_unexpected_failure_writes_its_sentence_to_the_log(client, monkeypatch):
+    def explode(*_a, **_k):
+        raise RuntimeError("nobody predicted this")
+
+    monkeypatch.setattr(updates, "prepare", explode)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    said = [line for line in _log_lines() if " update did not finish " in line]
+    assert len(said) == 1
+    assert "said=The update did not finish: nobody predicted this" in said[0]
+
+
+def test_no_key_reaches_the_log_through_a_failure_sentence(client, monkeypatch):
+    """Nothing on the update path reads the key. This holds the second guard:
+    if a key ever did end up inside an error, the log still never gets it."""
+    key = "sk-ant-api03-" + "Q" * 60
+    monkeypatch.setenv("ANTHROPIC_API_KEY", key)
+
+    def leak(*_a, **_k):
+        raise RuntimeError("something mentioned %s" % key)
+
+    monkeypatch.setattr(updates, "prepare", leak)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    text = "\n".join(_log_lines())
+    assert "update did not finish" in text
+    assert key not in text
+    assert "sk-ant-" not in text
+    assert "QQQQ" not in text
 
 
 def test_a_failed_update_never_closes_the_app(client, monkeypatch):

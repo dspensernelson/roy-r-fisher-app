@@ -556,6 +556,31 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    under nothing. Got wrong twice on 2026-09-16. */
 .screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 3px;
   height: 30px; min-width: 0; justify-content: space-between; }
+/* The two buttons take half the row each. Spenser, 2026-09-17, looking at the
+   widget: *"Why are Build and Generate too far apart? Why don't you make the
+   Build photo pages as wide as Generate so that they have the same amount of
+   space across the box?"* Spreading them left 68px of nothing in the middle.
+   Now the only space between them is the row's own 3px gap.
+
+   This keeps the left edge the line above is about: an equal half still
+   starts hard against the row's left wall, so the photo-and-plus icon on the
+   row below stays lined up under Build. Measured on 2026-09-17, both edges
+   land on the same number.
+
+   `flex-basis: 0` rather than `auto` is what makes them equal rather than
+   merely stretched: with `auto` the longer label would claim more.
+
+   Half of this row is 163.5px, and the words fit it. Measured in a browser
+   against this stylesheet on 2026-09-17: `Build photo pages` needs 131.03,
+   `Generate captions` 131.08, and with a two-digit count 156.77. The widest
+   state this row can reach is a three-digit count, which needs 163.72, so it
+   is 0.22px wider than its half and the last letter sits that far past the
+   fill. It was looked at, at three times size, and cannot be seen. Arial is
+   the face this measurement is in and it is also where Mark's Windows machine
+   lands, because the stack is Helvetica Neue, Helvetica, Arial, and Arial is
+   always installed there. */
+.screen-actions.control-panel .w-row > .act-wrap { flex: 1 1 0; min-width: 0; }
+.screen-actions.control-panel .w-row > .act-wrap > .button { width: 100%; }
 .screen-actions.control-panel .w-row.two { height: 24px; gap: 8px;
   justify-content: flex-end; }
 .screen-actions.control-panel .linky { margin-left: 0; }

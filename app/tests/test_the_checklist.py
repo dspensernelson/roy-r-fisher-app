@@ -105,9 +105,14 @@ def section_of(made, heading):
 
 def test_the_page_says_nothing_the_file_does_not():
     """The build may escape and lay out. It may not add a word. A session
-    adding its own wording to his checklist is a recorded fault."""
+    adding its own wording to his checklist is a recorded fault.
+
+    The notes control is furniture and gets the one exception, held to the
+    two short lines named in the build and tested below. It never reaches an
+    item's words, which the next test holds separately."""
     words = set(re.findall(r"[A-Za-z]{4,}", visible(page())))
     allowed = set(re.findall(r"[A-Za-z]{4,}", SOURCE.read_text(encoding="utf-8")))
+    allowed |= build.FURNITURE
     assert words <= allowed, "the page invented: %s" % sorted(words - allowed)
 
 
@@ -290,3 +295,179 @@ def test_no_ticked_item_and_no_done_section_when_nothing_is_ticked():
     made = build.build([("A heading", [(False, "an item", build.NO_STAR)])])
     assert build.DONE not in made
     assert made.count("<details") == 1
+
+
+# --- the notes control ------------------------------------------------------
+#
+# He asked for it on 2026-09-16: "now there needs to be a notes button to the
+# left of the star. When i click it leave notes i can hand to you". The note
+# goes to the artifact's own store when the page is published, and to this
+# browser when it is opened as a file on his Mac, which is what he does. The
+# rules below are the ones that can quietly break without anybody noticing.
+
+
+def labels(made):
+    """Every item row, whole."""
+    return re.findall(r'<label class="row[^"]*"[^>]*>.*?</label>', made, re.S)
+
+
+def script(made):
+    got = re.search(r"<script>(.*?)</script>", made, re.S)
+    assert got, "the page has no script"
+    return got.group(1)
+
+
+def test_the_page_holds_every_item_and_every_tick_the_file_has():
+    """The count before and after, in one place. A ticked item is written
+    twice, so the rows are the items plus the ticks."""
+    made = page()
+    raw = SOURCE.read_text(encoding="utf-8").splitlines()
+    items = sum(1 for line in raw if line.startswith("- ["))
+    ticks = sum(1 for line in raw if line.startswith("- [x]"))
+    assert len(labels(made)) == items + ticks
+    assert made.count('class="note"') == items + ticks
+
+
+def test_every_row_carries_a_notes_control_left_of_the_star():
+    """His words. Left of the star, on every row, ticked or not."""
+    for one in labels(page()):
+        at = one.find('<button type="button" class="note"')
+        assert at > 0, "a row has no notes control: %s" % one
+        assert at > one.index('<span class="t">'), "it is before the words"
+        star = one.find('<span class="star')
+        if star >= 0:
+            assert at < star, "the notes control is right of the star"
+
+
+def test_the_notes_control_carries_the_same_key_as_the_tick():
+    """One key ties a note to its item, and it is the key the tick already
+    uses. A second key scheme is a fact with two homes."""
+    for one in labels(page()):
+        tick = re.search(r'data-k="(c\d+)"', one).group(1)
+        note = re.search(r'class="note" data-n="(c\d+)"', one).group(1)
+        assert tick == note
+
+
+def test_both_copies_of_a_ticked_item_share_one_note():
+    """A ticked item is on the page twice. One note, not two."""
+    made = page()
+    keys = re.findall(r'class="note" data-n="(c\d+)"', made)
+    ticks = sum(1 for _, items in sections() for d, _, _ in items if d)
+    assert len(keys) - len(set(keys)) == ticks
+
+
+def test_a_row_carries_its_heading_and_its_star_for_the_note_to_record():
+    """A note has to say which heading and which star its item sat under, or
+    it is a sentence about nothing when it is read back."""
+    import html
+    made = page()
+    for heading, items in sections():
+        for _, text, star in items:
+            for one in labels(made):
+                if '<span class="t">%s</span>' % html.escape(text) not in one:
+                    continue
+                assert 'data-h="%s"' % html.escape(heading) in one, text
+                assert 'data-s="%s"' % html.escape(star) in one, text
+
+
+def test_the_notes_control_adds_no_word_to_any_item():
+    """The rule that the build never adds a word to an item still stands.
+    The control is furniture beside the words, never inside them."""
+    import html
+    made = page()
+    said = re.findall(r'<span class="t">(.*?)</span>', made, re.S)
+    want = [html.escape(t) for _, items in sections() for _, t, _ in items]
+    ticked = [html.escape(t) for _, items in sections() for d, t, _ in items if d]
+    assert sorted(said) == sorted(want + ticked)
+
+
+def test_the_two_things_the_notes_control_says_are_named_and_no_more():
+    """The exception to "the page says nothing the file does not" is exactly
+    this and it is written down. If it grows, this test says so."""
+    assert build.KEPT_HERE == "This browser only"
+    assert build.NOT_KEPT == "Not saved"
+    assert build.FURNITURE == {"This", "browser", "only", "saved"}
+    made = page()
+    assert made.count(build.KEPT_HERE) == 1
+    assert made.count(build.NOT_KEPT) == 1
+
+
+def test_the_page_says_it_is_this_browser_only_when_there_is_no_database():
+    """The store is not there when he opens the file on his Mac, which is
+    what he does. The page has to work and it has to say where the note
+    went. Never show a note as saved when it is not."""
+    made = page()
+    assert build.KEPT_HERE in visible(made), "the page never says it"
+    body = re.search(r'<div class="box".*?</div>\s*</div>', made, re.S).group(0)
+    assert build.KEPT_HERE in body and build.NOT_KEPT in body
+    s = script(made)
+    assert "localStorage" in s, "there is no fallback store"
+    assert "rrf-notes" in s, "the notes would land on the tick's own key"
+
+
+def test_the_notes_box_says_nothing_until_it_has_something_to_say():
+    """Both lines start hidden. A page that opens already claiming something
+    about a store it has not reached yet is the fifth north-star line."""
+    made = page()
+    for one in re.findall(r'<span class="say[^"]*"[^>]*>', made):
+        assert " hidden>" in one, one
+
+
+def test_the_page_never_writes_on_a_keystroke():
+    """Recorded fault. A caption box wrote on every keystroke and that was
+    one read across the office network per letter Colleen typed."""
+    made = page()
+    s = script(made)
+    assert not re.search(r"addEventListener\(\s*['\"]input['\"]", s), (
+        "something is bound to every keystroke")
+    assert "oninput" not in made
+    # And the other half: even when he has finished, nothing is written
+    # unless the words are different from the ones already held.
+    assert re.search(r"===\s*was\s*\)\s*return", s), (
+        "a write can happen when the note has not changed")
+
+
+def test_every_touch_of_browser_storage_is_wrapped():
+    """It throws outright in some contexts, and an unwrapped read takes the
+    whole page down with it."""
+    s = script(page())
+    for got in re.finditer(r"localStorage", s):
+        before = s[:got.start()]
+        assert before.count("try{") > before.count("}catch"), (
+            "a localStorage call sits outside a try")
+
+
+def test_the_page_does_not_wait_on_the_database_to_draw():
+    """It can take ten seconds and it can answer after the page is built.
+    The page draws, then the notes light up."""
+    s = script(page())
+    assert "claude" in s, "the store is never asked for"
+    assert re.search(r"window\.claude", s), "it is not guarded"
+    assert "await" not in s, "the page waits on the store"
+    assert re.search(r"\.then\(", s), "nothing handles the answer later"
+
+
+def test_a_row_holding_a_note_looks_different_from_one_that_does_not():
+    """He has to see at a glance where he left notes, without a word being
+    added to say so."""
+    made = page()
+    assert ".note{" in made
+    assert ".note.on{" in made
+
+
+def test_the_notes_control_cannot_tick_the_item():
+    """It sits inside the row's label. A control that ticks the box when he
+    reaches for a note is the caption the tick ate, again."""
+    made = page()
+    assert made.count('<button type="button" class="note"') == made.count('class="note"')
+    assert "preventDefault" in script(made)
+
+
+def test_a_note_never_changes_the_item_it_is_about():
+    """Words, star, tick and heading are the file's, not the control's."""
+    made = build.build([("A heading", [(False, "an item", "Star 3"),
+                                       (True, "a done one", build.NO_STAR)])])
+    assert '<span class="t">an item</span>' in made
+    assert '<span class="star">Star 3</span>' in made
+    assert '<span class="star none">No star</span>' in made
+    assert made.count('data-k="c2" checked') == 2

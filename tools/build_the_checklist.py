@@ -34,6 +34,16 @@ A ticked item is on the page twice: once under its own heading, out of view,
 and once in `Done`. The line at the end of each heading swaps which of the two
 you can see, so nothing is open in two places at once.
 
+**Notes, asked for on 2026-09-16.** Every row carries a small control to the
+left of its star. He clicks it, types a note about that item, and it is read
+back out of the store with a tool call, so he never copies anything. The note
+goes to the artifact's own database when the page is published and to the
+browser when it is opened as a file, which is what he does on his Mac. It is
+never both at once, and the box says which. The control is furniture: it adds
+nothing to an item's words, its star, its tick or its heading. The only two
+lines it ever says are `KEPT_HERE` and `NOT_KEPT` below, and they are the one
+exception to "nothing is invented here".
+
 **What it adds that the old inline version did not:** a count on every heading,
 so the shape of the work is visible without reading it, and headings that fold.
 Folding is off for the first two sections, because the north star and the work
@@ -78,6 +88,29 @@ STARS = ["Star %d" % n for n in range(1, 6)]
 # checks that it never becomes one again.
 DONE = "Done"
 
+# The only two things the notes control ever says, and the one exception to
+# "the page says nothing `docs/NOW.md` does not". They are furniture beside an
+# item, never words inside one, and a test holds them to this list so a third
+# cannot arrive quietly.
+#
+# Both had to be said. Published, a note goes to the artifact's own store and
+# can be read back out of it. Opened as a file on his Mac, which is what he
+# does, there is no store at all and the note stays in that browser. Saying so
+# is the fifth north-star line: a note shown as kept when it is not is the app
+# telling him something it does not know.
+KEPT_HERE = "This browser only"
+NOT_KEPT = "Not saved"
+FURNITURE = set(re.findall(r"[A-Za-z]{4,}", KEPT_HERE + " " + NOT_KEPT))
+
+# The box he types a note into. One of them, moved under whichever row he
+# opened, because a box per row is 127 boxes nobody asked for. Both lines
+# start hidden: the page says nothing about the store until the store has
+# answered.
+BOX = ('<div class="box" id="box" hidden><textarea id="pad" rows="3"></textarea>'
+       '<div class="foot"><span class="say bad" id="bad" hidden>%s</span>'
+       '<span class="say" id="here" hidden>%s</span></div></div>'
+       % (html.escape(NOT_KEPT), html.escape(KEPT_HERE)))
+
 PAGE = """<title>Roy R. Fisher: Checklist</title>
 <style>
 :root{--ground:#FAF8F4;--ink:#231F20;--muted:#6E6E73;--line:#E3E0D8;--brand:#8C0C04;--sunk:#F2EFE8}
@@ -112,6 +145,21 @@ input:checked~.star{color:var(--line);border-color:var(--line)}
 .pull::after{content:"+";margin-left:auto;font-size:15px;letter-spacing:0;color:var(--line)}
 .pull.on::after{content:"\\2013"}
 .pull:hover{color:var(--brand)}
+.note{flex:none;align-self:flex-start;margin-top:2px;padding:0 7px;border:0;background:none;
+  font-family:inherit;font-size:14px;line-height:1.3;color:var(--line);cursor:pointer;
+  -webkit-appearance:none}
+.note:hover{color:var(--muted)}
+.note.on{color:var(--brand)}
+.box{margin:2px 0 14px 29px;border-left:2px solid var(--brand);padding-left:11px}
+.box textarea{display:block;width:100%%;min-height:78px;resize:vertical;background:var(--sunk);
+  color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:8px 9px;
+  font:15px/1.45 'Helvetica Neue',Helvetica,Arial,'Segoe UI',sans-serif}
+.box textarea:focus{outline:none;border-color:var(--brand)}
+.foot{display:flex;gap:12px;padding:5px 0 0;font-size:10.5px;letter-spacing:.07em;
+  text-transform:uppercase;font-weight:700;color:var(--muted)}
+.say{margin-left:auto}
+.bad{color:var(--brand)}
+[hidden]{display:none!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --ground:#1A1817;--ink:#F2EFE8;--muted:#9A948C;--line:#33302C;--brand:#E4675C;--sunk:#221F1D}}
 :root[data-theme="dark"]{--ground:#1A1817;--ink:#F2EFE8;--muted:#9A948C;--line:#33302C;--brand:#E4675C;--sunk:#221F1D}
@@ -160,6 +208,99 @@ input:checked~.star{color:var(--line);border-color:var(--line)}
     });
   }
   tally();
+}());
+(function(){
+  // The notes he leaves on an item. Spenser, 2026-09-16: "now there needs to
+  // be a notes button to the left of the star. When i click it leave notes i
+  // can hand to you". He hands nothing over: the note is read back out of the
+  // store, so nothing is ever copied or pasted.
+  //
+  // Two stores and only ever one of them answering. Published, the artifact's
+  // own database holds the notes. Opened as a file there is no database, so
+  // the note is kept in this browser and the box says so. Never both at once:
+  // one note with two homes is the fault this project keeps meeting.
+  var box=document.getElementById('box'),pad=document.getElementById('pad'),
+      here=document.getElementById('here'),bad=document.getElementById('bad');
+  var mine={},store=null,asked=false,cur=null,was='',queue=Promise.resolve();
+  function read(){try{return JSON.parse(localStorage.getItem('rrf-notes')||'{}');}
+    catch(e){return {};}}
+  function write(all){try{localStorage.setItem('rrf-notes',JSON.stringify(all));
+    return true;}catch(e){return false;}}
+  function mark(){document.querySelectorAll('.note').forEach(function(b){
+    b.classList.toggle('on',!!mine[b.getAttribute('data-n')]);});}
+  // Said only once the store has answered. Before that the page knows nothing
+  // about where a note would go, so it claims nothing.
+  function say(){here.hidden=!(asked&&!store);}
+  var first=read();
+  for(var key in first){if(first[key]&&first[key].text)mine[key]=first[key].text;}
+  mark();
+  // One write, when he has finished and the words have changed. A caption box
+  // that wrote on every keystroke put one read across the office network per
+  // letter Colleen typed, and that is a recorded fault.
+  function keep(){
+    if(!cur)return;
+    var b=cur,k=b.getAttribute('data-n'),text=pad.value.trim();
+    if(text===was)return;
+    var before=mine[k],row=b.parentNode;
+    was=text;
+    if(text)mine[k]=text;else delete mine[k];
+    mark();
+    // The item's own line and where it sat go with the note, so a note still
+    // reads back if the keys are ever numbered differently.
+    var body={text:text,item:row.querySelector('.t').textContent,
+      section:row.getAttribute('data-h'),star:row.getAttribute('data-s'),
+      at:new Date().toISOString()};
+    var lost=function(){
+      if(before===undefined)delete mine[k];else mine[k]=before;
+      was=before||'';mark();bad.hidden=false;};
+    if(store){
+      var ref=store.collection('notes').doc(k);
+      queue=queue.then(function(){return text?ref.set(body):ref.delete();})
+        .then(function(){bad.hidden=true;},lost);
+      return;
+    }
+    var held=read();
+    if(text)held[k]=body;else delete held[k];
+    if(write(held))bad.hidden=true;else lost();
+  }
+  function shut(){if(!cur)return;keep();cur=null;box.hidden=true;}
+  function show(b){
+    if(cur===b){shut();return;}
+    shut();
+    cur=b;
+    var row=b.parentNode;
+    row.parentNode.insertBefore(box,row.nextSibling);
+    was=mine[b.getAttribute('data-n')]||'';
+    pad.value=was;bad.hidden=true;say();box.hidden=false;pad.focus();
+    // The caret goes to the end of what is already there. Setting the
+    // words leaves it at the start, so reopening a note put him in
+    // front of his own sentence and Backspace did nothing.
+    try{pad.setSelectionRange(was.length,was.length);}catch(e){}
+  }
+  document.querySelectorAll('.note').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();show(b);});});
+  pad.addEventListener('blur',keep);
+  pad.addEventListener('keydown',function(e){if(e.key==='Escape')shut();});
+  document.addEventListener('mousedown',function(e){
+    if(!cur||box.contains(e.target))return;
+    if(e.target.closest&&e.target.closest('.note'))return;
+    shut();});
+  window.addEventListener('pagehide',keep);
+  // Asked for without the page waiting on it. It can take ten seconds and it
+  // can answer after the page is built, so the page draws and the notes light
+  // up when it answers.
+  var got=null;
+  try{if(window.claude&&window.claude.use)got=window.claude.use('db');}catch(e){}
+  if(got&&got.then){got.then(function(db){
+    asked=true;
+    if(!db){say();return;}
+    store=db;
+    db.collection('notes').get().then(function(snap){
+      var now={};
+      snap.docs.forEach(function(d){var v=d.data()||{};if(v.text)now[d.id]=v.text;});
+      mine=now;mark();say();},function(){say();});
+  },function(){asked=true;say();});}else{asked=true;}
 }());
 </script>
 """
@@ -247,15 +388,29 @@ def build(sections):
             if star:
                 chip = '<span class="star%s">%s</span>' % (
                     " none" if star == NO_STAR else "", html.escape(star))
+            # The notes control, to the left of the star because that is
+            # where he asked for it. A glyph, not a word: the page may not add
+            # one to an item, and a pencil beside the words is understood
+            # without being explained. It is quiet until the note exists,
+            # which is how he sees at a glance where he left one.
             body = ('<input type="checkbox" data-k="c%d"%s>'
-                    '<span class="t">%s</span>%s'
-                    % (n, " checked" if done else "", html.escape(text), chip))
+                    '<span class="t">%s</span>'
+                    '<button type="button" class="note" data-n="c%d">&#9998;&#xFE0E;</button>'
+                    '%s'
+                    % (n, " checked" if done else "", html.escape(text), n, chip))
+            # A note says which heading and which star its item sat under, so
+            # it still reads back as something rather than as a sentence about
+            # nothing. The row is the only place that knows.
+            where = ' data-h="%s" data-s="%s"' % (html.escape(heading),
+                                                  html.escape(star))
             if not done:
-                rows.append('<label class="row">%s</label>' % body)
+                rows.append('<label class="row"%s>%s</label>' % (where, body))
                 continue
             mine += 1
-            rows.append('<label class="row away" data-home="%d">%s</label>' % (at, body))
-            finished.append('<label class="row" data-from="%d">%s</label>' % (at, body))
+            rows.append('<label class="row away" data-home="%d"%s>%s</label>'
+                        % (at, where, body))
+            finished.append('<label class="row" data-from="%d"%s>%s</label>'
+                            % (at, where, body))
         if mine:
             # A line, not a button, saying how many of the finished items at
             # the end of the page belong to this heading. Clicking it brings
@@ -269,7 +424,8 @@ def build(sections):
         blocks.append(
             '<details id="sdone"><summary>%s<span class="count"></span></summary>%s</details>'
             % (html.escape(DONE), "".join(finished)))
-    return PAGE % "".join(blocks)
+    # One box for the whole page, moved under whichever row he opens.
+    return PAGE % ("".join(blocks) + BOX)
 
 
 def main(argv):

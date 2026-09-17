@@ -223,17 +223,10 @@ export default function UpdateStep({ version, available, size, onClose }) {
       <p style={{ margin: "0 0 10px" }}>
         <strong>Update to version {available}?</strong>
       </p>
-      <p className="setting-fine" style={{ margin: "0 0 8px" }}>
-        You are on version {version}. The download is about {megabytes(size)}.
-        The app will close itself and open again as the new version. Your key,
-        your jobs folder, your settings and every document you have built are
-        not kept inside the app and are not touched.
-      </p>
       <p className="setting-fine" style={{ margin: "0 0 12px" }}>
-        The app checks that what arrives is exactly what was published. That
-        catches a damaged or incomplete download. It does not prove who made
-        the file. If anything goes wrong, nothing is changed and the version
-        you have now is not touched.
+        You are on version {version}. The download is about {megabytes(size)}.
+        The app closes itself and opens again as a new version. Your settings
+        remain the same.
       </p>
       <div className="setting-actions">
         <button className="button" onClick={onStart}>Update now</button>

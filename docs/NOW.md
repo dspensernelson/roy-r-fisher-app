@@ -80,6 +80,7 @@ are in its phases.
 
 ## The app never says anything it does not know
 
+- [ ] Clear captions leaves the ticks on, so Build is offered with no captions · Star 5
 - [ ] What should the loading page say when it cannot reach the app · Star 5
 - [ ] Nothing tells you the new version started · Star 5
 - [ ] When Check now finds a version, an Update button appears beside it · Star 5
@@ -98,6 +99,7 @@ are in its phases.
 
 ## What needs you
 
+- [ ] What a switched-off button looks like: it has no fill and no edge · No star
 - [ ] How far back should the log go · No star
 - [ ] What does Reset put back · No star
 - [ ] Which job produced the 700 KB photographs · No star
@@ -169,6 +171,8 @@ are in its phases.
 
 ## Housekeeping
 
+- [ ] A test writes into the real log file instead of a temporary one · No star
+- [ ] The photographs widget runs off the right edge at phone width · No star
 - [ ] Packaging a version silently breaks whatever was pointed at the old one · No star
 - [ ] Three plans on disk still have closeout tasks unticked · No star
 - [ ] Nothing stops a version being published before the test machine has run it · No star

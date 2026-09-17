@@ -35,7 +35,8 @@ internet.
 
 **Nothing here ever raises at a caller.** A bucket that is unreachable, empty,
 slow, or serving nonsense all mean the same thing: nothing is known, nothing is
-shown, and the app carries on exactly as it was. Mark is remote and will not
+offered, and the app carries on exactly as it was. Only `Check now`, which he
+asked for, says that it could not check. Mark is remote and will not
 debug anything, and the one thing he can always do is double-click his Desktop
 icon. That has to still be true after every failure in this file.
 
@@ -291,15 +292,20 @@ def available(root, offered=None) -> dict:
 _lock = threading.Lock()
 _known = {}
 _looked = False
+# Whether the last look learned nothing about versions at all: the bucket could
+# not be reached, or what it sent could not be read. Not the same as finding
+# nothing newer, and since 2026-09-17 the screen says which.
+_could_not_check = False
 
 
-def remember(found: dict) -> None:
+def remember(found: dict, could_not_check: bool = False) -> None:
     """Record what a check found, including that it found nothing."""
-    global _looked
+    global _looked, _could_not_check
     with _lock:
         _known.clear()
         _known.update(found or {})
         _looked = True
+        _could_not_check = bool(could_not_check)
 
 
 def known() -> dict:
@@ -318,12 +324,23 @@ def looked() -> bool:
         return _looked
 
 
+def could_not_check() -> bool:
+    """Whether the last look failed to learn anything about versions.
+
+    Only ever true or false. Nothing the bucket sent is kept here, so nothing
+    it sent can reach the screen: the sentence is the screen's own.
+    """
+    with _lock:
+        return _could_not_check
+
+
 def forget() -> None:
     """For tests, and for a fresh look."""
-    global _looked
+    global _looked, _could_not_check
     with _lock:
         _known.clear()
         _looked = False
+        _could_not_check = False
 
 
 def _note(message, **fields) -> None:
@@ -347,20 +364,30 @@ def look(root) -> dict:
     **It writes down what it saw.** Swallowing the failure is right for Mark
     and it cost two whole evenings: a certificate fault and a refused name
     both reported as "nothing is being offered", which is exactly what a
-    healthy check finding nothing reports. On screen those must stay
-    indistinguishable. In the log they must not.
+    healthy check finding nothing reports. The log says which.
+
+    **And so does the screen, since 2026-09-17.** These two cases used to be
+    kept the same on screen, so a check that reached nothing told him "You are
+    on the newest version", which the app did not know. Spenser decided they
+    must differ. The look remembers only whether it learned anything; the
+    words are fixed on the Settings screen, and nothing the bucket sent is
+    passed along. A development checkout is still quiet and still reads as
+    nothing newer.
     """
+    failed = False
     try:
         quiet = packaging.is_checkout(root) and not showing_in_a_checkout()
         raw = {} if quiet else announced()
         found = available(root, offered=raw)
     except Exception as exc:
         found = {}
+        failed = True
         _note("update check failed", error=str(exc))
     else:
         if quiet:
             pass                      # a development checkout, nothing to say
         elif not raw:
+            failed = True
             _note("update check reached nothing",
                   bucket=bucket_url(), running=packaging.version_of(root))
         elif found:
@@ -369,7 +396,7 @@ def look(root) -> dict:
         else:
             _note("update check found nothing newer",
                   offered=raw.get("version"), running=packaging.version_of(root))
-    remember(found)
+    remember(found, could_not_check=failed)
     return found
 
 

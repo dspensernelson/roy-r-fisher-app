@@ -65,6 +65,28 @@ describe("Check now", () => {
     expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
   });
 
+  it("says it could not check when the update server could not be reached", async () => {
+    // Spenser, 2026-09-17. It used to say "You are on the newest version.",
+    // which the app did not know.
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "", could_not_check: true });
+    render(<Settings workspace={WORKSPACE} version="0.6.4"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}}
+                     onUpdate={() => {}} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Check now" }));
+    expect(await screen.findByText("Could not check for a new version.")).toBeInTheDocument();
+    expect(screen.queryByText("You are on the newest version.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
+  });
+
+  it("says newest only when the update server answered", async () => {
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "", could_not_check: false });
+    render(<Settings workspace={WORKSPACE} version="0.6.4"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Check now" }));
+    expect(await screen.findByText("You are on the newest version.")).toBeInTheDocument();
+    expect(screen.queryByText("Could not check for a new version.")).toBeNull();
+  });
+
   it("still works when nothing is listening", async () => {
     vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "" });
     render(<Settings workspace={WORKSPACE} version="0.6.4"

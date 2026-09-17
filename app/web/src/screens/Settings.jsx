@@ -94,9 +94,15 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
             // while this screen says a newer version is there.
             if (onUpdateChecked) await onUpdateChecked();
             setNewer(!!found.available);
+            // Three answers, and the words are this screen's own. Nothing the
+            // update server sent reaches here, only whether it answered.
+            // "Newest" is said only when it did: Spenser, 2026-09-17, after it
+            // was said when the server could not be reached at all.
             setLooked(found.available
               ? `Version ${found.available} is available.`
-              : "You are on the newest version.");
+              : found.could_not_check
+                ? "Could not check for a new version."
+                : "You are on the newest version.");
           } catch {
             setLooked("The update service could not be reached just now. Nothing has changed.");
           }

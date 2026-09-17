@@ -82,6 +82,63 @@ def test_check_now_looks_and_answers_either_way(client, fake_bucket):
     assert answered["available"] == "0.5.4"
 
 
+def test_check_now_says_when_it_could_not_check(client, monkeypatch):
+    """Spenser, 2026-09-17. Settings said "You are on the newest version" when
+    the update server could not be reached, which the app did not know. The
+    screen has to be told which case it was."""
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", "http://127.0.0.1:9")   # nothing listens
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == ""
+    assert answered["could_not_check"] is True
+    # and the status route, which the masthead reads, carries the same answer
+    assert client.get("/api/update").json()["could_not_check"] is True
+
+
+def test_a_bucket_with_nothing_usable_is_a_check_that_did_not_happen(client,
+                                                                     fake_bucket):
+    """No pointer file, so nothing was learned about versions at all."""
+    answered = client.post("/api/update/check").json()
+    assert answered["could_not_check"] is True
+
+
+def test_check_now_that_found_nothing_newer_says_it_checked(client, fake_bucket):
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(dict(OFFER, version="0.5.3")))
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == ""
+    assert answered["could_not_check"] is False
+
+
+def test_check_now_that_found_one_says_it_checked(client, fake_bucket):
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(OFFER))
+    answered = client.post("/api/update/check").json()
+    assert answered["available"] == "0.5.4"
+    assert answered["could_not_check"] is False
+
+
+def test_a_check_that_works_again_clears_the_failure(client, fake_bucket,
+                                                     monkeypatch):
+    real = fake_bucket.url
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", "http://127.0.0.1:9")
+    assert client.post("/api/update/check").json()["could_not_check"] is True
+    monkeypatch.setenv("RRF_UPDATE_BUCKET", real)
+    fake_bucket.put(updates.LATEST_NAME, json.dumps(dict(OFFER, version="0.5.3")))
+    assert client.post("/api/update/check").json()["could_not_check"] is False
+
+
+def test_nothing_the_update_server_says_reaches_the_answer(client, fake_bucket):
+    """The sentence on screen is fixed text. What the server sends back is
+    read, never passed through."""
+    fake_bucket.put(updates.LATEST_NAME, "<html>SERVER SAYS SOMETHING ODD</html>")
+    answered = client.post("/api/update/check")
+    assert "SERVER SAYS" not in answered.text
+    assert answered.json()["could_not_check"] is True
+
+
+def test_nothing_has_been_checked_before_anything_has_looked(client):
+    """Not looked yet is not a failure to check. Nothing is said either way."""
+    assert client.get("/api/update").json()["could_not_check"] is False
+
+
 def test_a_checkout_is_never_offered_an_update(client, fake_bucket, monkeypatch):
     (main.PROGRAM / "app" / "tests").mkdir(parents=True)
     fake_bucket.put(updates.LATEST_NAME, json.dumps(OFFER))

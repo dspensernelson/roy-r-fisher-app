@@ -605,11 +605,16 @@ the review count, the bands still waiting, the folder a photograph came from.
 What blocks a button is said by that button when he hovers it, which took the
 three grey paragraphs about a missing key off the screen entirely.
 
-**Nothing moves.** The header is a fixed 76px, the widget is pinned at 360 by
-110, and the quiet line keeps its 20px whether or not it has anything to say.
-Amended in place 2026-09-17: this said 500 by 76, which stopped being true when
-commit 2a020a4 built the widget he approved on 2026-09-16. The 500 and the 516
-measured below are how the widget was sized before that design replaced them.
+**Nothing moves.** The header has a 76px floor and grows to the widget, the
+widget is pinned at 360 by 110, and the quiet line keeps its 20px whether or not
+it has anything to say. Because the widget's height is pinned, the header is
+110px in every state. Amended in place 2026-09-17, twice. This said the widget
+was 500 by 76, which stopped being true when commit 2a020a4 built the widget he
+approved on 2026-09-16; the 500 and the 516 measured below are how the widget
+was sized before that design replaced them. It also said the header was a fixed
+76px. That pin is what let the first row of photographs cover the bottom of the
+110px widget, and commit e8b07de made it a floor, as the approved design at
+`docs/design/photos-widget.html` has it (`app/web/src/brand.css`, `.screen-head`).
 The widget's width was measured rather than guessed: 473px for its widest
 ordinary state, 480 with a three-digit count, which is the 131-photograph job.
 A test holds the DOM shape across five states, because a layout that has moved
@@ -671,7 +676,8 @@ stylesheet can fall back to. At 500px wide the panel had about 7px spare on his
 machine. It looked full because it was full.
 
 **Walls 14px, gaps 9 and 8, width pinned at 516.** The height stays 76px, which
-is what stops the screen bouncing. Measured in a browser against this
+is what stops the screen bouncing. (Amended 2026-09-17: true on 2026-09-15. The
+widget is now pinned at 360 by 110, and the header grows to it; see above.) Measured in a browser against this
 stylesheet, widest state: `Generate captions` carrying a three-digit count,
 which is the 131-photograph job.
 
@@ -867,6 +873,14 @@ here because the checklist lines that asked these questions have come off it.
 
 - **Who wrote each caption is the next slice.** Recording it is what lets
   written and reviewed be two counts.
+
+- **Two sentences that guessed get new words.** He approved both by looking at
+  a rendered before and after. Being built on a branch by another builder; not
+  on `working` when this was written.
+  - The loading page, after 20 seconds with no answer, says "Roy R. Fisher is
+    not answering. Close this tab and double-click the icon."
+  - Settings, when Check now cannot reach the update server, says "Could not
+    check for a new version." instead of "You are on the newest version."
 
 ## The 8 September Fable analysis, recorded 17 September
 

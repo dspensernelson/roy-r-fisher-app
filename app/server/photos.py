@@ -64,8 +64,35 @@ def is_reviewed(entry: dict) -> bool:
     A missing key means not reviewed. Every manifest written before review
     existed therefore reads as unreviewed, which is the safe direction: the
     app asks him to look rather than assuming he already did.
+
+    **A tick with no words is not a review, and this is the only place that
+    says so.** Every count, every gate and every screen asks this one
+    question, so the rule cannot be true in one of them and false in
+    another. Before 2026-09-17 the tick was believed on its own: `Clear
+    captions` blanked every caption, left every tick standing, and the screen
+    offered `Build photo pages` in solid red for a report with no words in
+    it while the bar beside it said `0 written`. The three write paths
+    already agreed with this rule -- one tick refuses without a caption,
+    `review-all` skips a blank one, and `reset_changed_reviews` takes the
+    tick off when the words change -- so the rule was already the app's, and
+    only the reading of it was missing.
     """
-    return bool(entry.get(REVIEWED))
+    return bool(entry.get(REVIEWED)) and bool(str(entry.get("caption", "")).strip())
+
+
+def forget_unearned_ticks(entries: list) -> None:
+    """Take off any tick that `is_reviewed` does not recognise.
+
+    The manifest is hand-editable, and a tick left sitting beside a blank
+    caption is a fact that will be read as true by anything that looks at the
+    key instead of asking the question: the screen draws its ticks from that
+    key. So the key itself is kept honest at the two doors the file has,
+    `load_manifest` and `save_manifest`, rather than every reader learning
+    the rule for itself.
+    """
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get(REVIEWED) and not is_reviewed(entry):
+            entry.pop(REVIEWED, None)
 
 
 BANDS = "bands"
@@ -247,8 +274,11 @@ def review_progress(manifest: dict) -> dict:
     outside both halves of the count.
     """
     rows = included(manifest)
-    with_caption = [p for p in rows if str(p.get("caption", "")).strip()]
-    done = [p for p in with_caption if is_reviewed(p)]
+    # Both halves ask `is_reviewed`, so they cannot disagree. They used to
+    # ask differently: the count wanted words, the gate wanted only a tick,
+    # and that one function could say "0 of 12 reviewed" and "all reviewed"
+    # in the same breath.
+    done = [p for p in rows if is_reviewed(p)]
     outstanding = [p["file"] for p in rows if not is_reviewed(p)]
     return {
         "included": len(rows),
@@ -536,9 +566,15 @@ def load_manifest(job: Path) -> dict:
         kept.append(entry)
 
     # Everything on disk has now been reconciled, so his captions, his order
-    # and his ticks are all accounted for. Only now is the list narrowed to
-    # the report. The file on disk still holds every photograph; this is the
-    # view, and save_manifest below is what keeps the two from diverging.
+    # and his ticks are all accounted for. A tick beside a blank caption is
+    # not one of his: it was hand-written into the file, or left behind by an
+    # older build of this app, and the screen would draw it as a review that
+    # happened. Taken off here, in the view only, because a plain GET must not
+    # write.
+    forget_unearned_ticks(kept)
+    # Only now is the list narrowed to the report. The file on disk still
+    # holds every photograph; this is the view, and save_manifest below is
+    # what keeps the two from diverging.
     in_report, chosen, missing = _report_set(job, kept)
     manifest["photos"] = in_report
     manifest["photo_folder"] = chosen
@@ -581,6 +617,12 @@ def save_manifest(job: Path, manifest: dict):
             kept_back = [e for e in existing.get("photos", []) or []
                          if isinstance(e, dict) and e.get("file") not in known]
     out["photos"] = coming + kept_back
+    # The one door every write goes through, so no write can leave a tick
+    # standing beside a caption that has no words. `Clear captions` needs no
+    # rule of its own because of this: it blanks the words here, and the ticks
+    # go with them. The entries are the caller's own dictionaries, so the
+    # answer it sends back to the screen is the same honest list as the file.
+    forget_unearned_ticks(out["photos"])
 
     # The version from just before this write, kept outside the job folder.
     # Nothing here can stop the save that follows: keeping the spare must

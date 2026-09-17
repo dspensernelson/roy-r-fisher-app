@@ -16,10 +16,16 @@ point. Silence would read as nobody having thought about it.
 **Nothing appears under two headings.** The same work in two places is how a
 thing gets built twice or argued about twice, and the test catches it.
 
-**The order of the sections is the argument.** The north star is first because
-everything else is measured against it, then small and close, then far off.
-What he said out loud outranks what a session wrote to itself, and those two
-never share a heading.
+**The order is time order, soonest first.** The north star is at the top
+because everything else is measured against it. Then what needs a decision from
+him, then the update the office is waiting for, then the area of the report
+being built now, then the work he has asked for and not got, then ideas nobody
+has confirmed, then housekeeping. What is finished is last.
+
+Spenser asked for this order on 2026-09-16, because he could not tell what was
+next. The old headings sorted on three different questions at once: how big a
+job is, who asked for it, and whether it was a bug. Where an item sat said
+nothing about when it happens.
 
 Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 `docs/ROADMAP.md`, `docs/THE-WALK-2026-09-04.md` and `docs/CHECKS.md`.
@@ -32,46 +38,8 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Never shown an old screen or an old message
 - [ ] The app never says anything it does not know
 
-## Quick wins
+## What needs you
 
-- [x] The update box must fill the width, not sit in a narrow box on the left · No star
-- [x] The confirm box needs that same width fix · No star
-- [ ] Every message box fills the width, the red error box included · No star
-- [ ] The photographs screen must be readable the way it is at 90 per cent · No star
-- [x] Say what planned workflows means, or stop using the phrase · Star 5
-- [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
-
-## The photographs widget, approved 16 September
-
-- [x] Build the widget to the approved design, saved at docs/design · No star
-- [ ] Record who wrote each caption, so written and reviewed are two counts · No star
-- [x] Reviewed can never be more than written, read from one place · Star 5
-- [x] Add photos becomes the photograph-and-plus icon · No star
-- [x] Clear captions turns red and only appears when there is something to lose · No star
-- [x] The money is always there: an estimate first, then what it cost · Star 5
-- [x] Mark all as reviewed leaves the left and becomes the check in the box · No star
-- [ ] Decide whether A B C stay in the box, and whether they filter · No star
-
-## To get a version to the office
-
-- [x] Find out why every new version dies the first time it runs · Star 2
-- [x] Start the background jobs after the web server, which is what killed it · Star 2
-- [x] Make the launcher say what killed it instead of dying silently · Star 5
-- [x] Prove an update Spenser can take himself, end to end · Star 1
-- [x] Starting the app must open one tab, not two · Star 2
-- [x] An update must leave one tab: the tab Update was pressed in never goes away · Star 1
-- [ ] Nothing tells you the new version started · Star 5
-- [ ] When Check now finds a version, an Update button appears beside it · Star 5
-- [ ] Run the 28 by-hand checks on Windows · No star
-- [x] Upload to the office · No star
-
-## Bugs still open
-
-- [x] A photograph you removed stays in the list and blocks everything · Star 5
-
-## Waiting on Spenser
-
-- [x] Confirm the fixed port is how we get to one tab · Star 1
 - [ ] How far back should the log go · No star
 - [ ] What does Reset put back · No star
 - [ ] Which job produced the 700 KB photographs · No star
@@ -82,6 +50,19 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Who wins when the assessor card and the inspection transcript disagree · No star
 - [ ] Is the 8 September Fable analysis the plan we build to · No star
 
+## Get the office a working update
+
+- [ ] Every message box fills the width, the red error box included · No star
+- [ ] The photographs screen must be readable the way it is at 90 per cent · No star
+- [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
+- [ ] An update must leave one tab: it did not on Windows, two are running · Star 1
+- [ ] Nothing tells you the new version started · Star 5
+- [ ] When Check now finds a version, an Update button appears beside it · Star 5
+- [ ] Run the 28 by-hand checks on Windows · No star
+- [ ] The photographs cover the bar of buttons on the photographs screen · No star
+- [ ] Record who wrote each caption, so written and reviewed are two counts · No star
+- [ ] Decide whether A B C stay in the box, and whether they filter · No star
+
 ## Description of improvements
 
 - [ ] The Make the Word file button does nothing, nothing is wired behind it · Star 5
@@ -90,8 +71,33 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Name the finished Word file the way the photo file is named · No star
 - [ ] Save the 28 August measurement before the parked branch is lost · No star
 
-## He asked for it and it is not built
+## The report, section by section
 
+- [ ] One definition of what a report section is, written down once · No star
+- [ ] One record of what the app knows about a job · No star
+- [ ] A ledger of facts that says where each value came from · No star
+- [ ] One place that reads the source documents · No star
+- [ ] One model call, not one for every section · No star
+- [ ] One Word engine, not one for every section · No star
+- [ ] One review screen that every section uses · No star
+- [ ] Checks on the finished document, run when it is built · No star
+- [ ] Whichever section comes second forces all of the above · No star
+- [ ] The map and picture pages: aerial, neighborhood, plat, sketch, comp map · No star
+- [ ] The four boilerplate sections whose templates already exist · No star
+- [ ] Salient facts, which needs the workbook and a grid together · No star
+- [ ] The three approaches: cost, sales and income · No star
+- [ ] Mark dictates and the app drafts the words into blanks he edits · No star
+- [ ] The engagement letter fills itself in from the job · No star
+- [ ] He drops all the documents in at once and the app sorts them · No star
+- [ ] The whole report: assembly, contents, addenda, the delivered file · No star
+- [ ] Rebuild one delivered job of each report shape, next to the original · No star
+- [ ] Mark unzips once and double-clicks a shortcut for ever · Star 2
+- [ ] Mark gets everything through phase three in one handoff, not a drip · No star
+- [ ] The short form and the other report shapes, each from its own recipe · No star
+
+## You asked for it and it is not built
+
+- [ ] The app looks for a new version on its own, and the version on screen says so · Star 4
 - [ ] Spenser reads the log without asking Colleen to send it · No star
 - [ ] A way past it, wherever the app says no · No star
 - [ ] A layout pass over the job screen · No star
@@ -108,9 +114,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Mark uses his own key eventually, not Spenser's · No star
 - [ ] A goal conversation before each change, and a stop at the end of each phase · No star
 - [ ] Adopt the design system before there are more screens · No star
-
-## Promised to him and not delivered
-
 - [ ] A walk of the photo screen with him before anything was designed on it · No star
 - [ ] A harness that renders a real screen out of the app, so a mockup is true · No star
 - [ ] New job as two centred boxes · No star
@@ -118,34 +121,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] The app guesses a job's name rather than asking him to type it · No star
 - [ ] A log line at every step of starting up · Star 5
 
-## The Fable plan
-
-- [ ] One definition of what a report section is, written down once · No star
-- [ ] One record of what the app knows about a job · No star
-- [ ] A ledger of facts that says where each value came from · No star
-- [ ] One place that reads the source documents · No star
-- [ ] One model call, not one for every section · No star
-- [ ] One Word engine, not one for every section · No star
-- [ ] One review screen that every section uses · No star
-- [ ] Checks on the finished document, run when it is built · No star
-- [ ] Whichever section comes second forces all of the above · No star
-
-## The report, section by section
-
-- [ ] The map and picture pages: aerial, neighborhood, plat, sketch, comp map · No star
-- [ ] The four boilerplate sections whose templates already exist · No star
-- [ ] Salient facts, which needs the workbook and a grid together · No star
-- [ ] The three approaches: cost, sales and income · No star
-- [ ] Mark dictates and the app drafts the words into blanks he edits · No star
-- [ ] The engagement letter fills itself in from the job · No star
-- [ ] He drops all the documents in at once and the app sorts them · No star
-- [ ] The whole report: assembly, contents, addenda, the delivered file · No star
-- [ ] Rebuild one delivered job of each report shape, next to the original · No star
-- [ ] Mark unzips once and double-clicks a shortcut for ever · Star 2
-- [ ] Mark gets everything through phase three in one handoff, not a drip · No star
-- [ ] The short form and the other report shapes, each from its own recipe · No star
-
-## Ideas nobody has confirmed with him
+## Ideas nobody has confirmed with you
 
 - [ ] Click a photograph and see it bigger · No star
 - [ ] Take several photographs out at once · No star
@@ -162,11 +138,30 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 
 ## Housekeeping
 
+- [ ] Packaging a version silently breaks whatever was pointed at the old one · No star
+- [ ] A failed download says nothing until you have tried three times · Star 5
 - [ ] Three plans on disk still have closeout tasks unticked · No star
 - [ ] Nothing stops a version being published before the test machine has run it · No star
 
 ## Done
 
+- [x] The update box must fill the width, not sit in a narrow box on the left · No star
+- [x] The confirm box needs that same width fix · No star
+- [x] Say what planned workflows means, or stop using the phrase · Star 5
+- [x] Build the widget to the approved design, saved at docs/design · No star
+- [x] Reviewed can never be more than written, read from one place · Star 5
+- [x] Add photos becomes the photograph-and-plus icon · No star
+- [x] Clear captions turns red and only appears when there is something to lose · No star
+- [x] The money is always there: an estimate first, then what it cost · Star 5
+- [x] Mark all as reviewed leaves the left and becomes the check in the box · No star
+- [x] Find out why every new version dies the first time it runs · Star 2
+- [x] Start the background jobs after the web server, which is what killed it · Star 2
+- [x] Make the launcher say what killed it instead of dying silently · Star 5
+- [x] Prove an update Spenser can take himself, end to end · Star 1
+- [x] Starting the app must open one tab, not two · Star 2
+- [x] Upload to the office · No star
+- [x] A photograph you removed stays in the list and blocks everything · Star 5
+- [x] Confirm the fixed port is how we get to one tab · Star 1
 - [x] The photographs screen, rebuilt to the approved design · No star
 - [x] Settings, two columns, in his order · No star
 - [x] Close the app moved into the nav bar · Star 3
@@ -177,9 +172,6 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [x] Version numbering: four numbers for test builds, three for the office · No star
 - [x] The checklist page is built by a file, not from memory · No star
 - [x] Every recorded bug checked against the code: thirteen of sixteen fixed · No star
-
-## Bugs already fixed, checked against the code
-
 - [x] Add a photo puts the photograph where the report cannot see it · No star
 - [x] Generating captions deletes photographs you added · No star
 - [x] Taking out a photograph you added leaves a second copy behind · No star
@@ -191,3 +183,4 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [x] A console window sits in front of the app and stays there · Star 2
 - [x] Hitting Mark reviewed with the cursor in the box throws the caption away · No star
 - [x] Nothing happens for a few seconds after you click the icon · Star 2
+

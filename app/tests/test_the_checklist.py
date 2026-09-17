@@ -168,12 +168,28 @@ def test_nothing_appears_under_two_headings():
     assert not said, "\n".join(said)
 
 
-def test_the_quick_wins_come_before_the_far_off_ones():
-    """The order of the sections is the argument he reads. Small and close at
-    the top, things nobody has confirmed at the bottom."""
-    headings = [h.lower() for h, _ in sections()]
-    assert "north star" in headings[0]
-    assert "quick wins" in headings[1]
-    assert headings.index("quick wins") < headings.index("the report, section by section")
-    assert (headings.index("the report, section by section")
-            < headings.index("ideas nobody has confirmed with him"))
+def test_the_headings_are_his_nine_in_time_order():
+    """The order he approved on 2026-09-16: soonest first, the north star at
+    the top because everything else is measured against it, finished work last.
+    He could not tell what was next from the headings before these, because
+    they sorted on three different questions at once."""
+    assert [h for h, _ in sections()] == [
+        "The north star",
+        "What needs you",
+        "Get the office a working update",
+        "Description of improvements",
+        "The report, section by section",
+        "You asked for it and it is not built",
+        "Ideas nobody has confirmed with you",
+        "Housekeeping",
+        "Done",
+    ]
+
+
+def test_every_ticked_item_is_under_done():
+    """Finished work is last and it is only there. A tick left further up the
+    page is how a finished thing keeps reading as next."""
+    for heading, items in sections():
+        for done, text, _ in items:
+            assert done == (heading == "Done"), (
+                "%s is under %s" % (text, heading))

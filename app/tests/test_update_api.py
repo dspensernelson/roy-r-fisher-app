@@ -170,6 +170,71 @@ def test_anything_unexpected_still_reads_as_a_sentence(client, monkeypatch):
     assert client.get("/api/update").status_code == 200
 
 
+def _log_lines():
+    import applog
+    path = applog.log_file()
+    return path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+
+
+def test_a_refused_update_writes_its_sentence_to_the_log(client, monkeypatch):
+    """Found 2026-09-16. A log showed three failed update attempts and could
+    not say what any of them had told her, because the sentence lived only on
+    the screen. One line, in the shape of the check's own lines, whatever
+    shape the sentence had on screen."""
+    def refuse(*_a, **_k):
+        raise updates.UpdateRefused(
+            "The update did not arrive intact and was not installed.\n"
+            "What arrived is not what was published.\n"
+            "Nothing has changed. Try again.")
+
+    monkeypatch.setattr(updates, "prepare", refuse)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    said = [line for line in _log_lines() if " update did not finish " in line]
+    assert len(said) == 1, "the failure is not in the log exactly once"
+    assert "version=0.5.4" in said[0]
+    assert ("said=The update did not arrive intact and was not installed. "
+            "What arrived is not what was published. "
+            "Nothing has changed. Try again.") in said[0]
+
+
+def test_an_unexpected_failure_writes_its_sentence_to_the_log(client, monkeypatch):
+    def explode(*_a, **_k):
+        raise RuntimeError("nobody predicted this")
+
+    monkeypatch.setattr(updates, "prepare", explode)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    said = [line for line in _log_lines() if " update did not finish " in line]
+    assert len(said) == 1
+    assert "said=The update did not finish: nobody predicted this" in said[0]
+
+
+def test_no_key_reaches_the_log_through_a_failure_sentence(client, monkeypatch):
+    """Nothing on the update path reads the key. This holds the second guard:
+    if a key ever did end up inside an error, the log still never gets it."""
+    key = "sk-ant-api03-" + "Q" * 60
+    monkeypatch.setenv("ANTHROPIC_API_KEY", key)
+
+    def leak(*_a, **_k):
+        raise RuntimeError("something mentioned %s" % key)
+
+    monkeypatch.setattr(updates, "prepare", leak)
+    updates.remember(OFFER)
+    client.post("/api/update/start")
+    _wait_for_the_run_to_end()
+
+    text = "\n".join(_log_lines())
+    assert "update did not finish" in text
+    assert key not in text
+    assert "sk-ant-" not in text
+    assert "QQQQ" not in text
+
+
 def test_a_failed_update_never_closes_the_app(client, monkeypatch):
     """The one outcome that would strand him."""
     closed = []

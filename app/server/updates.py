@@ -630,11 +630,21 @@ def fail_run(message: str) -> None:
     `running` goes false so the screen stops polling, and the error stays so
     there is something to read. A failure that cleared itself would leave him
     looking at a screen that had silently gone back to normal.
+
+    **And it writes the sentence down.** On 2026-09-16 a log showed three
+    failed attempts and could not say what any of them had told her, because
+    the sentence lived only here. Written from this one place, so every way a
+    run can fail is covered by the line that stores it. One line: the screen's
+    line breaks and indents are folded to single spaces. Nothing on the update
+    path reads the key, and `applog.note` strips anything key-shaped anyway.
     """
     with _run_lock:
         _run["running"] = False
         _run["stage"] = ""
         _run["error"] = str(message)
+        version = _run.get("version", "")
+    _note("update did not finish", version=version,
+          said=" ".join(str(message).split()))
 
 
 def end_run() -> None:

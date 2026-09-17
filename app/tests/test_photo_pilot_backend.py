@@ -208,10 +208,19 @@ def test_the_first_run_shows_the_approved_five_cent_arithmetic(client, home, mon
     assert shown["arithmetic"] == "12 x $0.0500 = $0.60"
 
 
-def test_the_displayed_total_rounds_up_to_the_nearest_nickel():
-    assert cost.round_up(0.54) == 0.55
+def test_the_displayed_total_rounds_up_to_the_next_whole_cent():
+    """Spenser, 2026-09-17: round up, but to the cent, not to a nickel."""
+    assert cost.round_up(0.54) == 0.54
     assert cost.round_up(0.60) == 0.60
-    assert cost.round_up(0.5001) == 0.55
+    assert cost.round_up(0.5001) == 0.51
+    assert cost.round_up(0.021) == 0.03
+    assert cost.round_up(0.023) == 0.03
+    assert cost.round_up(0.0001) == 0.01
+    # Never down, which is the whole reason it is called a maximum.
+    for cents in range(0, 500):
+        raw = cents / 1000.0
+        assert cost.round_up(raw) >= raw - 1e-9
+        assert cost.round_up(raw) - raw < 0.01
 
 
 def test_a_cheaper_run_lowers_the_rate_by_the_approved_formula(client, home, monkeypatch):

@@ -33,10 +33,13 @@ PRIOR_PHOTOS = 60
 PRIOR_DOLLARS = 3.00
 STARTING_RATE = PRIOR_DOLLARS / PRIOR_PHOTOS          # $0.05
 
-# The displayed total always rounds up to the next nickel, so the figure he
-# reads is never lower than the arithmetic behind it. That is why it is called
-# a maximum and not a prediction.
-ROUNDING = 0.05
+# The displayed total always rounds up, so the figure he reads is never lower
+# than the arithmetic behind it. That is why it is called a maximum and not a
+# prediction. It rounds up to the whole cent. Spenser, 2026-09-17: "As we're
+# pushing it in, I will always want to round up. If it's 2.1, I want to round
+# up to 3. I don't want to round up to a nickel." It was a nickel until then,
+# which overstated a small run: one photograph at 2.3 cents was quoted at 5.
+ROUNDING = 0.01
 
 
 def bucket_name(model: str, image_settings_version: str) -> str:
@@ -98,7 +101,7 @@ def rate_including(bucket: str, extra_cost, extra_photos: int) -> float:
 
 
 def round_up(amount: float) -> float:
-    """Up to the next five cents. Never down."""
+    """Up to the next whole cent. Never down."""
     return round(math.ceil((amount - 1e-9) / ROUNDING) * ROUNDING, 2)
 
 

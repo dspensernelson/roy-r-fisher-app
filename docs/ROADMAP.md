@@ -605,8 +605,11 @@ the review count, the bands still waiting, the folder a photograph came from.
 What blocks a button is said by that button when he hovers it, which took the
 three grey paragraphs about a missing key off the screen entirely.
 
-**Nothing moves.** The header is a fixed 76px, the widget is pinned at 500 by
-76, and the quiet line keeps its 20px whether or not it has anything to say.
+**Nothing moves.** The header is a fixed 76px, the widget is pinned at 360 by
+110, and the quiet line keeps its 20px whether or not it has anything to say.
+Amended in place 2026-09-17: this said 500 by 76, which stopped being true when
+commit 2a020a4 built the widget he approved on 2026-09-16. The 500 and the 516
+measured below are how the widget was sized before that design replaced them.
 The widget's width was measured rather than guessed: 473px for its widest
 ordinary state, 480 with a three-digit count, which is the 131-photograph job.
 A test holds the DOM shape across five states, because a layout that has moved
@@ -722,7 +725,8 @@ done.
 ## Decisions on record (2026-09-07, Spenser, in chat)
 
 Made while building the photo page that holds six, F4. Recorded here because
-the plan that carried out the work has been deleted, and these outlive it.
+the plan that carried out the work has been deleted, and these outlive it. The
+last two were made the same day about photo bands.
 
 - **A value that is copied is a value that will lie, and a second case is what
   makes it lie.** `PHOTOS_PER_TABLE = 3` sat in the engine and the browser had
@@ -750,6 +754,19 @@ the plan that carried out the work has been deleted, and these outlive it.
   own two hundred captions can produce and shows it fits with the full 0.40 inch
   of slack spare. **What the app should do when a job crosses that edge is not
   decided, and shrinking the photographs to dodge it is not the answer.**
+
+- **Photo bands start fresh on every job.** Spenser, 2026-09-07, while
+  approving the switch that turns bands on. Carried here on 2026-09-17 from
+  `docs/plans/2026-09-07-the-bands-switch.md`, which deletes itself. A new job
+  starts with A, B and C only. The app does not remember Warehouse from the
+  last job. Wanting that is a want, and it needs a store outside the job
+  folder, so it is not built.
+
+- **A band's letter is never chosen on screen.** Same day, same plan, carried
+  here for the same reason. `PUT /api/jobs/{name}/bands` gives a letter to any
+  band arriving without one, and refuses a letter the job does not already
+  have. That is what keeps a rename from silently repointing every photograph
+  in the band.
 
 - **The self-immolation rule only bites inside `docs/plans/`.**
   `app/tests/test_plans_delete_themselves.py` reads that one folder and only
@@ -817,6 +834,451 @@ can't actually see that 0.7.0 is running anywhere."*
   black window open, to start the app from it, and to photograph it. All fixed,
   and a test now reads the README and refuses the word.
 
+## Decisions on record (2026-09-17, Spenser, in chat)
+
+Made while answering the notes he left on the published checklist. Recorded
+here because the checklist lines that asked these questions have come off it.
+
+- **Description of improvements is still the next major area.** He said yes.
+
+- **The 8 September Fable analysis is the plan, as a thought.** It is recorded
+  below, under its own heading. Re-run the analysis once description of
+  improvements has reached Mark, past beta and testing.
+
+- **When the assessor card and the inspection transcript disagree, the card
+  fills the field.** The transcript's different value shows beside it, so Mark
+  can switch to it with one click. It only fires when both sources have a value
+  and the two values differ.
+  - **This reverses rule 3 of the parked plan**,
+    `docs/plans/2026-08-29-description-of-improvements.md` on branch
+    `improvements-section`: "The app never settles a disagreement. If the card
+    and the transcript differ, show both and let Mark pick."
+  - **The parked branch never built that rule.** It kept whichever value the
+    model listed first and dropped the other without saying so:
+    `app/web/src/screens/ImprovementsScreen.jsx:150-152` on that branch.
+  - Read it beside the 28 August measurement below, which found the transcript
+    the primary source by count of fields. The two do not conflict: this rule
+    decides only the fields where both sources carry a value.
+
+- **A, B and C stay in the box. Clicking one filters the photographs to that
+  band.** Not built yet. The unbuilt part of the 7 September plan
+  `docs/plans/2026-09-07-the-bands-switch.md`, where a click on a band opens a
+  step to rename or remove it, is set aside.
+
+- **Who wrote each caption is the next slice.** Recording it is what lets
+  written and reviewed be two counts.
+
+## The 8 September Fable analysis, recorded 17 September
+
+**Re-run it once description of improvements reaches Mark.** Spenser decided on
+2026-09-17 that this analysis is the plan, as a thought, and that it is run
+again once description of improvements has reached Mark, past beta and testing.
+
+Written by Claude on 2026-09-08 and never saved to the repository. It lived
+only in that session's log. Recorded here on 2026-09-17 with its findings and
+its reasoning intact; the wording is tightened in places and nothing it
+concluded has been changed. Figures in it, such as the test count and how far
+the parked branch had drifted, are as they were on 2026-09-08. On 2026-09-17
+the parked branch was 160 commits behind, not 78.
+
+Its list of what should exist once was also nine lines on the checklist until
+2026-09-17. They came off in favour of one line: re-run this analysis.
+
+**Three findings from the last round of reading changed the analysis.** The old
+system's own operating rules, read in full, are about half compensations for a
+runtime that forgets. The two built sections in the app implement the same five
+patterns twice with no shared code. And the old system's hard-won rule that
+records beat field notes on physical facts is the opposite of what the new
+Description of Improvements plan says.
+
+**In one paragraph.** You have a product platform with one section on it. You
+are building a report engine whose fourteen sections are six kinds of work over
+eight kinds of page content. What connects them is not yet written: a
+definition of what a section is, one home for what the app knows about a job,
+and a ledger of facts that says where each value came from.
+
+### What you have now
+
+**The old system was a procedure executed by a model.** Strip away the files
+and it was this: a model read a written procedure, looped over the state of a
+folder, called scripts as tools, and talked to Mark through a scoreboard and
+one popup per turn. The filesystem was its database. Markdown files were its
+memory. Delivered reports were both its template library and its answer key. A
+human was its event loop: nothing happened until someone said so, and every
+input arrived as a file drop. Its central idea was that format should be
+inherited from delivered work rather than re-derived, and its central
+discipline was that numbers come only from the workbook or a document,
+judgment is Mark's, and a conflict is flagged, never settled.
+
+Read its operating rules with one question in mind: would this rule exist if
+the runtime had memory, a screen, and control of its own files? About half
+would not. The scoreboard format, the one-popup rule, the banned words, the
+decisions file, the checklist file, the prove-missing rule, the output-folder
+hygiene rule, the kit staging and byte audit, the source-trail companion files,
+the delete-the-digest dance, the renderer parity rule, and the proctor gates on
+tests are all patches for a runtime that forgets, litters, and cannot see. The
+other half is domain knowledge, and it is good: the engagement matrix, the
+measured rulebook, the map of where every input comes from in the world, the
+verbatim citations, the folder guides, the precedence rule for conflicting
+sources, the footer-year rule, the rule that candidate values are never picked,
+the transmittal value-block variants, and the per-shape gates on thin evidence.
+
+Where it broke is precise. It reached production quality on correctness twice
+and never on look. The failures cluster in one place: anything that needs
+pixel-exact reproduction. Grid pictures from Excel, exhibit pages bound at the
+right spine position, front matter with the logo, approach depth made of dozens
+of pasted images. A model orchestrating scripts by rendering pages and looking
+at them is a poor renderer. That is not a flaw in the recipes. It is a flaw in
+using a model as the runtime.
+
+**The app is a reconciliation loop over Mark's folders, with a product platform
+under it.** The app never owns his files. It reads a folder, reconciles what it
+sees against its own notes, shows him the difference, and asks one question
+inside one action. Its invariants are enforced by code and by 1,413 tests
+rather than by instruction: three classes of file, refusals worded as sentences
+with a door, no key past the server, a click leads to a step, a spend confirmed
+before it happens, a file never overwritten. The model is a component with a
+narrow contract. The corpus plays the same role it played for the old grader,
+the answer key, but automated and cheap. The platform is real and shared:
+atomic state, busy and progress, usage and pricing, the log, packaging,
+install, update, settings. The parked Description of Improvements branch reused
+pricing, usage, and state without touching them, which is the proof.
+
+Underneath, it is still a photograph application with a job shell around it.
+Nearly half the route file is photo logic. The photo module and photo screen
+are the two largest files in the tree. The job screen is a folder inventory
+with one section name typed into the code. Eight of nine classification labels
+act on nothing. The old readiness table sits in the tree unread, which means
+the app has lost something the old scoreboard could do: say "waiting on: the
+deed" per section.
+
+**The claim that the app has replaced the old system everywhere it has been
+built is true only in a narrow sense.** For job setup and photo pages, the app
+exceeds the old system in every respect. But the old system could draft
+thirteen of fourteen sections and bind them into a report, badly. The app
+drafts one section and cannot bind. What the app has replaced is the old
+system's runtime and platform: the chat agent, the memory hacks, the human
+event loop, the absent delivery. What it has not replaced is the old system's
+coverage or its binding, and its knowledge has migrated at the rate of one
+section in fourteen. No number has yet flowed through the app, so the old
+system's strongest property, every figure traced to the workbook, has no
+counterpart in the app at all. The old system is retired. It is not replaced.
+It is a quarry that is mostly unquarried.
+
+**What the migration really is.** The proposed framing is right on three axes
+and wrong on two.
+
+- **Persistent state:** yes, strongly, though fragmented.
+- **Bounded model use:** yes, and narrower than before, with one mechanism the
+  old system lacked, quote verification against the source.
+- **Reusable rendering:** half. The Office bridge is reusable and proven. The
+  Word layer is two parallel implementations.
+- **Deterministic services:** the old scripts were already deterministic. What
+  actually changed is that the orchestration became deterministic. The model
+  was demoted from runtime to component.
+- **Sections as data:** not yet, and on this axis the app is behind the old
+  system. The old system held its section knowledge as recipes with instance
+  counts, a rulebook, a readiness table, and a rubric ledger. The app holds the
+  engagement matrix and one layout file consumed by a bespoke module.
+
+Three things the framing misses. The human's role changed from event loop to
+operator, which is what forced the hygiene rules into code. The corpus changed
+from template library to test oracle. And delivery, absent in the old system,
+is a third of the app. So this is a migration of runtime and platform first and
+knowledge second, and the knowledge migration has barely begun.
+
+### What you are building
+
+**Fourteen sections are six kinds of work.** Measured over whole delivered
+reports, not only the two sections. Every numeric grid in the corpus is a
+pasted picture from Excel. The Word tables that exist are the photo pages, the
+correlation value box, and front matter. A sales comparison section in the
+Utica report is prose blocks, one comparables grid picture, one map picture,
+and one table, over about 150 elements. So the page content of every section is
+a composition of eight primitives:
+
+| Primitive | Where it appears |
+|---|---|
+| A picture placed on a page under a running header | Aerial, neighborhood map, plat, sketch, comparable map, traffic map |
+| A repeated picture-and-caption cell | Photo pages |
+| A labelled field: bold label, tab, value | Description of Improvements, Salient Facts, Site Analysis, Neighborhood, Market Overview sub-heads |
+| A grid picture rendered from a workbook range | Assessment grid, building summary, unit mix, sales grid, cost table, income summary, the ESRI market profile |
+| Prose with a known provenance: verbatim boilerplate with slots, model text from ticked facts, model text from data, or Mark's own | Every narrative section |
+| A sub-block repeated per entity: per building, tenancy, scenario, comparable | Improvements, approaches, scenario reports |
+| Page furniture: running header with CONTINUED, page X of Y, copyright year, margins | Every section |
+| Binding: order, table of contents, addenda, PDF | The report |
+
+Sections then group by what drives them and who supplies the words, because
+that is what decides the screen:
+
+| Kind of work | Sections | Source | Model's part |
+|---|---|---|---|
+| Image assembly | Aerial, maps, plat, sketch, comparable map; photo pages are the rich case | Files Mark drops or chooses | None, except captions |
+| Workbook fill | Salient Facts, the assessment grid, and the numeric skeleton of Cost, Sales, and Income | The workbook, read without Excel, rendered through the bridge | None |
+| Structured extraction | Description of Improvements, Site Analysis facts, Neighborhood from the transcript | Assessor card, transcript, zoning and flood documents | Extract with a quote, Mark ticks |
+| Data plus prose | Market Overview, the narrative of the approaches | ESRI spreadsheet, CoStar report, workbook | Write at length from numbers, behind Mark's edit |
+| Boilerplate with slots | Title, Transmittal, Certification, Limiting Conditions, Statement of the Problem, Highest and Best Use skeleton, methodology paragraphs | The brief and the workbook conclusions | None |
+| Binding | Table of contents, order, addenda, final PDF | Built sections | None |
+
+Two consequences. The three approaches are not their own kind. They are
+workbook fill plus data-plus-prose plus repetition, the largest compositions in
+the report, which is exactly why the old system failed on them. And Market
+Overview is the only place the model writes at length. It is a different risk
+class from everything else, and the old rubric rated it yellow with no retail
+donor in the corpus.
+
+**What should exist once.** The evidence for each item is that it already
+exists twice.
+
+- **A section definition, as data.** Name, which shapes carry it, its kind of
+  work, what it needs and from which folder or sheet, its template, its state
+  store, its build. Today that knowledge is split across a typed string on the
+  job screen, a planned-workflow row, the orphaned readiness table, the brief's
+  empty donor column, and the matrix.
+- **One job record.** The brief holds eight assignment fields in the job
+  folder. Mark's corrections and photo folder choice sit in a home-folder file
+  keyed by resolved path. The photo manifest holds the report year, caption
+  style, photographs per page, and bands, which are job facts inside a section
+  store. The Improvements state sits in another home file keyed the same way.
+  Two homes, four stores. A job renamed or moved on the Z drive keeps its
+  manifest and loses everything keyed by path, silently.
+- **A fact ledger with provenance.** The Improvements layout file already says,
+  per field, whether the value comes from the card, the transcript, both, Mark,
+  or nowhere. Captions carry a reviewed tick. Classifications carry a state.
+  Job facts carry a correction. These are four partial versions of one thing: a
+  value, its source, its quote or cell, whether Mark confirmed it, and where it
+  was used. That is the direct descendant of the old source trail and decisions
+  file, and it is the abstraction every remaining section needs.
+- **A source-document layer.** Find, rank, confine, and read a PDF, a Word
+  file, a spreadsheet. The Improvements branch built it for two file kinds with
+  filename hints. The old digest knew which 25 sheets matter and how to tell a
+  blank workbook from template chrome. The bridge's extractor reads a range.
+  Three readers, no shared layer.
+- **One model call.** Client construction, key, no retries, structured parse,
+  the error ladder, usage recording. Duplicated line for line between the
+  caption module and the Improvements module.
+- **One Word engine.** Reading a template's shape, repeating a block, fitting
+  an image, filling a label, rewriting the year, keeping page numbers alive,
+  merging orphan sections, naming the output, never overwriting. Today the
+  photo engine has the furniture, naming, and table repetition. The
+  Improvements engine has shape reading, block repetition, and field fill.
+  Neither has the other's half, and the Improvements template has no footer at
+  all while the photo templates carry a copyright year rewritten at build.
+- **One review screen shell.** Sources, confirm the spend, review with ticks,
+  build, open in Word. The photo screen and the Improvements screen are that
+  shape twice.
+- **Output checks.** The old standards check enforced em dashes, footer year,
+  header repetition, and photo geometry on every built file. The app has those
+  as tests only. A built file is never checked at build time.
+
+### The architecture that should connect them
+
+**What has moved into software, and what has not.**
+
+| Responsibility | Old home | Now |
+|---|---|---|
+| Job creation, naming convention, folder shape | Onboarding skill, cloned template | Code, measured from the corpus |
+| Section list per shape | Matrix plus popup | Matrix read at run time |
+| Per-section readiness, "waiting on" | Readiness scan plus guides plus scoreboard | Lost. Folder inventory only |
+| Memory, never ask twice | Decisions and conventions files | Stored answers, four stores |
+| Photo triage, order, captions, pages | Script plus rules | Code, beyond the old |
+| Never invent, flag do not settle | Instruction | Prompt rules, quote verification, refusals |
+| Candidate values never picked | Instruction | No counterpart, no numbers flow yet |
+| Chat interface | Scoreboard, one popup, banned words | Screens, a click leads to a step |
+| Kit integrity | Byte audit of the kit | Manifest check of the package |
+| Grading | Conductor and grader skills, human proctor | Tests against the corpus, hand checks |
+| Excel and Word rendering | AppleScript, Spenser warming Office | Bridge on a branch, cold Office is a sentence |
+| Delivery and updates | None | Package, install, update, rollback |
+| Workbook reading, sentinels, chrome | Digest script | Not in the app |
+| Binding, table of contents, addenda | Assembler script | Not in the app |
+| Exhibit geometry per sheet | Exhibit script | Not in the app |
+| Per-section input contracts, registers, spine tables, scenario rules, footer-year rule, caption grammar per shape | Recipes and matrix prose | Not in the app |
+| Which photographs, effective age, condition, adjustments, which value is final, comp pin maps, how he sequences his own work | Mark | Mark |
+| Filename prefixes as order and caption, subfolder conventions, the workbook's one-column-per-building layout | His files | His files, and the app now asks rather than reads |
+
+**Domain knowledge against baggage, and the one that matters.** The
+classification above holds for almost everything. One item deserves its own
+paragraph. The old system started with "never settle a conflict, flag it" and
+paid for it: 78 flags reached Mark in one run and about ten were genuinely his.
+It then adopted a precedence rule. On a physical or recorded fact, building
+size, year built, dates, parcel, the record beats the field note, the
+resolution is written down, and drafting continues. Popups are reserved for
+judgment and for gaps. The new Improvements plan says the app never settles a
+disagreement. That reverses a measured lesson. The right shape is neither rule
+alone. It is a per-field policy in the fact ledger: physical facts resolve to
+the record and show the override, judgment stays Mark's, gaps stay blank. The
+layout file already has the column for it.
+
+**Where the current architecture will hurt as sections are added.**
+
+- Two homes for job state, keyed two ways.
+- Three route styles: inline in the main file, a router carrying its domain
+  logic, and a router over engine modules.
+- A build route whose refusal ladder is 150 lines of photo-specific code in the
+  main file.
+- The report year set to today's year at the first manifest write, per section,
+  when the old rule is the publication year, per job.
+- Two Word engines with disjoint halves and different furniture.
+- The model client twice.
+- The interface copying engagement lists, property types, a default state, a
+  tranche size, and two brand colours.
+- Two ways of knowing what a file is: nine labels Mark applies, and filename
+  hints the Improvements reader uses.
+- The section picker unreachable after creation.
+- The matrix's scenario, property-type, and effective-date tables read by
+  nobody.
+
+None of these is wrong for one section. Each becomes a copied value the moment
+there are two, and the copied-value defect is the one this project has now paid
+for five times.
+
+**The boundaries that are visible now.**
+
+- Mark's files, the app's notes, and generated outputs: stated, enforced, with
+  the photo manifest as the grandfathered exception because it is hand-editable
+  and travels with the job.
+- Deterministic against model: enforced by folder, since the engine has no
+  model and the server has the model and the routes.
+- Observed fact, Mark's judgment, model suggestion: visible for the first time
+  as a per-field attribute in the Improvements layout, and it is the axis the
+  whole report runs on.
+- Job-wide against section-local facts: year, scenarios, buildings, tenancies,
+  engagement, effective date, city and address are job facts, and today some
+  live in a section store.
+- Report shape against section: five shapes now, not four, with the land
+  appraisal resting on one instance.
+- Platform: one function answering "are we on Windows", used three times the
+  same way.
+- And the one boundary the old contract left open and the app has settled:
+  Word is the editor, the app builds and gets out of the way, and nothing
+  reaches into a built file.
+
+**What the analysis makes unavoidable.** Not an order of sections. One fact:
+whichever section comes second forces the section definition, the single job
+record, the shared Word engine, and the fact ledger, because the second section
+is where every one-off becomes a copy. The Improvements branch already shows
+this. It reused the platform cleanly and rebuilt the section machinery from
+scratch, and it is the section machinery that drifted 78 commits behind.
+
+## Description of Improvements, measured (2026-08-28), recovered 17 September
+
+**Recovered on 2026-09-17 from branch `improvements-section`**, where it was
+`docs/ROADMAP.md:359-440`. It existed nowhere on `working`, and the branch is
+parked and 160 commits behind, so it is copied here unchanged, below this note,
+before the branch can be lost.
+
+Two files from that branch came with it, byte for byte, taken with
+`git show improvements-section:<path>`:
+
+- `app/data/improvements-layout.md` is now at
+  `docs/design/improvements/improvements-layout.md`.
+- `app/templates/Improvements.docx`, the template approved as the governing
+  source for the section (see the 2026-08-17 decisions above), is now at
+  `docs/design/improvements/Improvements.docx`.
+
+**They are under `docs/`, not `app/`, on purpose.** `tools/package_windows.py`
+copies `app/data` and `app/templates` whole into the Windows package
+(`APP_PARTS`, line 58), and nothing on `working` reads either file. Putting them
+under `app/` would have changed what Mark receives. `docs/` is left out of the
+package. When the section is built, the files move to `app/` with the code that
+reads them. The layout file's first line still names `app/templates/`, because
+it is the branch's copy and has not been edited.
+
+Replaces an earlier attribution built from Mason City alone, which was wrong.
+That job's Description of Improvements traces to the Clinton Walmart report in
+its own `Old Reports` folder, and that report's text is Iowa City's. One job is
+not a measurement, which is a rule this file already carried.
+
+### Decided
+
+- **Narrative1 is replaced, not fed.** Mark's workbook pushes values into Word
+  through `DOCVARIABLE` fields (`BuildingsTotalGBA`, `Building1YearBuilt`,
+  `BuildingsParkingSpaces`, `BuildingsLandtoBuildingRatio`,
+  `BuildingsCapsuleDescription`), all present in both his documents and the
+  workbook itself. The app neither writes into that chain nor reads it. It
+  reads the sources and writes the document. Consequence: the app owns the
+  arithmetic N1 used to do.
+- **The section is built toward Blaul Lofts**, after Spenser spoke to Mark.
+- **Mechanical Equipment and Site Improvements are in the layout** even though
+  Blaul omits both, labels taken from 215 E 37th. Blaul's own transcript
+  carries the mechanical detail its document does not print, so the omission is
+  Mark's rather than the source's.
+- **The template is authored, not stripped from a delivered report.** It is the
+  layout, the file Spenser can open and change, and the yardstick the tests
+  measure against, all as one artifact.
+
+### Measured
+
+- **No firm-wide layout exists.** Nine delivered reports carry the section and
+  no two share a 60-character run of text, compared letters-only so PDF spacing
+  cannot hide a match. The property-independent boilerplate appears in one
+  report each.
+- **The Mills Fleet Farm rack is one lineage, not a standard.** Its blocks
+  (Overall Rating, Equipment and Mechanical, Interior Description, Remodeling,
+  Building Floorplan) appear in 1 of those 9. It descends Iowa City to Clinton
+  to Mason City to Mills. Do not propose it again as the template.
+- **Blaul Lofts, 215 E 37th and Brookside are one layout family.** Foundation,
+  Exterior Walls, Roof and Windows appear in all three with identical labels in
+  identical order. That is the only hard spine in the corpus.
+- **Where Blaul's values come from**, measured against its own assessor card
+  and inspection transcript, both in the vault at
+  `Report Examples/BURLINGTON_425 Valley St, (Blaul Lofts)`:
+
+  | Source | Labeled fields, of 21 |
+  |---|---|
+  | Transcript alone | 9 |
+  | Transcript and PRC together | 3 |
+  | PRC alone | 1 |
+  | One source plus a third | 3 |
+  | Neither source | 4 |
+  | Contradicts its own source | 1 |
+
+  **The transcript is the primary source, not the assessor card.** The numbers
+  split cleanly: four exact PRC reads (GBA 70,607, 39 units, built 1915, the
+  7,672 fourth floor), two calculations (land to building, 21,294 / 70,607 =
+  0.30 to 1; actual age from 1915), one from the lease (4,134 commercial
+  suite), and two judgments that are always Mark's (effective age 20, remaining
+  economic life 30).
+
+- **Four fields have no source at all**: Store Fronts; Ceilings and Lighting
+  under common areas; Parking under the commercial suite. They come out blank
+  and marked. They are where a filler would invent.
+
+- **Mark already performs the extraction step by hand.** The Blaul folder holds
+  his raw dictation and a cleaned version reorganised under Building Exterior,
+  Building Interior and Common Areas, Apartment Units, and Commercial and Event
+  Spaces. Those are the document's own blocks. The seam the app needs is one he
+  is already working.
+
+- **Two drifts in the delivered document, found by attributing it.** Bathrooms
+  says full baths in every unit; his transcript records three-quarter baths in
+  four of the six units inspected. Kitchens says granite; the transcript says
+  hard surface six times and never granite. Neither is large, and both are what
+  a draft showing its sources would have caught. That is the argument for
+  showing them.
+
+### Owed
+
+- The fill is unproven. Nothing reads a PRC or a transcript yet.
+- The layout rests on three documents, one of which is not delivered work.
+  Further apartment or mixed-use reports from Mark are worth more than any
+  additional work against this corpus.
+
+## Later
+
+Far-off work taken off the checklist on 2026-09-17, so the checklist holds what
+is next. One line each: what it is, why it is far off, and where this file
+already reasons about it. Nothing here is approved to build.
+
+- **The app suggests what a file is from its name, for him to confirm.** Not approved or designed, and it first needs a measurement of how often a name's prefix would be guessed wrong, which was its own checklist line and is folded in here. See "Still owed out of that work" above, and F10 in `docs/FUTURES.md`.
+- **Offer to move a file to the part of the report it belongs in.** It runs against the rule that the app never touches Mark's folders, and Phase 4 has not yet decided whether sorting shows a category or moves a file. See Phase 4 below.
+- **Select photographs across more than one folder.** Deliberately not built until he has wanted it twice. See "Still owed out of that work" above, and F11 in `docs/FUTURES.md`.
+- **What happens when captions overflow a six-photograph page.** Not decided, and the worst page Mark's own two hundred captions can make still fits with 0.40 inch spare. See the 2026-09-07 decisions, "A test that fails by design is not a test".
+- **Its own web address for updates instead of Cloudflare's.** One appraiser downloading now and then is nowhere near the development address's limit. See "Where updates will be pushed from, 2026-08-27".
+- **Sign the package so it proves who built it.** The hash check guards against accident, not against an adversary, and that limit is already said on the screen where Mark decides. See "What the checking does and does not do, 2026-08-28".
+- **The job screen says what information a job still needs.** It waits for the information-needs slice, and `readiness_scan.REQUIREMENTS` sits in the tree for it. See "Carried out of Phase 0" above, and the 8 September analysis, which names per-section readiness as something the app lost.
+- **Find out which band names the office types, and whether clicking beat dragging.** A measurement of the office's own use, not a build, and it needs jobs made with bands to measure. It was the closing task of both 7 September band plans. See F6 in `docs/FUTURES.md`, which names the band vocabulary as unmeasured.
+
 ## The punch list
 
 It lives in `docs/PUNCHLIST.md`. It is a work list, and this file is not one:
@@ -875,6 +1337,12 @@ single hardcoded buildable-section string in
 `app/web/src/screens/JobHome.jsx` with a real registry, because this phase
 is where one section becomes many.
 
+Off the checklist on 2026-09-17, where each was one line:
+
+- The map and picture pages: aerial, neighborhood, plat, sketch, comp map
+- The four boilerplate sections whose templates already exist
+- Salient facts, which needs the workbook and a grid together
+
 **Phase 3: the approaches.** Cost, Sales, Income. Each approach's
 furniture comes from its own recipe and they do not share one structure:
 Sales uses per-comparable pages in one variant only and has two other
@@ -882,6 +1350,10 @@ measured variants; Income uses rent grids, survey exhibits, and operating
 statements, with no per-comparable pages at all; Cost has its own ordered
 block list. Grids come from the bridge. Template manufacturing at full
 speed under the gate above. Longest phase.
+
+Off the checklist on 2026-09-17, where each was one line:
+
+- The three approaches: cost, sales and income
 
 **Phase 4: the model's sections.** Prose drafting from dictation into
 structured blanks Mark edits. The engagement letter into the intake form.
@@ -893,6 +1365,12 @@ confirmation, what stays blank when extraction is uncertain, whether
 sorting displays a category or moves a file, and where app-owned
 classifications live without touching Mark's folders.
 
+Off the checklist on 2026-09-17, where each was one line:
+
+- Mark dictates and the app drafts the words into blanks he edits
+- The engagement letter fills itself in from the job
+- He drops all the documents in at once and the app sorts them
+
 **Phase 5: the whole report, and handoff.** Assembly, TOC, addenda, the
 delivered PDF. The finish test: the app rebuilds one delivered job per
 report shape as that shape's sections land, Mason City first, each result
@@ -903,6 +1381,13 @@ distribution, so Mark's whole experience is unzip once, double-click a
 shortcut forever. The Windows Photo Pilot ships a bounded early package to
 prove installation and startup. Final packaging is still this phase, and the
 pilot does not close it.
+
+Off the checklist on 2026-09-17, where each was one line:
+
+- The whole report: assembly, contents, addenda, the delivered file
+- Rebuild one delivered job of each report shape, next to the original
+- Mark gets everything through phase three in one handoff, not a drip
+- The short form and the other report shapes, each from its own recipe
 
 ## The quarry: what the locker gives each phase
 

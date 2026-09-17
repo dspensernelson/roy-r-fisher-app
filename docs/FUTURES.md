@@ -111,9 +111,14 @@ designed and must not be built until it is.**
 
 ## F6. Photo bands, 2026-09-02
 
-**Designed 2026-09-02 with Spenser, in chat. Not approved to build.** The
-design is here rather than in a plan because no slice has opened and a plan is
-a work list with a death date.
+**Built 2026-09-07 and shipped in 0.6.8, with the switch that turns bands
+on.** Approved that day and carried out by `docs/plans/2026-09-07-photo-bands.md`
+and `docs/plans/2026-09-07-the-bands-switch.md`. The design below is as it was
+written on 2026-09-02. Where the build differs: the unassigned strip became a
+line counting the photographs still waiting. On 2026-09-17 Spenser decided A, B
+and C stay and a click filters the photographs to that band, which is not built,
+and set aside the unbuilt click to rename or remove a band. Both are in
+`docs/ROADMAP.md`.
 
 Mark turns bands on, clicks one dot under each photograph, and the photo pages
 come out arranged the way the property reads. One click per photograph instead

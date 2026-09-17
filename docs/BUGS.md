@@ -299,8 +299,8 @@ anybody sees, every time.
 
 ## B12. The update box sits narrow on the left instead of spanning the screen
 
-**STILL LIVE, 2026-09-16.** Checked against the code at `app/web/src/brand.css:227` and `:1052`.
-**Worse than this entry says.** `.confirm` is still capped at 720px and `.update-step` now adds a 560px cap, so the box is narrower than when the bug was written. The commit `fab1192`, "docs: the update box must fill the width", changed no CSS at all.
+**FIXED ON `working`, 2026-09-17. NOT YET SEEN ON WINDOWS.** Checked against the code at `app/web/src/brand.css:226-230` and `:1070`, by commit `2e60806`. `.confirm` has no `max-width` and `.update-step` is `width: 100%`. 0.7.6.1 on the virtual machine carries it and the office's 0.7.6 does not. The update box belongs to the version an update starts from, so the first time it can be seen on Windows is an update started from 0.7.6.1. Nobody has watched it there yet.
+**Was worse than this entry says, on 2026-09-16.** `.confirm` was still capped at 720px and `.update-step` added a 560px cap, so the box was narrower than when the bug was written. The commit `fab1192`, "docs: the update box must fill the width", changed no CSS at all.
 
 **What happens.** The "Update to version 0.6.5?" box stops at 720px and leaves
 open space to its right instead of filling the width Settings gives it.

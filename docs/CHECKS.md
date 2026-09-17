@@ -136,10 +136,8 @@ on Windows. Check 15 is the one that finds out.
 
 > ### Check 16. Starting it twice does not give you two of it
 > With the app already open and working, double-click the icon again.
-> **Should:** you are put back in front of the app you already had. No loading
-> page this time, because there is nothing to wait for.
-> **Wrong if:** a loading page appears, or a second copy starts, or you are told
-> another version is running.
+> **Should:** a loading page says it is closing the copy already open, then it becomes the app.
+> **Wrong if:** two copies end up running, it says it could not close the first, or the page never becomes the app.
 
 > ### Check 17. A damaged copy still stops you
 > Copy the whole version folder to the Desktop. In the copy only, open

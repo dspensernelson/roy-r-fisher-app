@@ -56,19 +56,22 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] Which job produced the 700 KB photographs · No star
 - [ ] What is the black window that appears after an update · Star 4
 - [ ] What should the loading page say when it cannot reach the app · Star 5
-- [x] Confirm the fixed port is how we get to one tab · Star 1
+- [ ] Confirm the fixed port is how we get to one tab · Star 1
+- [ ] Did the photographs widget replace the short list in the upper right · No star
 
 ## Get the office a working update
 
 - [ ] Every message box fills the width, the red error box included · No star
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
-- [ ] An update must leave one tab: it did not on Windows, two are running · Star 1
+- [ ] An update must leave one tab: unproven until an update starts from 0.7.6.1 · Star 1
 - [ ] Nothing tells you the new version started · Star 5
 - [ ] When Check now finds a version, an Update button appears beside it · Star 5
 - [ ] Run the 28 by-hand checks on Windows · No star
 - [ ] The photographs cover the bar of buttons on the photographs screen · No star
 - [ ] Record who wrote each caption, so written and reviewed are two counts · No star
+- [ ] A failed update's reason is never written to the log · Star 5
+- [ ] The written count includes photographs taken out of the report · No star
 - [x] The update box must fill the width, not sit in a narrow box on the left · No star
 - [x] The confirm box needs that same width fix · No star
 - [x] Say what planned workflows means, or stop using the phrase · Star 5
@@ -107,7 +110,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 ## Description of improvements
 
 - [ ] The Make the Word file button does nothing, nothing is wired behind it · Star 5
-- [ ] The parked work is 142 versions behind and conflicts in four files · No star
+- [ ] The parked work is 160 versions behind and conflicts in seven files · No star
 - [ ] The job screen knows one section by name and needs a real list · No star
 - [ ] Name the finished Word file the way the photo file is named · No star
 - [x] Save the 28 August measurement before the parked branch is lost · No star
@@ -135,6 +138,7 @@ Detail lives in `docs/BUGS.md`, `docs/FUTURES.md`, `docs/PUNCHLIST.md`,
 - [ ] New job as two centred boxes · No star
 - [ ] Manage active jobs · No star
 - [ ] A log line at every step of starting up · Star 5
+- [ ] Clicking A, B or C shows only that band's photographs · No star
 - [x] Stop the green and red boxes piling up · Star 4
 - [x] Mark uses his own key eventually, not Spenser's · No star
 

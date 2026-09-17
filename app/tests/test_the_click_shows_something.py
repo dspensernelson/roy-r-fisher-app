@@ -75,10 +75,32 @@ def test_giving_up_never_claims_the_app_did_not_start():
         assert lie not in late, lie
 
 
-def test_giving_up_points_at_the_tab_the_app_opened_for_itself():
-    page = splash.page(51234, "0.6.8").lower()
-    late = page[page.index('class="late"'):]
-    assert "another tab" in late or "other tab" in late
+# Superseded on 2026-09-17 by Spenser's approved wording. This used to require
+# the page to point at "the other tab". It said the app had "probably" opened
+# there and that this was how the browser is set up "on some computers", which
+# were two guesses about a machine the page cannot see. What the page does
+# know is that the app is not answering it, so that is what it says.
+def _late_text(page):
+    late = page[page.index('<div class="late">'):]
+    late = late[:late.index("</div>")]
+    return [" ".join(re.sub(r"<[^>]+>", "", p).split())
+            for p in re.findall(r"<p>(.*?)</p>", late, flags=re.S)]
+
+
+def test_giving_up_says_only_what_the_page_knows_in_his_words():
+    page = splash.page(51234, "0.6.8")
+    assert _late_text(page) == [
+        "Roy R. Fisher is not answering.",
+        "Close this tab and double-click the icon.",
+        "If that does not work either, send Spenser this whole window.",
+    ]
+    assert "<p><strong>Roy R. Fisher is not answering.</strong></p>" in page
+
+
+def test_giving_up_no_longer_guesses():
+    late = " ".join(_late_text(splash.page(51234, "0.6.8"))).lower()
+    for guess in ("probably", "some computers", "other tab", "another tab"):
+        assert guess not in late, guess
 
 
 def test_it_keeps_looking_even_after_it_has_given_up():
@@ -150,8 +172,8 @@ def test_it_can_say_what_is_happening_instead():
 
 
 def test_it_can_be_told_to_wait_longer_before_giving_up():
-    """Stopping the old copy is a legitimate wait. Saying "look in another tab"
-    in the middle of it would point him at the copy being closed."""
+    """Stopping the old copy is a legitimate wait. Saying "not answering"
+    in the middle of it would send him away from a start that is going fine."""
     page = splash.page(51234, "0.6.8", patience=90)
     assert "90 * 1000" in page
 

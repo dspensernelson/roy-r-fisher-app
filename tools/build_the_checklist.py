@@ -34,10 +34,19 @@ A ticked item is on the page twice: once under its own heading, out of view,
 and once in `Done`. The line at the end of each heading swaps which of the two
 you can see, so nothing is open in two places at once.
 
-**Notes, asked for on 2026-09-16.** Every row carries a small control to the
-left of its star. A note is keyed on the item's own words, not on where the
-item sits, so it follows the item when the list is reordered or the item moves
-to another heading. See `note_key`. He clicks it, types a note about that item, and it is read
+**The north star is five headings, since 2026-09-17.** Spenser asked for the
+starred items to be pulled together, because they are the important ones. Each
+of his five sentences is a heading, the first five in `docs/NOW.md`, and an
+item naming `Star N` sits under the Nth. The suffix stays in the file, because
+it is how an item finds its heading. The page no longer draws it beside the
+words: the heading above already says it, and a badge repeating that on every
+row is ten words where three will do. `complain` says when an item sits under
+the wrong star.
+
+**Notes, asked for on 2026-09-16.** Every row carries a small control at its
+end, where the star used to be drawn. A note is keyed on the item's own words,
+not on where the item sits, so it follows the item when the list is reordered
+or the item moves to another heading. See `note_key`. He clicks it, types a note about that item, and it is read
 back out of the store with a tool call, so he never copies anything. The note
 goes to the artifact's own database when the page is published and to the
 browser when it is opened as a file, which is what he does on his Mac. It is
@@ -48,8 +57,8 @@ exception to "nothing is invented here".
 
 **What it adds that the old inline version did not:** a count on every heading,
 so the shape of the work is visible without reading it, and headings that fold.
-Folding is off for the first two sections, because the north star and the work
-to get a version to the office are the two he opens the page to see.
+The first six are open when the page loads: the five stars, and what needs his
+decision. The rest fold away.
 
 Standard library only. It runs on the Mac, not on Windows, and it is not part
 of the package.
@@ -65,9 +74,11 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = HERE / "docs" / "NOW.md"
 
-# The two that are open when the page loads. Everything else folds away, so the
-# page stays the length of a checklist however long the list underneath grows.
-ALWAYS_OPEN = 2
+# The headings open when the page loads: the five stars and What needs you.
+# Everything else folds away, so the page stays the length of a checklist
+# however long the list underneath grows. Two until 2026-09-17, when the one
+# north star heading became five.
+ALWAYS_OPEN = 6
 
 # An item longer than this wraps on a narrow screen, and a wrapped item is how
 # one lost its ending. This is a warning, not a refusal: refusing would mean
@@ -84,7 +95,8 @@ MARK = " · "
 # cannot be mistaken for one that was thought about and serves no star.
 NO_STAR = "No star"
 
-# The five, in the order they appear in the first section of `docs/NOW.md`.
+# The five, in the order of the first five headings of `docs/NOW.md`. An item
+# naming one of these belongs under the heading at that same position.
 STARS = ["Star %d" % n for n in range(1, 6)]
 
 # The section this file makes. It is not a heading in `docs/NOW.md` and a test
@@ -152,18 +164,13 @@ summary{display:flex;align-items:baseline;gap:10px;list-style:none;cursor:pointe
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";margin-left:auto;font-size:15px;letter-spacing:0;color:var(--line)}
 details[open]>summary::after{content:"\\2013"}
-details:first-of-type summary{color:var(--brand)}
 .count{font-size:11px;letter-spacing:.04em;color:var(--line);font-weight:700}
+.north>summary{color:var(--brand)}
 .row{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
 summary+.row{border-top:0}
 input{margin:3px 0 0;width:17px;height:17px;flex:none;accent-color:var(--brand);cursor:pointer}
 input:checked+span{color:#9C9890;text-decoration:line-through}
 span.t{font-size:15.5px;flex:1}
-.star{flex:none;align-self:flex-start;margin-top:3px;font-size:10.5px;font-weight:700;
-  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;color:var(--brand);
-  border:1px solid var(--brand);border-radius:2px;padding:1px 5px;opacity:.85}
-.star.none{color:var(--line);border-color:var(--line);opacity:1}
-input:checked~.star{color:var(--line);border-color:var(--line)}
 .row.away{display:none}
 .pull{display:flex;align-items:baseline;cursor:pointer;-webkit-user-select:none;user-select:none;
   padding:13px 0 3px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
@@ -373,10 +380,17 @@ def complain(sections, out=sys.stderr):
                 said.append("%d characters, will wrap: %s" % (len(text), text))
             if re.search(r"\b[A-Z]\d+\b", text):
                 said.append("has a code in it, he does not read codes: %s" % text)
-            if at and not star:
+            if not star:
                 said.append("no star said either way: %s" % text)
             if star and star != NO_STAR and star not in STARS:
                 said.append("%s is not one of the five: %s" % (star, text))
+            # The suffix is how an item finds its heading, so an item under
+            # the wrong one is the file disagreeing with itself.
+            if star in STARS and STARS.index(star) != at:
+                said.append("%s belongs under heading %d, not %s: %s"
+                            % (star, STARS.index(star) + 1, heading, text))
+            if at < len(STARS) and star not in STARS:
+                said.append("under a star heading without naming it: %s" % text)
             # Crossover. He asked for it by name on 2026-09-16, and the same
             # work under two headings is how an item gets done twice or argued
             # about twice. Compared on the words that carry meaning.
@@ -410,21 +424,17 @@ def build(sections):
         mine = 0
         for done, text, star in items:
             n += 1
-            chip = ""
-            if star:
-                chip = '<span class="star%s">%s</span>' % (
-                    " none" if star == NO_STAR else "", html.escape(star))
-            # The notes control, to the left of the star because that is
-            # where he asked for it. A glyph, not a word: the page may not add
-            # one to an item, and a pencil beside the words is understood
-            # without being explained. It is quiet until the note exists,
-            # which is how he sees at a glance where he left one.
+            # The notes control, at the end of the row, where he asked for it
+            # when the star was still drawn to its right. A glyph, not a word:
+            # the page may not add one to an item, and a pencil beside the
+            # words is understood without being explained. It is quiet until
+            # the note exists, which is how he sees at a glance where he left
+            # one. The star is not drawn: the heading above already says it.
             body = ('<input type="checkbox" data-k="c%d"%s>'
                     '<span class="t">%s</span>'
                     '<button type="button" class="note" data-n="%s">&#9998;&#xFE0E;</button>'
-                    '%s'
                     % (n, " checked" if done else "", html.escape(text),
-                       note_key(text), chip))
+                       note_key(text)))
             # A note says which heading and which star its item sat under, so
             # it still reads back as something rather than as a sentence about
             # nothing. The row is the only place that knows.
@@ -444,8 +454,9 @@ def build(sections):
             # them up here, still ticked, and clicking it again sends them back.
             rows.append('<div class="pull" data-for="%d">%d done</div>' % (at, mine))
         blocks.append(
-            '<details id="s%d"%s><summary>%s<span class="count"></span></summary>%s</details>'
-            % (at, " open" if at < ALWAYS_OPEN else "",
+            '<details id="s%d"%s%s><summary>%s<span class="count"></span></summary>%s</details>'
+            % (at, ' class="north"' if at < len(STARS) else "",
+               " open" if at < ALWAYS_OPEN else "",
                html.escape(heading), "".join(rows)))
     if finished:
         blocks.append(

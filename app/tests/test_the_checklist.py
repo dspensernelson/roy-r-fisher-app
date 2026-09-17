@@ -10,6 +10,12 @@ not opening the markdowns and that a bug number means nothing to him. Prose got
 onto it twice before that. So: one line per item, no codes, and nothing on the
 page that `docs/NOW.md` does not say.
 
+On 2026-09-17 the north star stopped being one heading holding five lines and
+became five headings, each holding the work that moves it. The five lines are
+no longer items. An item still names its star after the middle dot, and that
+is how it finds its heading; the page stops drawing the star beside the words,
+because the heading above them already says it.
+
 On 2026-09-16 the `Done` heading came out of the file. Every ticked item stays
 under the heading it belongs to, and the page gathers them into a `Done`
 section it generates itself. The rules that used to be a person's memory are
@@ -68,12 +74,33 @@ def test_every_item_is_one_line():
                 % (len(text), heading, text))
 
 
-def test_the_north_star_is_first_and_is_his_five():
+# His five sentences, in his order, as the checklist words them. Each is a
+# heading now, not an item. Written out here rather than read from the build,
+# so a change to either one is caught by the other.
+NORTH_STAR = [
+    "Press Update: the new app opens, the old one closes, nothing else happens",
+    "Double-click the icon: it opens, anything else running shuts down",
+    "Close the tab, or press Close the app: everything closes",
+    "Never shown an old screen or an old message",
+    "The app never says anything it does not know",
+]
+
+
+def test_the_north_star_is_first_and_is_his_five_headings():
     """It is the thing every other item is measured against. If it stops being
-    first, the page stops being the argument it is meant to be."""
-    heading, items = sections()[0]
-    assert "north star" in heading.lower()
-    assert len(items) == 5
+    first, the page stops being the argument it is meant to be. Since
+    2026-09-17 each line is its own heading, so the work that moves a star
+    sits under it and the heading shows that star's progress."""
+    assert [h for h, _ in sections()][:5] == NORTH_STAR
+    assert len(build.STARS) == len(NORTH_STAR)
+
+
+def test_the_five_lines_are_headings_and_no_longer_items():
+    """An item that repeats its own heading is noise, and a line that is both
+    would be ticked as though a star were done."""
+    for heading, items in sections():
+        for _, text, _ in items:
+            assert text not in NORTH_STAR, "%s is an item under %s" % (text, heading)
 
 
 # --- the page ---------------------------------------------------------------
@@ -127,13 +154,16 @@ def test_every_item_reaches_the_page_with_its_state():
     assert len(re.findall(r'checkbox" data-k="c\d+" checked>', made)) == ticked * 2
 
 
-def test_the_first_two_sections_are_open_and_the_rest_fold():
-    """He opens the page for the north star and for what stands between him
-    and the office. Everything else may be folded away or the page stops
-    being readable at a glance."""
+def test_the_five_stars_and_what_needs_you_are_open_and_the_rest_fold():
+    """He opens the page for the north star and for what is waiting on him.
+    Everything else may be folded away or the page stops being readable at a
+    glance. Six headings, set on 2026-09-17 when the star became five."""
     made = page()
     assert made.count("<details") == len(sections()) + 1, "the file's headings and the generated Done"
-    assert made.count(" open>") == min(build.ALWAYS_OPEN, len(sections()))
+    assert build.ALWAYS_OPEN == 6
+    assert [h for h, _ in sections()][build.ALWAYS_OPEN - 1] == "What needs you"
+    opened = re.findall(r'<details id="s\d+"[^>]* open><summary>(.*?)<span', made)
+    assert opened == [h for h, _ in sections()][:build.ALWAYS_OPEN]
 
 
 def test_an_item_with_html_in_it_cannot_break_the_page():
@@ -146,7 +176,9 @@ def test_the_complaint_is_a_warning_and_never_a_refusal():
     """A build that refuses could stop a session publishing at all, and the
     page being slightly wrong beats the page being absent or stale."""
     import io
-    bad = [("A heading", [(False, "B15 " + "x" * 200, "")])]
+    # Named for the first star, because it is under the first heading and
+    # only the code and the length are meant to be wrong with it.
+    bad = [("A heading", [(False, "B15 " + "x" * 200, "Star 1")])]
     said = build.complain(bad, out=io.StringIO())
     assert len(said) == 2
     assert "<details" in build.build(bad)
@@ -154,11 +186,12 @@ def test_the_complaint_is_a_warning_and_never_a_refusal():
 
 # --- the star, put into everything ------------------------------------------
 
-def test_every_item_outside_the_north_star_names_the_star_it_serves():
+def test_every_item_names_the_star_it_serves():
     """He asked for this on 2026-09-16: the star goes into everything. An item
     with nothing said either way is the failure this catches, because silence
-    reads as "nobody thought about it", which is exactly what it is."""
-    for heading, items in list(sections())[1:]:
+    reads as "nobody thought about it", which is exactly what it is. Since the
+    five lines became headings there is no section exempt from it."""
+    for heading, items in sections():
         for _, text, star in items:
             assert star, "%s, under %s, says nothing about the star" % (text, heading)
             assert star == build.NO_STAR or star in build.STARS, (
@@ -166,11 +199,30 @@ def test_every_item_outside_the_north_star_names_the_star_it_serves():
                 % (star, build.NO_STAR, text))
 
 
-def test_the_north_star_itself_carries_no_star():
-    """The five are what everything else points at. A line pointing at itself
-    is noise."""
-    for _, _, star in sections()[0][1]:
-        assert not star
+def test_every_starred_item_sits_under_its_own_star_open_or_ticked():
+    """The suffix is how an item finds its heading. Ticked ones come too, so
+    each star shows how far along it is."""
+    for at, (heading, items) in enumerate(sections()):
+        for _, text, star in items:
+            if star in build.STARS:
+                assert heading == NORTH_STAR[build.STARS.index(star)], (
+                    "%s names %s and sits under %s" % (text, star, heading))
+
+
+def test_nothing_under_a_star_heading_says_no_star():
+    """No star items stay where time order puts them."""
+    for heading, items in sections()[:len(NORTH_STAR)]:
+        for _, text, star in items:
+            assert star in build.STARS, "%s says %s under %s" % (text, star, heading)
+
+
+def test_the_build_complains_about_an_item_under_the_wrong_star():
+    import io
+    bad = [(NORTH_STAR[0], [(False, "an item", "Star 2")]),
+           (NORTH_STAR[1], [(False, "another", build.NO_STAR)])]
+    said = build.complain(bad, out=io.StringIO())
+    assert any("an item" in one for one in said)
+    assert any("another" in one for one in said)
 
 
 def test_the_star_is_beside_the_words_and_never_inside_them():
@@ -182,11 +234,24 @@ def test_the_star_is_beside_the_words_and_never_inside_them():
             assert not text.endswith(build.NO_STAR)
 
 
-def test_a_star_reaches_the_page_as_its_own_thing():
+def test_the_page_no_longer_draws_the_star_beside_an_item():
+    """The heading above the item already says which star it serves, and a
+    badge repeating it on every row is the ten words where three will do."""
     made = build.build([("A heading", [(False, "an item", "Star 3"),
                                        (False, "another", build.NO_STAR)])])
-    assert '<span class="star">Star 3</span>' in made
-    assert '<span class="star none">No star</span>' in made
+    assert 'class="star' not in made
+    assert "Star 3" not in visible(made)
+    assert build.NO_STAR not in visible(made)
+    assert 'class="star' not in page()
+
+
+def test_the_star_headings_are_marked_as_the_north_star():
+    """The north star heading was drawn in the brand colour. All five are now."""
+    made = page()
+    for at, heading in enumerate(NORTH_STAR):
+        assert re.search(r'<details id="s%d" class="north"[^>]*><summary>%s<span'
+                         % (at, re.escape(heading)), made), heading
+    assert made.count('class="north"') == len(NORTH_STAR)
 
 
 def test_nothing_appears_under_two_headings():
@@ -198,13 +263,13 @@ def test_nothing_appears_under_two_headings():
     assert not said, "\n".join(said)
 
 
-def test_the_headings_are_his_eight_in_time_order():
+def test_the_headings_are_his_five_stars_then_his_seven_in_time_order():
     """The order he approved on 2026-09-16: soonest first, the north star at
     the top because everything else is measured against it. He could not tell
     what was next from the headings before these, because they sorted on three
-    different questions at once. `Done` is not among them: the page makes it."""
-    assert [h for h, _ in sections()] == [
-        "The north star",
+    different questions at once. On 2026-09-17 the one north star heading
+    became five. `Done` is not among them: the page makes it."""
+    assert [h for h, _ in sections()] == NORTH_STAR + [
         "What needs you",
         "Get the office a working update",
         "Description of improvements",
@@ -328,15 +393,15 @@ def test_the_page_holds_every_item_and_every_tick_the_file_has():
     assert made.count('class="note"') == items + ticks
 
 
-def test_every_row_carries_a_notes_control_left_of_the_star():
-    """His words. Left of the star, on every row, ticked or not."""
+def test_every_row_carries_a_notes_control_after_the_words():
+    """His words were left of the star, on every row, ticked or not. The star
+    is no longer drawn, so the control is the last thing on the row, where
+    the star's left edge used to be."""
     for one in labels(page()):
         at = one.find('<button type="button" class="note"')
         assert at > 0, "a row has no notes control: %s" % one
         assert at > one.index('<span class="t">'), "it is before the words"
-        star = one.find('<span class="star')
-        if star >= 0:
-            assert at < star, "the notes control is right of the star"
+        assert one.index("</button>") == len(one) - len("</button></label>")
 
 
 def note_keys(made):
@@ -546,6 +611,6 @@ def test_a_note_never_changes_the_item_it_is_about():
     made = build.build([("A heading", [(False, "an item", "Star 3"),
                                        (True, "a done one", build.NO_STAR)])])
     assert '<span class="t">an item</span>' in made
-    assert '<span class="star">Star 3</span>' in made
-    assert '<span class="star none">No star</span>' in made
+    assert 'data-s="Star 3"' in made
+    assert 'data-s="No star"' in made
     assert made.count('data-k="c2" checked') == 2

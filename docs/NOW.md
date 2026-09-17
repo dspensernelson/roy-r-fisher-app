@@ -80,7 +80,6 @@ are in its phases.
 
 ## The app never says anything it does not know
 
-- [ ] Clear captions leaves the ticks on, so Build is offered with no captions · Star 5
 - [ ] What should the loading page say when it cannot reach the app · Star 5
 - [ ] Nothing tells you the new version started · Star 5
 - [ ] When Check now finds a version, an Update button appears beside it · Star 5
@@ -96,6 +95,7 @@ are in its phases.
 - [x] The photo screen sits on Loading for ever and hides the reason · Star 5
 - [x] Show the log opens a window behind everything and says nothing · Star 5
 - [x] Check now points at a button that is not on the screen · Star 5
+- [x] Clear captions leaves the ticks on, so Build is offered with no captions · Star 5
 
 ## What needs you
 

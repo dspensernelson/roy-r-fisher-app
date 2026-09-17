@@ -2,7 +2,34 @@ import React, { useEffect, useRef, useState } from "react";
 import CloseX from "../CloseX.jsx";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, captionProgress, captionSamples, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
-         photoGroups, putPhotoGroup, readingProgress } from "../api.js";
+         photoGroups, putPhotoGroup, readingProgress, captionBack, captionsBack, refreshCaption } from "../api.js";
+
+// The mark on Back, on the tile and in the widget's bar. One drawing at two
+// sizes, so the two read as one idea. Drawn in the language of the app's only
+// other icon, the photograph with a plus below: thin strokes in currentColor,
+// round caps.
+function BackMark() {
+  return (
+    <svg viewBox="0 0 14 13" fill="none" aria-hidden="true">
+      <path d="M1.8 4.8H9.0a3 3 0 0 1 0 6H7.4" stroke="currentColor"
+            strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M4.6 2.0 1.8 4.8l2.8 2.8" stroke="currentColor"
+            strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// The mark on refresh. The same hand as Back.
+function RefreshMark() {
+  return (
+    <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M10.25 3.75A4.6 4.6 0 1 1 7 2.4" stroke="currentColor"
+            strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M5.5 1.1 7.6 2.4 5.5 3.7" stroke="currentColor"
+            strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 // One page of the caption chooser's preview, in the shape the engine builds.
 // Three-up pairs each photograph with the caption beside it. Six-up puts two
@@ -375,6 +402,53 @@ export default function PhotosScreen({ job }) {
     setBusy("");
   }
 
+  // Back, on one photograph. It works on its own: it does not wait for the
+  // job-wide one and it does not care what any other photograph holds. The
+  // tick does not come back with the words, and the server is what makes that
+  // true, so the screen simply draws what it is handed.
+  async function onCaptionBack(file) {
+    setError(null);
+    try {
+      // The same wait `Mark reviewed` takes, for the same reason. A caption
+      // he typed a moment ago may still be travelling, and the server would
+      // answer this out of the list it still holds.
+      await saving.current;
+      setManifest(await captionBack(job, file));
+    } catch (e) { setError(e.message); }
+  }
+
+  // The job-wide one, in the bar. It spares what he changed: only the
+  // photographs still empty since the clear come back. Safe to press twice.
+  async function onCaptionsBack() {
+    setError(null); setDone(null); setAt(0);
+    try {
+      await saving.current;
+      setManifest(await captionsBack(job));
+    } catch (e) { setError(e.message); }
+    // A whole job's worth of captions has just changed, so the count on
+    // Generate captions and the figure in the bar have both moved. One
+    // question, after one press of one button. Deliberately not done by Back
+    // on a tile: he can press that sixty times, and working the price out
+    // opens photograph files across the office network each time.
+    refreshQuote();
+  }
+
+  // Refresh, on one photograph. One model call, and it spends the figure
+  // printed inside the control, so pressing it is the agreement and no window
+  // opens in front of it.
+  async function onRefreshCaption(file) {
+    setError(null); setDone(null); setAt(0);
+    setBusy("Writing captions...");
+    try {
+      await saving.current;
+      setManifest(await refreshCaption(job, file));
+    } catch (e) { setError(e.message); }
+    setBusy("");
+    // What the job has spent has moved, so the figure in the bar is asked for
+    // again. Once, here, after the money was spent. Never on a redraw.
+    refreshQuote();
+  }
+
   async function onBuild() {
     setBusy("Building photo pages..."); setError(null); setDone(null); setAt(0);
     try { setDone(await build(job)); } catch (e) { setError(e.message); }
@@ -575,6 +649,30 @@ export default function PhotosScreen({ job }) {
     return n < 1 ? `${Math.round(n * 100)}\u00A2` : `$${n.toFixed(2)}`;
   }());
 
+  // What one photograph costs, printed inside the refresh control on every
+  // tile. It is read off the estimate the screen already asks for, which is
+  // asked for when the screen opens, after a run and when the spending window
+  // opens, and at no other time. It is deliberately NOT a question per tile
+  // and NOT a question per keystroke: this app already shipped a fault where
+  // the price was asked for on every letter he typed, one trip across the
+  // office network each. Sixty tiles read one number.
+  //
+  // The same shape as the money in the bar, so a penny reads as a penny.
+  const onePhoto = quote && quote.one_photo ? quote.one_photo.total : null;
+  const onePhotoPrice = onePhoto === null || onePhoto === undefined ? null
+    : (onePhoto < 1 ? `${Math.round(onePhoto * 100)}¢` : `$${onePhoto.toFixed(2)}`);
+  const onePhotoCents = onePhoto === null || onePhoto === undefined ? null
+    : Math.round(onePhoto * 100);
+
+  // The job-wide back is live exactly when it has something to do: a
+  // photograph that a clear emptied and that is still empty. Spenser's rule,
+  // 2026-09-17: it spares what he changed. So the moment the only copies left
+  // belong to photographs he has since typed or refreshed, this has nothing
+  // to act on and says so by going grey. Their own Back on the tile still
+  // works, which is the whole point of it working on its own.
+  const canPutBackAll = manifest.photos.some(
+    (p) => (p.cleared_caption || "").trim() && !(p.caption || "").trim());
+
   // Everything the server told us about this run, read before anything that
   // depends on it. Declared out of order once and the whole screen went blank
   // on a temporal-dead-zone error, which no test caught because none of them
@@ -607,6 +705,14 @@ export default function PhotosScreen({ job }) {
   // was a raw refusal instead of the window asking him to agree to the money.
   // Found while photographing this screen, not by a test.
   const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause && toSend > 0;
+  // Refresh is stopped by the same two things a run is stopped by, and by
+  // nothing else. `nothing_to_do` is not one of them: it means every
+  // photograph already has a caption, which is precisely the job refresh
+  // exists for. The price has to be in hand as well, because the figure
+  // printed on the control is the agreement and a blank control agrees to
+  // nothing.
+  const canRefresh = !!quote && aiOn
+                     && blockedBecause !== "no_key" && blockedBecause !== "local_only";
   const chosen = manifest.caption_style || "view";
   // The one this job starts on is shown first, whichever it is.
   const ordered = [...styles].sort((a, b) => (b.key === chosen) - (a.key === chosen));
@@ -949,6 +1055,17 @@ export default function PhotosScreen({ job }) {
                 Clear captions
               </button>
             )}
+            {/* The job-wide back, to the right of Clear captions. Grey until a
+                clear has happened, then live. It spares what he changed:
+                only the photographs still empty since the clear come back, so
+                it is safe to press twice and it greys itself the moment there
+                is nothing left for it to do. Spenser, 2026-09-17. */}
+            <button className="bar-back" disabled={!canPutBackAll || !!busy}
+                    aria-label={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
+                    title={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
+                    onClick={onCaptionsBack}>
+              <BackMark />
+            </button>
             {/* Always there. Before anything is generated it is the estimate
                 and wears a tilde, which is the one moment she most wants it.
                 After, it is what the job has cost and the tilde comes off. */}
@@ -1030,7 +1147,39 @@ export default function PhotosScreen({ job }) {
                     <span aria-hidden="true">{b.letter}</span>
                   </button>
                 ))}
-
+                {/* Back, on this one photograph. A circle, the same 26 by 26
+                    the tick and the bands are: Spenser, 2026-09-17, *"The
+                    actual app is circles, and you gave me little ovals."* It
+                    is live exactly when this photograph has words waiting,
+                    and it needs nothing else to have happened first. */}
+                <button className="dot back-dot"
+                        disabled={!(p.cleared_caption || "").trim() || !!busy}
+                        aria-label={(p.cleared_caption || "").trim()
+                                    ? "Put the old caption back" : "Nothing was cleared"}
+                        title={(p.cleared_caption || "").trim()
+                               ? "Put the old caption back" : "Nothing was cleared"}
+                        onClick={() => onCaptionBack(p.file)}>
+                  <BackMark />
+                </button>
+                {/* Refresh. The only control on the row that is not a circle,
+                    because the price rides inside it, and the only one that
+                    spends. The figure printed on it IS the agreement: one
+                    photograph at a price he can read is not a number that
+                    needs a window in front of it. */}
+                <button className="dot refresh-dot"
+                        disabled={!canRefresh || !!busy}
+                        aria-label={onePhotoCents === null
+                                    ? "Write a new caption"
+                                    : `Write a new caption, about ${onePhotoCents} cents`}
+                        title={onePhotoPrice === null
+                               ? "Write a new caption"
+                               : `Write a new caption, ~${onePhotoPrice}`}
+                        onClick={() => onRefreshCaption(p.file)}>
+                  <RefreshMark />
+                  {onePhotoPrice !== null && (
+                    <span className="price">~{onePhotoPrice}</span>
+                  )}
+                </button>
               </div>
             </figure>
           ))}

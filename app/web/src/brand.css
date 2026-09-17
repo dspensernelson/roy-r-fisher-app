@@ -965,6 +965,71 @@ input::placeholder, textarea::placeholder {
   border-color: var(--brand);
   color: #fff;
 }
+
+/* Back and refresh, on one photograph. Spenser approved these on 2026-09-17
+   from a drawing called `one-photograph.html`, which is not in this
+   repository yet. He corrected that drawing in the same breath: *"The actual
+   app is circles, and you gave me little ovals."* So Back is a `.dot` and
+   nothing else: the same 26 by 26
+   circle the tick and the band dots already are, with no width rule of its
+   own. Only refresh is wider, because the price sits inside it.
+
+   THE ROW HAS TO FIT INSIDE THE PHOTOGRAPH. Spenser, 2026-09-17: *"what you
+   gave me stretches out over the side of the picture."* The drawing's own
+   arithmetic said so out loud, `Six pills need 244px. The tile draws 216px.`
+   The tile is 216px at the width the screen usually draws it and 200px at the
+   narrowest the grid can make it, because `auto-fill minmax(200px, 1fr)`
+   never goes under 200 while there is room for a column at all.
+
+   What made it fit is the row's own gap, not the circles. The gap is a
+   property of the row; the circles are untouched, and they measure 26 by 26
+   in a browser with this rule in force. 8px between six things is 40px of air
+   on a 200px tile, and at that gap the row needs 223.7px and runs off the
+   picture. At 3px it needs 198.7px and it does not. 3px is already this
+   app's own tightest gap: the widget's top row already uses it.
+
+   Measured in a browser against this stylesheet, with the tick, three bands,
+   Back and refresh at the real price of one photograph today:
+
+       tile 216px  -> the row occupies 216.00px, nothing past the edge
+       tile 200px  -> the row occupies 198.70px, 1.30px to spare
+
+   Back's `margin-left: auto` is what takes up the slack on the wider tile, so
+   the row ends exactly on the picture's right edge rather than growing past
+   it. 216px is what the screen draws at Mark's window size; 200px is the
+   narrowest column `auto-fill minmax(200px, 1fr)` can produce while there is
+   room for a column at all, measured by sweeping the grid's width from
+   1400px down to 180px.
+
+   `flex-wrap` is the backstop and not the plan, and it is there because two
+   things are not bounded. A job can be given more bands than A, B and C, and
+   nothing says how many. And the price inside refresh is a learned figure: at
+   `~5` it is three glyphs and at two digits it is four, which is about 6px
+   more and more than the 1.30px the narrowest tile has spare. In both cases
+   the row folds onto a second line inside the photograph. That is the honest
+   answer; running past the picture's edge is not. */
+.review-line { gap: 3px; flex-wrap: wrap; }
+/* What backs him out goes right, which is also what absorbs the slack on a
+   wider tile so the row never grows past the picture. */
+.back-dot { margin-left: auto; }
+.back-dot svg { display: block; height: 13px; width: auto; margin: 0 auto; }
+/* The only one that is not a circle. Its skin is the widget's own icon
+   button, `.w-icon`: a line-strong edge, the sunk paper behind it, #4A4A4A
+   ink. Its height is the row's height and never anything else. */
+.refresh-dot {
+  width: auto; padding: 0 8px; gap: 4px; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-color: var(--line-strong); background: var(--paper-sunk); color: #4A4A4A;
+}
+.refresh-dot:hover { border-color: #B9B5AE; background: var(--paper); }
+.refresh-dot svg { display: block; height: 12px; width: auto; }
+/* The price, in the money's own green and the money's own figures, so the
+   green in this app is one thing and not two that nearly match. */
+.refresh-dot .price {
+  font-size: 11.5px; font-weight: 700; color: #2F5D33;
+  font-variant-numeric: tabular-nums;
+}
+
 /* What a run turned out to cost, after it has run. The arithmetic before the
    run used to sit in a boxed callout in the middle of the style window; on
    2026-09-14 that became a small figure in its top right corner, `.sheet-cost`,
@@ -1200,3 +1265,32 @@ input::placeholder, textarea::placeholder {
 /* Except when Clear captions is there, which pushes them both right as a pair
    and keeps the gap between them fixed. */
 .control-panel .barline .clear + .money { margin-left: 0; }
+
+/* The job-wide back, in the widget's bar, to the right of Clear captions.
+   The tile's own mark in the bar's pill shape, at the bar's height. It takes
+   the push-right when Clear captions is not there, so the money still holds
+   the right edge either way.
+
+   The bar does not wrap and must not, so this had to be shown to fit before
+   it went in. It costs 27.84px and one 6px gap. Measured in a browser on
+   2026-09-17, against the bar's 330px of room:
+
+       59 written, 58 reviewed, Clear captions, back, 5c   -> 320.30px
+       0 written, 0 reviewed, back, ~$3.00                 -> 243.63px
+
+   The first is the fullest the bar can reach. It cannot hold both counts and
+   a dollar figure at once: the money only shows whole dollars while nothing
+   is captioned, and Clear captions is not there while nothing is captioned. */
+.control-panel .barline .bar-back {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  height: 20px; padding: 0 7px; margin-left: auto; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--paper);
+  color: #4A4A4A; cursor: pointer;
+}
+.control-panel .barline .bar-back:hover:not(:disabled) { border-color: #B9B5AE; }
+.control-panel .barline .bar-back:disabled { opacity: .45; cursor: not-allowed; }
+.control-panel .barline .bar-back svg { display: block; height: 11px; width: auto; }
+/* Clear captions and the back travel together, and the money still holds the
+   right edge after them. */
+.control-panel .barline .clear + .bar-back { margin-left: 0; }
+.control-panel .barline .bar-back + .money { margin-left: 0; }

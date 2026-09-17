@@ -756,11 +756,11 @@ export default function PhotosScreen({ job }) {
         onFiles(e.dataTransfer.files);
       }}
     >
-      {/* THE HEADER. Two things, one row, one fixed height. On the left what
-          is being made, its numbers and the quiet line. On the right the one
-          widget. The row's height is set in the stylesheet and never read
-          from its contents, so nothing inside it can push the photographs
-          down. Spenser approved this on 2026-09-15. */}
+      {/* THE HEADER. Two things, one row. On the left what is being made,
+          its numbers and the quiet line. On the right the one widget. The
+          row grows to the widget and no further, and the widget's height is
+          pinned in the stylesheet, so nothing inside it can push the
+          photographs down. Spenser approved this on 2026-09-15. */}
       <div className="screen-head">
         <div className="made">
           {/* A screen that makes a file is named by that file. */}

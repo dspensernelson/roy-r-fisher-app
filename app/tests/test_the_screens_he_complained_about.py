@@ -232,6 +232,39 @@ def test_the_widget_keeps_the_fixed_height_that_stops_the_screen_bouncing():
     assert re.search(r"[^-]width:\s*\d+px", panel), "its width is not pinned"
 
 
+# Spenser's checklist, 2026-09-17, in capitals: the first row of photographs
+# covered the bottom of the widget. The widget went from 76px to 110px tall
+# on 2026-09-16 and the header that holds it stayed pinned at 76px, so the
+# widget's bottom 34px hung out of the header and the photographs, which sit
+# 12px under the header, painted over 22px of it, bar and all.
+
+def test_the_header_is_never_shorter_than_the_widget_it_holds():
+    """Measured in the running app on 2026-09-17 before this was fixed: header
+    76px, widget 110px, first photograph starting 22px above the widget's
+    bottom edge, at the top of the page and scrolled, bands on and off.
+
+    `docs/design/photos-widget.html` gives the header `min-height: 76px`, a
+    floor, so it grows to whatever the widget is. That cannot bring back the
+    bouncing the 76px pin was for: the widget's own height is pinned (the
+    test above), so the header is the same height in every state.
+    """
+    widget = int(re.search(r"[^-]height:\s*(\d+)px",
+                           block(".screen-actions.control-panel")).group(1))
+    head = block(".screen-head")
+    pinned = re.search(r"[^-]height:\s*(\d+)px", head)
+    assert not pinned or int(pinned.group(1)) >= widget, \
+        "the header is pinned shorter than the widget, so the photographs cover it"
+    assert "max-height" not in head, "a ceiling would cut the widget off the same way"
+    assert re.search(r"min-height:\s*\d+px", head), "the design gives the header a floor"
+
+
+def test_the_folder_question_takes_no_floor_from_the_header():
+    """The folder question uses the same header with one line of words under
+    the title, 71px tall. It never held the widget, so the 76px floor would
+    only move the question down."""
+    assert re.search(r"min-height:\s*0", block(".screen-head.is-asking"))
+
+
 def test_the_money_holds_the_right_edge_of_the_bar():
     """Two rules do it, and both were wrong once on 2026-09-16.
 

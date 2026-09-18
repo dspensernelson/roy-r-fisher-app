@@ -326,7 +326,9 @@ export default function App() {
           </button>
         </nav>
       </div>
-      <div className="frame">
+      {/* Marked while the photographs screen is in it, which draws that screen
+          at 90 per cent of its design sizes. See `.frame.is-photos`. */}
+      <div className={`frame${view.screen === "photos" ? " is-photos" : ""}`}>
         {updateStep}{resetStep}{resetNote}
         {view.screen === "jobs" && <JobsPortal onOpen={(job) => setView({ screen: "job", job })}
                                             onNew={() => setView({ screen: "new", job: null })}

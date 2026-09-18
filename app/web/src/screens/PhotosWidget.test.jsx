@@ -15,8 +15,12 @@ import PhotosScreen from "./PhotosScreen.jsx";
 
 const JOB = "A JOB";
 
-function photo(n, { caption = "", reviewed = false } = {}) {
-  return { file: `IMG_${n}.jpeg`, caption, reviewed };
+// Every caption the server sends carries who wrote it (`author_of` in
+// app/server/photos.py fills it in), so these do too. Written by the AI unless
+// a test says otherwise.
+function photo(n, { caption = "", reviewed = false, author } = {}) {
+  const who = caption.trim() ? { author: author || "ai" } : {};
+  return { file: `IMG_${n}.jpeg`, caption, reviewed, ...who };
 }
 
 function setUp({ written = 0, reviewed = 0, total = 12, taken = [] } = {}) {
@@ -53,34 +57,48 @@ afterEach(() => vi.restoreAllMocks());
 const widget = () => document.querySelector(".control-panel");
 const bar = () => document.querySelector(".control-panel .barline");
 
-describe("the bar, and the two counts", () => {
-  it("counts captions as they are written", async () => {
+// Spenser, 2026-09-18: one pill, "N of M reviewed", where M is the
+// photographs in the report that have a caption. Who wrote each caption is on
+// the photograph, not in the bar.
+const pillText = () => Array.from(bar().querySelectorAll(".pill"))
+  .map((p) => p.textContent.replace(/\u00A0/g, " ").trim());
+
+describe("the bar, and the one count", () => {
+  it("counts reviewed out of the captions written", async () => {
     setUp({ written: 5, reviewed: 0 });
     await waitFor(() => expect(bar()).toBeTruthy());
-    expect(bar().textContent).toMatch(/5\s*written/);
+    expect(pillText()).toEqual(["0 of 5 reviewed"]);
   });
 
   it("counts reviewed separately from written", async () => {
     setUp({ written: 12, reviewed: 3 });
     await waitFor(() => expect(bar()).toBeTruthy());
-    // Not "3 written". The two numbers are different facts and this screen
-    // showed one while claiming the other on 2026-09-16.
-    expect(bar().textContent).toMatch(/3\s*reviewed/);
+    expect(pillText()).toEqual(["\u2713 3 of 12 reviewed"]);
   });
 
-  it("offers the check once every caption is written, as a glyph", async () => {
+  it("says nothing about who wrote them", async () => {
+    setUp({ written: 5, reviewed: 1 });
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(bar().textContent).not.toMatch(/\bAI\b|typed/);
+  });
+
+  it("offers the check once every caption is written, on the count itself", async () => {
+    // One pill, 2026-09-18. The offer and the count were two pills and at
+    // three digits the bar did not fit, so the count becomes the offer: the
+    // glyph in front, light green, and pressing it asks the same warning.
     setUp({ written: 12, reviewed: 3 });
     const tick = await screen.findByRole("button", { name: /mark every caption as reviewed/i });
-    // The glyph, never the words. Overwritten twice on 2026-09-16.
-    expect(tick.textContent.replace(/\s/g, "")).toBe("✓all");
+    // The glyph, never the words "Mark all". Overwritten twice on 2026-09-16.
+    expect(tick.textContent.replace(/\s/g, "")).toBe("✓" + "3of12reviewed");
     expect(tick.className).toMatch(/\bact\b/);
+    expect(bar().querySelectorAll(".pill")).toHaveLength(1);
   });
 
   it("does not offer the check while captions are still being written", async () => {
     setUp({ written: 5, reviewed: 0 });
     await waitFor(() => expect(bar()).toBeTruthy());
     expect(screen.queryByRole("button", { name: /mark every caption as reviewed/i })).toBeNull();
-    expect(bar().textContent).toMatch(/5\s*written/);
+    expect(pillText()).toEqual(["0 of 5 reviewed"]);
   });
 
   it("counts written only among the photographs still in the report", async () => {
@@ -92,8 +110,7 @@ describe("the bar, and the two counts", () => {
       { caption: "Taken out, also written" },
     ] });
     await waitFor(() => expect(bar()).toBeTruthy());
-    expect(bar().textContent).toMatch(/(?<!\d)5\s*written/);
-    expect(bar().textContent).toMatch(/(?<!\d)2\s*reviewed/);
+    expect(pillText()).toEqual(["2 of 5 reviewed"]);
   });
 
   it("never shows more reviewed than written, with photographs taken out", async () => {
@@ -104,9 +121,7 @@ describe("the bar, and the two counts", () => {
       { caption: "Taken out", reviewed: true },
     ] });
     await waitFor(() => expect(bar()).toBeTruthy());
-    const count = (word) => Number(bar().textContent.match(new RegExp(`(\\d+)\\s*${word}`))[1]);
-    expect(count("written")).toBe(3);
-    expect(count("reviewed")).toBeLessThanOrEqual(count("written"));
+    expect(pillText()).toEqual(["\u2713 3 of 3 reviewed"]);
   });
 
   it("offers the check when every photograph in the report is written", async () => {
@@ -119,10 +134,18 @@ describe("the bar, and the two counts", () => {
   it("says it is done, and stops offering, once everything is reviewed", async () => {
     setUp({ written: 12, reviewed: 12 });
     await waitFor(() => expect(bar()).toBeTruthy());
-    expect(bar().textContent).toMatch(/All reviewed/);
+    expect(pillText()).toEqual(["\u2713 12 of 12 reviewed"]);
+    expect(bar().querySelector(".pill.done")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /mark every caption as reviewed/i })).toBeNull();
-    // and it does not also claim a count beside it
-    expect(bar().textContent).not.toMatch(/written/);
+  });
+
+  it("is done when every captioned photograph is reviewed, blanks or not", async () => {
+    // M is the photographs that have a caption, so two blanks do not hold
+    // the pill back. Build is still held back by them, as before.
+    setUp({ written: 10, reviewed: 10, total: 12 });
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(pillText()).toEqual(["\u2713 10 of 10 reviewed"]);
+    expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
   });
 });
 
@@ -145,7 +168,7 @@ describe("what only appears when it is true", () => {
     // so it keeps counting those too, even though the written pill does not.
     setUp({ written: 0, taken: [{ caption: "Taken out, written" }] });
     await waitFor(() => expect(bar().querySelector(".clear")).toBeTruthy());
-    expect(bar().textContent).toMatch(/(?<!\d)0\s*written/);
+    expect(pillText()).toEqual(["0 of 0 reviewed"]);
     await userEvent.click(bar().querySelector(".clear"));
     expect(screen.getByRole("heading", { name: "Clear 1 caption?" })).toBeInTheDocument();
   });

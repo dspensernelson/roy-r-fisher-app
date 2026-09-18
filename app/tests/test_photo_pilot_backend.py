@@ -359,7 +359,11 @@ def test_one_click_reviews_one_caption(client, home, monkeypatch):
     assert body["review"]["text"] == "1 of 4 reviewed"
 
 
-def test_editing_a_reviewed_caption_puts_it_back(client, home, monkeypatch):
+def test_editing_a_reviewed_caption_makes_it_his_and_leaves_it_ticked(
+        client, home, monkeypatch):
+    """Changed on 2026-09-18. Editing a caption used to untick it. Spenser
+    decided that day that a caption he types himself counts as reviewed, so
+    editing one makes it his, and it stays ticked because he has read it."""
     make_job(home, 3)
     stand_in(monkeypatch)
     caption_all(client)
@@ -372,8 +376,10 @@ def test_editing_a_reviewed_caption_puts_it_back(client, home, monkeypatch):
     client.put("/api/jobs/%s/manifest" % JOB, json=manifest)
 
     after = client.get("/api/jobs/%s/manifest" % JOB).json()
-    assert after["photos"][1].get("reviewed") is not True
+    assert after["photos"][1].get("reviewed") is True
+    assert after["photos"][1].get("author") == "person"
     assert after["photos"][0].get("reviewed") is True     # the others are untouched
+    assert after["photos"][0].get("author") == "ai"
 
 
 def test_build_refuses_until_every_included_caption_is_reviewed(client, home, monkeypatch):

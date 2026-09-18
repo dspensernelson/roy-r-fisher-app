@@ -182,8 +182,10 @@ def test_review_and_build_work_without_a_key(client, job):
         photo["caption"] = "View of the north elevation %02d" % i
     client.put("/api/jobs/%s/manifest" % JOB, json=manifest)
 
-    blocked = client.post("/api/jobs/%s/build" % JOB)
-    assert blocked.status_code == 400 and "reviewed" in blocked.json()["detail"]
+    # A caption he types counts as reviewed (Spenser, 2026-09-18), so the
+    # hand-typed captions arrive ticked and nothing needs a key to build.
+    typed = client.get("/api/jobs/%s/manifest" % JOB).json()
+    assert all(p.get("reviewed") for p in typed["photos"])
 
     for photo in manifest["photos"]:
         assert client.post("/api/jobs/%s/photos/%s/reviewed"

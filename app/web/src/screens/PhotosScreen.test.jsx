@@ -273,8 +273,8 @@ describe("build is gated on review", () => {
     // because "every one is written and every one is read" is the one state
     // this job is working towards and it is worth one pill.
     expect(document.querySelector(".quiet").textContent).toBe("");
-    expect(document.querySelector(".control-panel .barline").textContent)
-      .toMatch(/All reviewed/);
+    expect(document.querySelector(".control-panel .barline .pill.done").textContent)
+      .toMatch(/3\sof\s3\sreviewed/);
   });
 });
 
@@ -1363,9 +1363,8 @@ describe("clearing the captions", () => {
   it("says nothing is written and nothing is reviewed", async () => {
     await clearThem();
     const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
-    expect(bar.textContent).toMatch(/0\s*written/);
-    expect(bar.textContent).toMatch(/0\s*reviewed/);
-    expect(bar.textContent).not.toMatch(/All reviewed/);
+    expect(bar.textContent).toMatch(/0\sof\s0\sreviewed/);
+    expect(bar.querySelector(".pill.done")).toBeNull();
   });
 
   it("leaves no tick on a photograph", async () => {

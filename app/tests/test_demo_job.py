@@ -292,10 +292,10 @@ def test_the_photo_document_builds_from_the_shipped_dataset(client, built):
     assert client.put("/api/jobs/%s/manifest" % demo_job.JOB_NAME,
                       json=manifest).status_code == 200
 
-    # Build is gated on review now, which is the approved behaviour.
-    blocked = client.post("/api/jobs/%s/build" % demo_job.JOB_NAME)
-    assert blocked.status_code == 400
-    assert "reviewed" in blocked.json()["detail"]
+    # Build is gated on review. A caption he types counts as reviewed
+    # (Spenser, 2026-09-18), so hand-typed captions arrive ticked.
+    typed = client.get("/api/jobs/%s/manifest" % demo_job.JOB_NAME).json()
+    assert all(p.get("reviewed") and p.get("author") == "person" for p in typed["photos"])
 
     for photo in manifest["photos"]:
         assert client.post("/api/jobs/%s/photos/%s/reviewed"

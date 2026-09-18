@@ -1,8 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import CloseX from "../CloseX.jsx";
+import { showMoney } from "../money.js";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, captionProgress, captionSamples, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress, captionBack, captionsBack, refreshCaption } from "../api.js";
+
+// A size on this screen, in the stylesheet's terms: the design number times
+// `--k`, which the photographs frame sets to 0.9. For the few inline styles;
+// everything else is in brand.css. See `.frame.is-photos` there.
+const k = (n) => `calc(${n}px * var(--k, 1))`;
 
 // The mark on Back, on the tile and in the widget's bar. One drawing at two
 // sizes, so the two read as one idea. Drawn in the language of the app's only
@@ -119,6 +125,10 @@ export default function PhotosScreen({ job }) {
   // Which of the quiet line's messages he is looking at. One line shows one
   // thing; the rest are a click away, and never a second box.
   const [at, setAt] = useState(0);
+  // The band whose photographs are the only ones showing, or null for all of
+  // them. The screen's own business: never sent, never saved, and it never
+  // changes the report's order. Spenser, 2026-09-17.
+  const [onlyBand, setOnlyBand] = useState(null);
   // What he is typing right now, by file name, before it is saved. It is
   // deliberately not in the manifest. Everything that watches the manifest
   // reacts to every change of it, including the price question, which opens
@@ -204,7 +214,25 @@ export default function PhotosScreen({ job }) {
 
   async function save(next) {
     setManifest(next);
-    await putManifest(job, next).catch((e) => setError(e.message));
+    return putManifest(job, next).catch((e) => { setError(e.message); return null; });
+  }
+
+  // Who wrote a caption he has just finished, and whether it is ticked, as
+  // the server decided them. Spenser, 2026-09-18: a caption he types counts
+  // as reviewed. That rule lives on the server (`record_typed_captions`), and
+  // the screen takes its answer rather than holding a second copy of it.
+  // Only if the words are still the ones that were sent: if he has changed
+  // them again since, the next save will bring the next answer.
+  function adoptWriter(file, answer) {
+    const saved = answer && answer.manifest && Array.isArray(answer.manifest.photos)
+      ? answer.manifest.photos.find((e) => e.file === file) : null;
+    if (!saved) return;
+    setManifest((now) => {
+      if (!now) return now;
+      const photos = now.photos.map((p) => (p.file === file && p.caption === saved.caption
+        ? { ...p, author: saved.author, reviewed: saved.reviewed } : p));
+      return { ...now, photos };
+    });
   }
 
   async function onFiles(files) {
@@ -481,7 +509,7 @@ export default function PhotosScreen({ job }) {
     if (caption === manifest.photos[i].caption) return;   // nothing changed
     const next = structuredClone(manifest);
     next.photos[i].caption = caption;
-    saving.current = save(next);
+    saving.current = save(next).then((answer) => adoptWriter(file, answer));
   }
 
   function drop(i) {
@@ -544,14 +572,14 @@ export default function PhotosScreen({ job }) {
         <div className="screen-head is-asking">
           <div>
             <h1 style={{ margin: 0 }}>Photos</h1>
-            <p className="sub" style={{ margin: "4px 0 0" }}>
+            <p className="sub" style={{ margin: `${k(4)} 0 0` }}>
               This job keeps photographs in more than one place.
             </p>
           </div>
         </div>
 
         {where.chosen_missing && (
-          <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>
+          <div className="error" style={{ marginTop: 0, marginBottom: k(16) }}>
             The folder you chose, <strong>{where.chosen}</strong>, is not in this
             job any more. Nothing has been built from a different folder. Choose
             again below.
@@ -559,10 +587,10 @@ export default function PhotosScreen({ job }) {
         )}
 
         <div className="confirm" style={{ marginTop: 0 }}>
-          <p style={{ margin: "0 0 4px" }}>
+          <p style={{ margin: `0 0 ${k(4)}` }}>
             <strong>Which folder holds the photographs for this report?</strong>
           </p>
-          <p className="setting-fine" style={{ margin: "0 0 14px" }}>
+          <p className="setting-fine" style={{ margin: `0 0 ${k(14)}` }}>
             Every photograph stays where it is. This only says which ones go in
             the report, and you can change it later.
           </p>
@@ -583,13 +611,13 @@ export default function PhotosScreen({ job }) {
           </div>
 
           {asked && !where.chosen_missing && (
-            <div className="setting-actions" style={{ marginTop: 14 }}>
+            <div className="setting-actions" style={{ marginTop: k(14) }}>
               <button className="linky" onClick={() => setAsked(false)}>Cancel</button>
             </div>
           )}
         </div>
         {error && (
-          <div className="error" style={{ marginTop: 16 }}>
+          <div className="error" style={{ marginTop: k(16) }}>
             <CloseX onClose={() => setError(null)} what="this message" />
             {error}
           </div>
@@ -611,7 +639,8 @@ export default function PhotosScreen({ job }) {
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
   // Written, counted the way every other count here is: only photographs
   // still in the report. It counted every caption until 2026-09-17, so it
-  // could say more was written than the report holds.
+  // could say more was written than the report holds. It is the M of the
+  // bar's "N of M reviewed": Spenser, 2026-09-18.
   const written = inPhotos.filter((x) => (x.p.caption || "").trim()).length;
   // How many photographs share a page. The server normalises this on the way
   // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
@@ -635,6 +664,9 @@ export default function PhotosScreen({ job }) {
   // "9 of 12 reviewed" while the box said everything was done. 2026-09-16.
   const allWritten = inPhotos.length > 0
                      && inPhotos.every((x) => (x.p.caption || "").trim());
+  // Every caption there is has been read. The bar's done state; not the
+  // build gate, which still wants every photograph written and read.
+  const captionsRead = written > 0 && reviewedCount >= written;
 
   // What it costs, in the smallest true form. An estimate until money has
   // actually been spent, and then what was spent. Cents while it is pennies,
@@ -646,7 +678,9 @@ export default function PhotosScreen({ job }) {
   const money = (function () {
     const n = captioned > 0 && spentTotal !== null ? spentTotal : estimate;
     if (n === null || n === undefined) return null;
-    return n < 1 ? `${Math.round(n * 100)}\u00A2` : `$${n.toFixed(2)}`;
+    // One rule for every figure on this screen, in app/web/src/money.js:
+    // whole dollars, rounded up, from $10.
+    return showMoney(n, { cents: true });
   }());
 
   // What one photograph costs, printed inside the refresh control on every
@@ -659,8 +693,7 @@ export default function PhotosScreen({ job }) {
   //
   // The same shape as the money in the bar, so a penny reads as a penny.
   const onePhoto = quote && quote.one_photo ? quote.one_photo.total : null;
-  const onePhotoPrice = onePhoto === null || onePhoto === undefined ? null
-    : (onePhoto < 1 ? `${Math.round(onePhoto * 100)}¢` : `$${onePhoto.toFixed(2)}`);
+  const onePhotoPrice = showMoney(onePhoto, { cents: true });
   const onePhotoCents = onePhoto === null || onePhoto === undefined ? null
     : Math.round(onePhoto * 100);
 
@@ -692,6 +725,13 @@ export default function PhotosScreen({ job }) {
   // than closing the gap, so turning bands on and off moves nothing.
   const chips = manifest.bands || [];
   const waiting = bandsOn ? inPhotos.filter((x) => !x.p.band).length : 0;
+  // What the grid draws. A third view of the one list, made the same way as
+  // `inPhotos` and `cutPhotos`, so every index is still the photograph's own
+  // place in the job and dragging inside a band moves it in the real order.
+  // Every count above reads `inPhotos`, never this, so the numbers keep
+  // counting the whole job. With bands off there is no filter at all.
+  const filter = bandsOn && chips.some((b) => b.letter === onlyBand) ? onlyBand : null;
+  const gridPhotos = filter ? inPhotos.filter((x) => x.p.band === filter) : inPhotos;
   const waitingText = `${waiting} photograph${waiting === 1 ? " is" : "s are"} waiting for a band`;
 
   const buildReady = inPhotos.length > 0 && allReviewed && waiting === 0
@@ -830,7 +870,7 @@ export default function PhotosScreen({ job }) {
       {spent.summary && <p className="outcome-said">{spent.summary}</p>}
       <strong>{spent.label}</strong>
       {spent.calculated_cost !== null && spent.calculated_cost !== undefined ? (
-        <> : <code>${spent.calculated_cost.toFixed(2)}</code> for {spent.captioned}{" "}
+        <> : <code>{showMoney(spent.calculated_cost)}</code> for {spent.captioned}{" "}
           {spent.captioned === 1 ? "caption" : "captions"}.</>
       ) : (
         <span className="cost-unavailable"> . {spent.note}</span>
@@ -1003,14 +1043,21 @@ export default function PhotosScreen({ job }) {
             <span className="w-name">Bands</span>
             <button className="switch" role="switch" aria-checked={bandsOn}
                     aria-label="Bands" disabled={!!busy}
-                    onClick={() => onBands({ bands_on: !bandsOn })}>
+                    onClick={() => { setOnlyBand(null); onBands({ bands_on: !bandsOn }); }}>
               <span className="knob" />
             </button>
+            {/* Each chip is a filter. Click one and only that band's
+                photographs show; click it again and they all do; click
+                another and it switches. Screen only, and the counts do not
+                follow it. Spenser, 2026-09-17. */}
             <span className={`w-chips${bandsOn ? "" : " off"}`}>
               {chips.map((b) => (
-                <button key={b.letter} className="w-chip"
+                <button key={b.letter}
+                        className={`w-chip${filter === b.letter ? " is-on" : ""}`}
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
-                        title={b.name === b.letter ? `Band ${b.letter}` : b.name}>
+                        aria-pressed={filter === b.letter}
+                        title={b.name === b.letter ? `Band ${b.letter}` : b.name}
+                        onClick={() => setOnlyBand(filter === b.letter ? null : b.letter)}>
                   {b.letter}
                 </button>
               ))}
@@ -1029,21 +1076,31 @@ export default function PhotosScreen({ job }) {
               written, writing has nothing left to say, so it starts offering
               the tick instead. */}
           <div className="barline">
-            {allWritten ? (
-              allReviewed ? (
-                <span className="pill done">&#10003;&nbsp;All reviewed</span>
-              ) : (
-                <button className="pill act" disabled={!!busy}
-                        aria-label="Mark every caption as reviewed"
-                        onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
-                  &#10003;&nbsp;all
-                </button>
-              )
+            {/* One pill: reviewed, out of the captions there are. Spenser,
+                2026-09-18. Who wrote each one is on the photograph, not
+                here; three pills did not fit the box.
+
+                It has three faces and never two pills. Amber while captions
+                are still being written. Once every photograph in the report
+                has words and some are unread, the count itself is the offer
+                to tick the lot: the glyph in front, the money's light green,
+                and pressing it asks the same warning `✓ all` asked. That
+                offer used to be a pill of its own, and with it the bar did
+                not fit at three digits. Filled green once every caption has
+                been read, blanks or not: a blank still holds Build back, and
+                Build's own hover says so. */}
+            {allWritten && !captionsRead ? (
+              <button className="pill act" disabled={!!busy}
+                      aria-label="Mark every caption as reviewed"
+                      title="Mark every caption as reviewed"
+                      onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
+                &#10003;&nbsp;<b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+              </button>
             ) : (
-              <span className="pill hold"><b>{written}</b>&nbsp;written</span>
-            )}
-            {!allReviewed && (
-              <span className="pill hold"><b>{reviewedCount}</b>&nbsp;reviewed</span>
+              <span className={`pill ${captionsRead ? "done" : "hold"}`}>
+                {captionsRead && <>&#10003;&nbsp;</>}
+                <b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+              </span>
             )}
             {/* Red, and a link rather than a button: "the same exact thing,
                 just red". It is not here at all until there is something to
@@ -1059,10 +1116,14 @@ export default function PhotosScreen({ job }) {
                 clear has happened, then live. It spares what he changed:
                 only the photographs still empty since the clear come back, so
                 it is safe to press twice and it greys itself the moment there
-                is nothing left for it to do. Spenser, 2026-09-17. */}
+                is nothing left for it to do. Spenser, 2026-09-17. Its words,
+                "Restore cleared captions", are his, 2026-09-18. Grey says
+                nothing: no hover text, only the screen-reader name, so it is
+                never a nameless button. His words, 2026-09-17: "I don't
+                think you need to say anything in the grey." */}
             <button className="bar-back" disabled={!canPutBackAll || !!busy}
-                    aria-label={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
-                    title={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
+                    aria-label="Restore cleared captions"
+                    title={canPutBackAll ? "Restore cleared captions" : undefined}
                     onClick={onCaptionsBack}>
               <BackMark />
             </button>
@@ -1084,7 +1145,7 @@ export default function PhotosScreen({ job }) {
         </div>
       ) : (
         <div className="grid">
-          {inPhotos.map(({ p, i }) => (
+          {gridPhotos.map(({ p, i }) => (
             <figure key={p.file} style={{ margin: 0 }} draggable
               onDragStart={() => (dragFrom.current = i)}
               onDragOver={(e) => e.preventDefault()}
@@ -1122,6 +1183,18 @@ export default function PhotosScreen({ job }) {
                 value={p.file in typing ? typing[p.file] : p.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => commitCaption(i)} />
+              {/* Who wrote the caption, quietly, under it. Information, not a
+                  control, and never in the row below, which is exactly full.
+                  Always here so every tile's row sits at the same height;
+                  empty when there is no caption. Read from `author`, which
+                  the server puts on every caption (`author_of` in
+                  app/server/photos.py). The words are Spenser's to change.
+                  2026-09-18. */}
+              <div className="who">
+                {(p.caption || "").trim()
+                  ? (p.author === "person" ? "Typed" : p.author === "ai" ? "AI" : "")
+                  : ""}
+              </div>
               {/* The tick is the first thing in the row and stays there,
                   however many bands the job grows. Spenser, 2026-09-07. It
                   is one photograph at a time, with the all-at-once shortcut
@@ -1166,13 +1239,13 @@ export default function PhotosScreen({ job }) {
                     the tick and the bands are: Spenser, 2026-09-17, *"The
                     actual app is circles, and you gave me little ovals."* It
                     is live exactly when this photograph has words waiting,
-                    and it needs nothing else to have happened first. */}
+                    and it needs nothing else to have happened first. Grey
+                    says nothing: no hover text, only its name. */}
                 <button className="dot back-dot"
                         disabled={!(p.cleared_caption || "").trim() || !!busy}
-                        aria-label={(p.cleared_caption || "").trim()
-                                    ? "Put the old caption back" : "Nothing was cleared"}
+                        aria-label="Put the old caption back"
                         title={(p.cleared_caption || "").trim()
-                               ? "Put the old caption back" : "Nothing was cleared"}
+                               ? "Put the old caption back" : undefined}
                         onClick={() => onCaptionBack(p.file)}>
                   <BackMark />
                 </button>
@@ -1212,7 +1285,7 @@ export default function PhotosScreen({ job }) {
           </button>
           {showCut && (
             <>
-              <p className="setting-fine" style={{ margin: "0 0 12px" }}>
+              <p className="setting-fine" style={{ margin: `0 0 ${k(12)}` }}>
                 These are left out of the photo pages and out of caption writing.
                 The files are still in the job's Photos folder, untouched.
               </p>
@@ -1268,7 +1341,7 @@ export default function PhotosScreen({ job }) {
             <div className="sheet-head">
               <h2>Generate captions for {toSend} {toSend === 1 ? "photo" : "photos"}?</h2>
               {quote && quote.estimate && (
-                <p className="sheet-cost">${quote.estimate.total.toFixed(2)} max</p>
+                <p className="sheet-cost">{showMoney(quote.estimate.total)} max</p>
               )}
             </div>
 
@@ -1300,7 +1373,7 @@ export default function PhotosScreen({ job }) {
                 the frames stay blank, because a written specimen beside a
                 photograph reads as a caption of that photograph. */}
             {!shownShots && (
-              <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+              <p className="sub" style={{ margin: `${k(10)} 0 0`, fontSize: k(12.5) }}>
                 {shotsBusy
                   ? "Captioning your photographs..."
                   : "Examples of the style, not your photographs."}
@@ -1308,7 +1381,7 @@ export default function PhotosScreen({ job }) {
             )}
 
             {shotsError && (
-              <p className="sub sample-trouble" style={{ margin: "10px 0 0" }}>{shotsError}</p>
+              <p className="sub sample-trouble" style={{ margin: `${k(10)} 0 0` }}>{shotsError}</p>
             )}
 
             {/* No sentence under the samples. The one that stood here
@@ -1321,7 +1394,7 @@ export default function PhotosScreen({ job }) {
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
               <button className="button secondary" onClick={() => beginCaptions(showing)}>
                 Generate captions{quote && quote.estimate
-                  ? ` ($${quote.estimate.total.toFixed(2)})` : ""}
+                  ? ` (${showMoney(quote.estimate.total)})` : ""}
               </button>
             </div>
           </div>
@@ -1381,7 +1454,6 @@ export default function PhotosScreen({ job }) {
             <h2>Clear {captioned} {captioned === 1 ? "caption" : "captions"}?</h2>
             <p className="fine">
               The photographs, their order and the caption style are unchanged.
-              Cleared captions cannot be recovered.
             </p>
             <div className="sheet-acts">
               <button className="linky" onClick={() => setClearing(false)}>Cancel</button>
@@ -1408,12 +1480,12 @@ export default function PhotosScreen({ job }) {
                 job's brief.
               </p>
             )}
-            <div className="setting-actions" style={{ marginTop: 14, gap: 8, flexWrap: "wrap" }}>
+            <div className="setting-actions" style={{ marginTop: k(14), gap: k(8), flexWrap: "wrap" }}>
               <label className="setting-fine" style={{ margin: 0 }}>City
-                <input defaultValue={facts ? facts.city : ""} id="fix-city" style={{ marginLeft: 6 }} />
+                <input defaultValue={facts ? facts.city : ""} id="fix-city" style={{ marginLeft: k(6) }} />
               </label>
               <label className="setting-fine" style={{ margin: 0 }}>Street address
-                <input defaultValue={facts ? facts.address : ""} id="fix-address" style={{ marginLeft: 6 }} />
+                <input defaultValue={facts ? facts.address : ""} id="fix-address" style={{ marginLeft: k(6) }} />
               </label>
             </div>
             <div className="sheet-acts">

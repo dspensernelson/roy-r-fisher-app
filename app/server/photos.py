@@ -64,6 +64,53 @@ REVIEWED = "reviewed"
 CLEARED = "cleared_caption"
 
 
+# Who wrote the words on a photograph: the AI, or a person. Spenser,
+# 2026-09-18: a caption he types himself counts as reviewed, because he wrote
+# it and so has read it. An AI caption still waits for his tick. Set at every
+# place words are written, and only there: a run and a refresh write the AI's,
+# `put_manifest` writes his when the words change, a clear takes it off with
+# the words, and a Back puts back whoever wrote the words it restores.
+AUTHOR = "author"
+CLEARED_AUTHOR = "cleared_author"
+BY_AI = "ai"
+BY_PERSON = "person"
+AUTHORS = (BY_AI, BY_PERSON)
+
+
+def author_of(entry: dict) -> str:
+    """Who wrote this photograph's caption, or "" when it has none.
+
+    **A caption with no author recorded is the AI's.** Every manifest written
+    before 2026-09-18 carries no author, and reading those captions as the
+    AI's is the safe direction: an AI caption waits for his tick, so nothing
+    is ticked that was not ticked before. This is the only place that default
+    lives; the screen is always handed the answer.
+    """
+    if not str(entry.get("caption", "")).strip():
+        return ""
+    who = entry.get(AUTHOR)
+    return who if who in AUTHORS else BY_AI
+
+
+def settle_authors(entries: list) -> None:
+    """Write `author_of` into every entry, so every reader gets the answer.
+
+    Run in `load_manifest`, beside `forget_unearned_ticks`, for the same
+    reason: the screen draws from the key, so the key is made true there
+    rather than every reader learning the default for itself. Not at the
+    save door: a save that only cuts a photograph writes only the cut key,
+    and an old caption left without the key on disk reads the same anyway.
+    """
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        who = author_of(entry)
+        if who:
+            entry[AUTHOR] = who
+        else:
+            entry.pop(AUTHOR, None)
+
+
 def cleared_caption(entry: dict) -> str:
     """What this photograph said before its caption was cleared, or "".
 
@@ -92,6 +139,10 @@ def _put_one_back(entry: dict) -> bool:
         return False
     entry["caption"] = words
     entry.pop(REVIEWED, None)
+    # Whoever wrote the words it restores. A spare kept before authors were
+    # recorded has none, and reads as the AI's, as every old caption does.
+    who = entry.get(CLEARED_AUTHOR)
+    entry[AUTHOR] = who if who in AUTHORS else BY_AI
     return True
 
 
@@ -346,6 +397,45 @@ def reset_changed_reviews(existing: dict, incoming: dict) -> None:
         now = str(entry.get("caption", ""))
         if before is not None and before != now:
             entry.pop(REVIEWED, None)
+
+
+def record_typed_captions(existing: dict, incoming: dict) -> None:
+    """A caption whose words changed on the screen is his, and it is ticked.
+
+    Spenser, 2026-09-18: a caption he types himself counts as reviewed. The
+    screen sends a caption only when he leaves the box, never per keystroke,
+    so this runs once per caption he finishes. Editing an AI caption makes
+    it his. Typing one away to nothing leaves no author and no tick.
+
+    Who wrote a caption whose words did NOT change is read off disk and not
+    off what was sent: it is the app's fact, and a reorder or a per-page
+    change sends every caption back untouched.
+
+    Runs after `reset_changed_reviews`, which has already taken the old tick
+    off anything whose words changed.
+    """
+    was = {}
+    for entry in (existing or {}).get("photos", []) or []:
+        if isinstance(entry, dict) and entry.get("file"):
+            was[entry["file"]] = entry
+
+    for entry in (incoming or {}).get("photos", []) or []:
+        if not isinstance(entry, dict) or not entry.get("file"):
+            continue
+        before = was.get(entry["file"])
+        now = str(entry.get("caption", ""))
+        if before is not None and str(before.get("caption", "")) != now:
+            if now.strip():
+                entry[AUTHOR] = BY_PERSON
+                entry[REVIEWED] = True
+            else:
+                entry.pop(AUTHOR, None)
+        elif before is not None:
+            who = author_of(before)
+            if who:
+                entry[AUTHOR] = who
+            else:
+                entry.pop(AUTHOR, None)
 
 
 def included(manifest: dict) -> list:
@@ -609,6 +699,7 @@ def load_manifest(job: Path) -> dict:
     # happened. Taken off here, in the view only, because a plain GET must not
     # write.
     forget_unearned_ticks(kept)
+    settle_authors(kept)
     # Only now is the list narrowed to the report. The file on disk still
     # holds every photograph; this is the view, and save_manifest below is
     # what keeps the two from diverging.
@@ -897,6 +988,12 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
         # caption and the manifest is hand-editable by design.
         if CLEARED in entry and not isinstance(entry[CLEARED], str):
             return "A photo's cleared caption must be text."
+        # Who wrote it, and who wrote the words a clear kept. One of two
+        # answers or nothing: a typed caption is ticked on the strength of
+        # this, so an unknown value is refused rather than guessed at.
+        for key in (AUTHOR, CLEARED_AUTHOR):
+            if key in entry and entry[key] not in AUTHORS:
+                return "Who wrote photo %r's caption must be 'ai' or 'person'." % name
         if BAND in entry:
             # An unknown letter is an error rather than a silent unassign.
             # Quietly dropping it would hide whatever wrote it, the same
@@ -960,10 +1057,14 @@ def put_manifest(name: str, manifest: dict):
     # An edited caption is no longer the caption he reviewed, so the tick comes
     # off here, against what is actually on disk, rather than being trusted to
     # whatever sent this.
-    reset_changed_reviews(load_manifest(job), manifest)
+    existing = load_manifest(job)
+    reset_changed_reviews(existing, manifest)
+    record_typed_captions(existing, manifest)
     with busy.writing():
         save_manifest(job, manifest)
-    return {"ok": True, "review": review_progress(manifest)}
+    # The saved list comes back so the screen can show who wrote a caption and
+    # its tick without working either out for itself.
+    return {"ok": True, "review": review_progress(manifest), "manifest": manifest}
 
 
 def _set_reviewed(job: Path, file: str, reviewed: bool) -> dict:
@@ -1268,7 +1369,11 @@ def clear_captions(name: str):
             # second clear would quietly empty every spare in the job.
             if str(entry.get("caption", "")).strip():
                 entry[CLEARED] = entry["caption"]
+                # Who wrote them goes with the spare, so Back can put back
+                # whoever it was. The live author goes with the words.
+                entry[CLEARED_AUTHOR] = author_of(entry)
             entry["caption"] = ""
+            entry.pop(AUTHOR, None)
             # The tick goes with the words. A tick says Mark has read the
             # caption on this photograph, and there is no longer a caption on
             # it, so the claim is not true any more. It used to survive the

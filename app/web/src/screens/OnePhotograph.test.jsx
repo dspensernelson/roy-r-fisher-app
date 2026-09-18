@@ -81,7 +81,12 @@ describe("back, on one photograph", () => {
     setUp(WRITTEN);
     await waitFor(() => expect(tiles().length).toBe(2));
     expect(backOn(tiles()[0]).disabled).toBe(true);
-    expect(backOn(tiles()[0]).getAttribute("title")).toBe("Nothing was cleared");
+
+    // Grey says nothing. Spenser, 2026-09-17: "I don't think you need to say
+    // anything in the grey. If it's great, it's great." No hover text; the
+    // screen-reader name stays, so it is never a nameless button.
+    expect(backOn(tiles()[0]).hasAttribute("title")).toBe(false);
+    expect(backOn(tiles()[0]).getAttribute("aria-label")).toBe("Put the old caption back");
   });
 
   it("goes live on the tile whose caption was cleared", async () => {
@@ -231,13 +236,28 @@ describe("the job-wide back, in the bar", () => {
     setUp(WRITTEN);
     await waitFor(() => expect(bar()).toBeTruthy());
     expect(barBack().disabled).toBe(true);
-    expect(barBack().getAttribute("title")).toBe("Nothing was cleared");
+
+    // Grey says nothing. Spenser, 2026-09-17: "I don't think you need to say
+    // anything in the grey. If it's great, it's great." No hover text; the
+    // screen-reader name stays, so it is never a nameless button.
+    expect(barBack().hasAttribute("title")).toBe(false);
+    expect(barBack().getAttribute("aria-label")).toBe("Restore cleared captions");
   });
 
   it("goes live once captions have been cleared", async () => {
     setUp(CLEARED);
     await waitFor(() => expect(bar()).toBeTruthy());
     expect(barBack().disabled).toBe(false);
+  });
+
+  it("says Spenser's words when it is live, and only those", async () => {
+    // Spenser's wording, exactly, 2026-09-18. It replaced "Put every caption
+    // back" in both the hover text and what a screen reader hears.
+    setUp(CLEARED);
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(barBack().getAttribute("title")).toBe("Restore cleared captions");
+    expect(barBack().getAttribute("aria-label")).toBe("Restore cleared captions");
+    expect(document.body.innerHTML).not.toContain("Put every caption back");
   });
 
   it("sits to the right of Clear captions", async () => {

@@ -16,7 +16,10 @@ APP = WEB / "App.jsx"
 
 def block(name: str) -> str:
     """One rule's declarations, by its selector."""
-    css = CSS.read_text()
+    # The photographs screen writes every size as its design number times
+    # `--k` (see test_the_photographs_screen_at_ninety.py). These tests are
+    # about the design numbers, so they read them with the scale taken off.
+    css = re.sub(r"calc\((\d+(?:\.\d+)?px) \* var\(--k, 1\)\)", r"\1", CSS.read_text())
     start = css.index(name + " {")
     return css[start:css.index("}", start)]
 

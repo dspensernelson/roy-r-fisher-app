@@ -1177,9 +1177,11 @@ def create_app() -> FastAPI:
         the caption he does not like, so it has to be able to write over it,
         and the tick comes off with the old words.
 
-        The spare from a clear is left alone. A caption written here is one of
-        the ones the job-wide back must spare, and its own Back still has
-        somewhere to go.
+        The words it replaces become the photograph's spare, the one Back
+        puts back, so Back undoes a Refresh the way it undoes a clear.
+        Spenser, 2026-09-18. A photograph with no words keeps whatever spare
+        a clear left it. A caption written here is one of the ones the
+        job-wide back must spare, and its own Back still has somewhere to go.
         """
         job = photos_routes._job_or_404(name)
         manifest = photos_routes.load_manifest(job)
@@ -1220,6 +1222,14 @@ def create_app() -> FastAPI:
         fresh = str(drafted.get(resolved.name, "")).strip()
         if fresh:
             with busy.writing():
+                # The words this replaces are kept, the same way Clear
+                # captions keeps the words it wipes, so Back on this
+                # photograph undoes the Refresh. Spenser, 2026-09-18. A blank
+                # caption leaves any spare from a clear where it is.
+                old = str(wanted.get("caption", ""))
+                if old.strip():
+                    wanted[photos_routes.CLEARED] = old
+                    wanted[photos_routes.CLEARED_AUTHOR] = photos_routes.author_of(wanted)
                 wanted["caption"] = fresh
                 wanted[photos_routes.AUTHOR] = photos_routes.BY_AI
                 wanted.pop(photos_routes.REVIEWED, None)

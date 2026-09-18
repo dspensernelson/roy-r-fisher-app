@@ -210,6 +210,95 @@ describe("refresh, on one photograph", () => {
       tickOn(tiles()[0]).className).not.toMatch(/is-reviewed/));
   });
 
+  it("leaves Back live, and Back puts the replaced words back", async () => {
+    // Spenser, 2026-09-18: Back undoes a Refresh. The server keeps the words
+    // Refresh replaced as the photograph's spare, the way a clear does.
+    setUp(WRITTEN);
+    vi.spyOn(api, "refreshCaption").mockResolvedValue(manifest([
+      { file: "photo-01.jpg", caption: "A different set of words",
+        cleared_caption: "View east from Brady Street" },
+      WRITTEN[1],
+    ]));
+    const back = vi.spyOn(api, "captionBack").mockResolvedValue(manifest([
+      { file: "photo-01.jpg", caption: "View east from Brady Street",
+        cleared_caption: "View east from Brady Street" },
+      WRITTEN[1],
+    ]));
+    await waitFor(() => expect(tiles().length).toBe(2));
+    expect(backOn(tiles()[0]).disabled).toBe(true);
+
+    await userEvent.click(refreshOn(tiles()[0]));
+    await waitFor(() => expect(backOn(tiles()[0]).disabled).toBe(false));
+    // The job-wide back is for what a clear emptied. Nothing is empty here.
+    expect(barBack().disabled).toBe(true);
+
+    await userEvent.click(backOn(tiles()[0]));
+    expect(back).toHaveBeenCalledWith(JOB, "photo-01.jpg");
+    await waitFor(() => expect(
+      within(tiles()[0]).getByRole("textbox").value).toBe("View east from Brady Street"));
+    // Put back without its tick: it was ticked before the refresh.
+    expect(tickOn(tiles()[0]).className).not.toMatch(/is-reviewed/);
+  });
+
+  // Spenser, 2026-09-18: "Refreshing caption", his words, laid over the
+  // photograph while its one caption is written. Gone when it arrives or
+  // fails, and a failure is said on that photograph, not somewhere else.
+  const saysOn = (tile) => tile.querySelector(".photo-says");
+
+  it("says Refreshing caption over that photograph while it works", async () => {
+    setUp(WRITTEN);
+    let arrive;
+    vi.spyOn(api, "refreshCaption").mockReturnValue(new Promise((ok) => { arrive = ok; }));
+    await waitFor(() => expect(tiles().length).toBe(2));
+    expect(saysOn(tiles()[0])).toBeNull();
+
+    await userEvent.click(refreshOn(tiles()[0]));
+
+    await waitFor(() => expect(saysOn(tiles()[0])).not.toBeNull());
+    expect(saysOn(tiles()[0]).textContent).toBe("Refreshing caption");
+    // Inside the photograph, not under it.
+    expect(saysOn(tiles()[0]).closest(".photo-frame")).not.toBeNull();
+    // Only on the one being written.
+    expect(saysOn(tiles()[1])).toBeNull();
+
+    arrive({ ...manifest([{ file: "photo-01.jpg", caption: "A different set of words" },
+                          WRITTEN[1]]), written: true });
+    await waitFor(() => expect(saysOn(tiles()[0])).toBeNull());
+  });
+
+  it("says a failure on that photograph, and not on the line under the title", async () => {
+    setUp(WRITTEN);
+    vi.spyOn(api, "refreshCaption").mockRejectedValue(new Error("The model could not be reached."));
+    await waitFor(() => expect(tiles().length).toBe(2));
+
+    await userEvent.click(refreshOn(tiles()[0]));
+
+    await waitFor(() => expect(saysOn(tiles()[0])).not.toBeNull());
+    expect(saysOn(tiles()[0]).textContent).toContain("The model could not be reached.");
+    expect(saysOn(tiles()[0]).textContent).not.toContain("Refreshing caption");
+    expect(document.querySelector(".quiet").textContent).not.toContain("could not be reached");
+    expect(saysOn(tiles()[1])).toBeNull();
+    // The caption he had is still there.
+    expect(within(tiles()[0]).getByRole("textbox").value).toBe("View east from Brady Street");
+
+    // It can be put away.
+    await userEvent.click(within(saysOn(tiles()[0])).getByRole("button"));
+    expect(saysOn(tiles()[0])).toBeNull();
+  });
+
+  it("says so on the photograph when no words came back", async () => {
+    setUp(WRITTEN);
+    vi.spyOn(api, "refreshCaption").mockResolvedValue(
+      { ...manifest(WRITTEN), written: false });
+    await waitFor(() => expect(tiles().length).toBe(2));
+
+    await userEvent.click(refreshOn(tiles()[0]));
+
+    await waitFor(() => expect(saysOn(tiles()[0])).not.toBeNull());
+    expect(saysOn(tiles()[0]).textContent)
+      .toContain("No caption was written. Nothing was changed.");
+  });
+
   it("is grey when there is no key on this computer", async () => {
     setUp(WRITTEN, { quote: { blocked_because: "no_key", ai_available: false } });
     await waitFor(() => expect(tiles().length).toBe(2));

@@ -1,19 +1,25 @@
-"""A switched-off button still reads as a button, and as its own button.
+"""A switched-off button is the same button, faded.
 
-Spenser, 2026-09-18, on Build photo pages and Generate captions both off:
-*"Everything looks like it's on top of the button, not part of the button."*
-The old rule replaced both fills with one flat grey and no edge, so the two
-became identical grey slabs that read as words on a box.
+Spenser, 2026-09-18, from his check results on 0.7.6.3: *same colour,
+faded.* Build photo pages stays red and Generate captions stays blue, faded,
+and resting on either still says why it is off.
 
-What he was given and what this holds: keep the pale fill, and draw an outline
-in the button's own colour. Red for the filled red button, blue for the blue
-one. It still reads as off, it still reads as a button, and the two stay
-distinguishable.
+This replaces the round before it, which kept a pale fill and drew an edge in
+the button's own colour. That had answered his earlier complaint about two
+identical grey slabs, *"Everything looks like it's on top of the button, not
+part of the button."* Same colour, faded, answers both: the two stay two
+different buttons, and nothing sits on top of either.
+
+`.is-off` is used on four buttons: Build photo pages (red) and Generate
+captions (blue) on the photographs screen, the blue save on Manage active
+jobs, and the blue Use this folder on the folder chooser. One rule for all
+four.
 """
 import re
 from pathlib import Path
 
 CSS = Path(__file__).resolve().parents[1] / "web" / "src" / "brand.css"
+SCREENS = Path(__file__).resolve().parents[1] / "web" / "src" / "screens"
 
 
 def rules(selector: str) -> list:
@@ -33,45 +39,50 @@ def one(selector: str) -> str:
     return " ".join(got)
 
 
-def test_off_keeps_the_pale_fill_and_the_quiet_ink():
+def faded(body: str) -> float:
+    m = re.search(r"opacity:\s*([\d.]+)", body)
+    assert m, "an off button is not faded"
+    return float(m.group(1))
+
+
+def test_off_build_stays_red_and_fades():
     off = one(".button.is-off")
-    assert "var(--quiet-bg)" in off
-    assert "var(--ink-on-quiet)" in off
+    assert re.search(r"background:\s*var\(--brand\)", off)
+    assert 0.3 <= faded(off) <= 0.6
 
 
-def test_off_build_is_outlined_in_red():
-    assert re.search(r"box-shadow:\s*inset[^;]*var\(--brand\)", one(".button.is-off")), \
-        "a switched-off red button has lost its red edge"
+def test_off_generate_stays_blue_and_fades():
+    off = one(".button.secondary.is-off")
+    assert re.search(r"background:\s*var\(--link\)", off)
+    assert 0.3 <= faded(off) <= 0.6
 
 
-def test_off_generate_is_outlined_in_blue():
-    assert re.search(r"box-shadow:\s*inset[^;]*var\(--link\)",
-                     one(".button.secondary.is-off")), \
-        "a switched-off blue button has lost its blue edge"
+def test_the_pale_fill_and_the_edge_are_gone():
+    for selector in (".button.is-off", ".button.secondary.is-off"):
+        body = one(selector)
+        assert "var(--quiet-bg)" not in body, "%s is the pale fill again" % selector
+        assert "inset" not in body, "%s still draws an edge" % selector
 
 
-def test_the_two_off_buttons_do_not_look_the_same():
-    red = re.search(r"box-shadow:([^;]*)", one(".button.is-off")).group(1)
-    blue = re.search(r"box-shadow:([^;]*)", one(".button.secondary.is-off")).group(1)
-    assert red.strip() != blue.strip()
-
-
-def test_the_outline_does_not_change_the_buttons_size():
-    """An inset shadow, not a border. A border would make the button 3px
-    taller the moment it switched off, in a widget whose height is pinned."""
+def test_off_does_not_change_the_buttons_size():
+    """A widget whose height is pinned cannot have a button that grows when
+    it switches off."""
     for selector in (".button.is-off", ".button.secondary.is-off"):
         for body in rules(selector):
-            assert not re.search(r"(^|[;\s])border(-width)?\s*:", body), \
-                "%s changes its border, so it changes size when it switches off" % selector
+            assert not re.search(r"(^|[;\s])border(-width)?\s*:", body)
             assert "padding" not in body
 
 
 def test_hovering_an_off_button_does_not_light_it_up():
-    """`.button.secondary:hover` is written later in the file at the same
-    specificity as the old off rule, so hovering a greyed Generate captions
-    painted it the live hover blue. The off hover names the secondary
-    button itself so it outranks that."""
-    assert re.search(r"box-shadow:\s*inset[^;]*var\(--link\)",
-                     one(".button.secondary.is-off:hover"))
-    assert "var(--quiet-bg)" in one(".button.secondary.is-off:hover")
-    assert re.search(r"box-shadow:\s*inset[^;]*var\(--brand\)", one(".button.is-off:hover"))
+    """`.button:hover` and `.button.secondary:hover` paint the live hover
+    colour, so the off hover names each one itself and holds the resting
+    colour."""
+    assert re.search(r"background:\s*var\(--link\)", one(".button.secondary.is-off:hover"))
+    assert re.search(r"background:\s*var\(--brand\)", one(".button.is-off:hover"))
+
+
+def test_resting_on_an_off_button_still_says_why():
+    screen = (SCREENS / "PhotosScreen.jsx").read_text()
+    assert 'data-has={buildWhy ? "yes" : "no"}' in screen
+    assert 'data-has={generateWhy ? "yes" : "no"}' in screen
+    assert re.search(r"\.act-wrap:hover \.why\[data-has=\"yes\"\]", CSS.read_text())

@@ -359,6 +359,66 @@ def test_refresh_leaves_a_waiting_copy_alone(client, home, monkeypatch):
         == "View east from Brady Street"
 
 
+def test_refresh_keeps_the_words_it_replaced(client, home, monkeypatch):
+    """Back undoes a Refresh. Spenser, 2026-09-18: Refresh keeps the words it
+    replaced, the same way Clear captions keeps the words it wipes, so Back
+    on that photograph has something to put back."""
+    stand_in(monkeypatch, words="Words he did not ask for")
+    job = home / JOB
+    client.post("/api/jobs/%s/photos/b.jpg/caption" % JOB)
+    kept = by_file(on_disk(job))["b.jpg"]
+    assert kept["caption"] == "Words he did not ask for"
+    assert kept[photos_routes.CLEARED] == "Rear loading area"
+    assert kept[photos_routes.CLEARED_AUTHOR] == "ai"
+
+
+def test_back_after_a_refresh_puts_the_old_words_back(client, home, monkeypatch):
+    stand_in(monkeypatch, words="Words he did not ask for")
+    job = home / JOB
+    client.post("/api/jobs/%s/photos/b.jpg/caption" % JOB)
+    r = client.post("/api/jobs/%s/photos/b.jpg/caption/back" % JOB)
+    assert r.status_code == 200
+    assert by_file(on_disk(job))["b.jpg"]["caption"] == "Rear loading area"
+
+
+def test_back_after_a_refresh_brings_no_tick(client, home, monkeypatch):
+    """a.jpg is ticked before the refresh. The tick never comes back with the
+    words, the same rule as after a clear."""
+    stand_in(monkeypatch, words="Words he did not ask for")
+    job = home / JOB
+    client.post("/api/jobs/%s/photos/a.jpg/caption" % JOB)
+    client.post("/api/jobs/%s/photos/a.jpg/caption/back" % JOB)
+    kept = by_file(on_disk(job))["a.jpg"]
+    assert kept["caption"] == "View east from Brady Street"
+    assert not kept.get("reviewed")
+
+
+def test_back_after_a_refresh_puts_back_who_wrote_them(client, home, monkeypatch):
+    manifest = client.get("/api/jobs/%s/manifest" % JOB).json()
+    for entry in manifest["photos"]:
+        if entry["file"] == "b.jpg":
+            entry["caption"] = "Something he typed himself"
+    client.put("/api/jobs/%s/manifest" % JOB, json=manifest)
+    stand_in(monkeypatch, words="Words he did not ask for")
+    job = home / JOB
+    client.post("/api/jobs/%s/photos/b.jpg/caption" % JOB)
+    client.post("/api/jobs/%s/photos/b.jpg/caption/back" % JOB)
+    kept = by_file(on_disk(job))["b.jpg"]
+    assert kept["caption"] == "Something he typed himself"
+    assert kept[photos_routes.AUTHOR] == "person"
+
+
+def test_a_refresh_that_writes_nothing_keeps_nothing(client, home, monkeypatch):
+    """No new words, no change: the old caption stays on the photograph and
+    no spare is made from it."""
+    stand_in(monkeypatch, words="")
+    job = home / JOB
+    client.post("/api/jobs/%s/photos/b.jpg/caption" % JOB)
+    kept = by_file(on_disk(job))["b.jpg"]
+    assert kept["caption"] == "Rear loading area"
+    assert photos_routes.CLEARED not in kept
+
+
 def test_refresh_is_refused_for_a_photograph_this_job_does_not_have(
         client, home, monkeypatch):
     calls = stand_in(monkeypatch)

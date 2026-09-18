@@ -129,12 +129,22 @@ export default function PhotosScreen({ job }) {
   // them. The screen's own business: never sent, never saved, and it never
   // changes the report's order. Spenser, 2026-09-17.
   const [onlyBand, setOnlyBand] = useState(null);
+  // Photographs he moved out of the band being shown, kept in view until the
+  // filter changes or clears, so one does not vanish from under his pointer
+  // the moment he clicks its new letter. Spenser, 2026-09-18. Screen only,
+  // like the filter itself.
+  const [stayed, setStayed] = useState([]);
+  function showBand(letter) { setOnlyBand(letter); setStayed([]); }
   // What he is typing right now, by file name, before it is saved. It is
   // deliberately not in the manifest. Everything that watches the manifest
   // reacts to every change of it, including the price question, which opens
   // photograph files across the office network. A caption he has not finished
   // is not yet a fact about the job, so it waits here until he leaves the box.
   const [typing, setTyping] = useState({});
+  // What a photograph is saying about itself, by file name: that its caption
+  // is being refreshed, or why the refresh failed. Said on the photograph and
+  // nowhere else.
+  const [said, setSaid] = useState({});
   // The caption save that is still in the air, if there is one. `Mark
   // reviewed` reads the job's list on the server and answers with what it
   // read, so a caption sent a moment before and still travelling comes back
@@ -151,6 +161,7 @@ export default function PhotosScreen({ job }) {
     // A different job's photographs, so what was bought for the last one is
     // not his any more.
     setShots(null); setShotsError(""); bought.current = false;
+    setSaid({}); setStayed([]);
     // Polls alongside the call rather than after it. Nothing was watching at
     // mount, which is exactly when the waiting happens.
     let alive = true;
@@ -386,6 +397,7 @@ export default function PhotosScreen({ job }) {
   // takes it back out, so the same click is never a trap.
   async function onBand(file, letter) {
     setError(null);
+    if (onlyBand) setStayed((now) => (now.includes(file) ? now : [...now, file]));
     try { setManifest(await setPhotoBand(job, file, letter)); }
     catch (e) { setError(e.message); }
   }
@@ -463,14 +475,30 @@ export default function PhotosScreen({ job }) {
 
   // Refresh, on one photograph. One model call, and it spends the figure
   // printed inside the control, so pressing it is the agreement and no window
-  // opens in front of it.
+  // opens in front of it. The server keeps the words it replaces as this
+  // photograph's spare, so Back on the tile undoes it. Spenser, 2026-09-18.
+  //
+  // While it works, the photograph itself says "Refreshing caption", his
+  // words, and a failure is said on that photograph too, never on the line
+  // under the title. Spenser, 2026-09-18.
   async function onRefreshCaption(file) {
     setError(null); setDone(null); setAt(0);
     setBusy("Writing captions...");
+    setSaid((now) => ({ ...now, [file]: { working: true } }));
+    let outcome = null;
     try {
       await saving.current;
-      setManifest(await refreshCaption(job, file));
-    } catch (e) { setError(e.message); }
+      const m = await refreshCaption(job, file);
+      setManifest(m);
+      if (m && m.written === false) {
+        outcome = { failed: "No caption was written. Nothing was changed." };
+      }
+    } catch (e) { outcome = { failed: e.message }; }
+    setSaid((now) => {
+      const rest = { ...now };
+      if (outcome) rest[file] = outcome; else delete rest[file];
+      return rest;
+    });
     setBusy("");
     // What the job has spent has moved, so the figure in the bar is asked for
     // again. Once, here, after the money was spent. Never on a redraw.
@@ -745,7 +773,9 @@ export default function PhotosScreen({ job }) {
   // Every count above reads `inPhotos`, never this, so the numbers keep
   // counting the whole job. With bands off there is no filter at all.
   const filter = bandsOn && chips.some((b) => b.letter === onlyBand) ? onlyBand : null;
-  const gridPhotos = filter ? inPhotos.filter((x) => x.p.band === filter) : inPhotos;
+  const gridPhotos = filter
+    ? inPhotos.filter((x) => x.p.band === filter || stayed.includes(x.p.file))
+    : inPhotos;
   const waitingText = `${waiting} photograph${waiting === 1 ? " is" : "s are"} waiting for a band`;
 
   const buildReady = inPhotos.length > 0 && allReviewed && waiting === 0
@@ -1069,7 +1099,7 @@ export default function PhotosScreen({ job }) {
             <span className="w-name">Bands</span>
             <button className="switch" role="switch" aria-checked={bandsOn}
                     aria-label="Bands" disabled={!!busy}
-                    onClick={() => { setOnlyBand(null); onBands({ bands_on: !bandsOn }); }}>
+                    onClick={() => { showBand(null); onBands({ bands_on: !bandsOn }); }}>
               <span className="knob" />
             </button>
             {/* Each chip is a filter. Click one and only that band's
@@ -1086,7 +1116,7 @@ export default function PhotosScreen({ job }) {
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
                         aria-pressed={filter === b.letter}
                         title={b.name === b.letter ? `Band ${b.letter}` : b.name}
-                        onClick={() => setOnlyBand(filter === b.letter ? null : b.letter)}>
+                        onClick={() => showBand(filter === b.letter ? null : b.letter)}>
                   {b.letter}
                 </button>
               ))}
@@ -1183,6 +1213,38 @@ export default function PhotosScreen({ job }) {
                   line of text: the photographs afford dragging. */}
               <span className="photo-frame">
                 <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+                {/* Who wrote the caption: AI, or Typed. Read from `author`,
+                    which the server puts on every caption (`author_of` in
+                    app/server/photos.py). Information, not a control, laid
+                    quietly over the upper left of the picture and taking no
+                    clicks. It sat on its own line under the caption until
+                    Spenser, 2026-09-18: it pushed everything down. Nothing
+                    at all when there is no caption, because over the picture
+                    an empty label holds no place for anything. The words are
+                    his to change. */}
+                {(p.caption || "").trim() && (p.author === "person" || p.author === "ai") && (
+                  <span className="who">{p.author === "person" ? "Typed" : "AI"}</span>
+                )}
+                {/* Laid over the picture while its one caption is being
+                    written, and gone when it arrives. A failure stays until
+                    he puts it away. Before the take-out button in the
+                    markup, so that button still sits on top and still
+                    works. */}
+                {said[p.file] && (
+                  <span className={`photo-says${said[p.file].failed ? " is-failed" : ""}`}
+                        role="status" aria-live="polite">
+                    {said[p.file].failed ? (
+                      <>
+                        <span className="photo-says-words">{said[p.file].failed}</span>
+                        <CloseX what="this message" onClose={() => setSaid((now) => {
+                          const rest = { ...now };
+                          delete rest[p.file];
+                          return rest;
+                        })} />
+                      </>
+                    ) : "Refreshing caption"}
+                  </span>
+                )}
                 <button className="dot cut-dot" aria-label="Take out" title="Take out"
                         onClick={() => onCut(p.file)}>
                   <span aria-hidden="true">&times;</span>
@@ -1204,18 +1266,6 @@ export default function PhotosScreen({ job }) {
                 value={p.file in typing ? typing[p.file] : p.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => commitCaption(i)} />
-              {/* Who wrote the caption, quietly, under it. Information, not a
-                  control, and never in the row below, which is exactly full.
-                  Always here so every tile's row sits at the same height;
-                  empty when there is no caption. Read from `author`, which
-                  the server puts on every caption (`author_of` in
-                  app/server/photos.py). The words are Spenser's to change.
-                  2026-09-18. */}
-              <div className="who">
-                {(p.caption || "").trim()
-                  ? (p.author === "person" ? "Typed" : p.author === "ai" ? "AI" : "")
-                  : ""}
-              </div>
               {/* The tick is the first thing in the row and stays there,
                   however many bands the job grows. Spenser, 2026-09-07. It
                   is one photograph at a time, with the all-at-once shortcut

@@ -24,10 +24,13 @@
   --link-on-dark: #248CC8;    /* only on the charcoal bar */
   --ok-bg: #E8F5EC;
   --ok-ink: #1E7A3C;
-  --tick: #3A8F52;            /* the tick green, lighter than --ok-ink. Chosen by
-                                 Spenser on 2026-09-17 for the Description of
+  --tick: #2E7242;            /* the tick green. Spenser chose #3A8F52 on
+                                 2026-09-17 for the Description of
                                  Improvements drawing, where it is `--tick`
-                                 too. The done state of the reviewed pill. */
+                                 too, and on 2026-09-18 asked for it a shade
+                                 darker, enough to read as small text on its
+                                 pale tint: 3.29:1 there before, 4.71:1 now.
+                                 The done state of the reviewed pill. */
 
   /* Paper. Two surfaces and only two: eggshell is the page, white is
      everything sitting on it. Charcoal survives in one place, the nav bar,
@@ -357,30 +360,27 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .button:hover { background: var(--brand-hover); }
 .button:active { background: var(--brand-press); transform: translateY(1px); }
 .button[disabled] { opacity: 0.5; cursor: default; }
-/* A control that cannot be used stops looking like a control that can. Half
-   opacity alone still reads as a blue button he ought to be able to press.
+/* A switched-off button is the same button, faded. Spenser, 2026-09-18:
+   *"same colour, faded."* Build photo pages stays red and Generate captions
+   stays blue, and resting on either still says why it is off. The fade is
+   .45, the number every other switched-off control in this app already uses.
 
-   Pale fill, and an outline in the button's own colour: red for the red one,
-   blue for the blue one. Spenser, 2026-09-18, on the flat grey this replaced:
-   *"Everything looks like it's on top of the button, not part of the
-   button."* Build photo pages and Generate captions had become identical grey
-   slabs. With the edge they still read as off, still read as buttons, and
-   still read as two different buttons. `.button.final` is the same idea.
+   It replaced a pale fill with an edge in the button's own colour, which had
+   in turn replaced one flat grey for both: *"Everything looks like it's on
+   top of the button, not part of the button."* Same colour, faded, keeps the
+   two looking like two different buttons without anything sitting on them.
 
-   An inset shadow, never a border, so switching off cannot change the
-   button's size inside a widget whose height is pinned.
+   Nothing here touches the border or the padding, so switching off cannot
+   change a button's size inside a widget whose height is pinned.
 
-   The hover rules name the blue button outright because
-   `.button.secondary:hover`, further down, has the same weight as a plain
-   `.button.is-off:hover` and used to win: hovering a greyed Generate captions
-   painted it the live hover blue with grey words on it. */
+   The hover rules name each button outright because `.button:hover` and
+   `.button.secondary:hover` paint the live hover colour at the same weight,
+   and used to win. */
 .button.is-off, .button.is-off:hover {
-  background: var(--quiet-bg); color: var(--ink-on-quiet); opacity: 1;
-  box-shadow: inset 0 0 0 1.5px var(--brand);
+  background: var(--brand); color: #fff; opacity: .45; box-shadow: none;
 }
 .button.secondary.is-off, .button.secondary.is-off:hover {
-  background: var(--quiet-bg); color: var(--ink-on-quiet); opacity: 1;
-  box-shadow: inset 0 0 0 1.5px var(--link);
+  background: var(--link); color: #fff; opacity: .45; box-shadow: none;
 }
 .drop { border: calc(2px * var(--k, 1)) dashed var(--link); background: #FFFFFF; border-radius: calc(6px * var(--k, 1)); padding: calc(26px * var(--k, 1)); text-align: center; color: var(--ink-muted); margin-bottom: calc(22px * var(--k, 1)); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(200px * var(--k, 1)), 1fr)); gap: calc(18px * var(--k, 1)); }
@@ -397,14 +397,17 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(4px * var(--k, 1)) calc(2px * var(--k, 1)); resize: vertical; overflow: hidden; min-height: calc(44px * var(--k, 1));
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
-/* Who wrote the caption above it: AI, or Typed. Spenser, 2026-09-18. Quiet on
-   purpose, it is information and not a control. A fixed height, so a tile
-   with no caption keeps its row at the same pixel as its neighbours. */
-.grid .who {
-  height: calc(14px * var(--k, 1)); margin-top: calc(2px * var(--k, 1));
+/* Who wrote the caption: AI, or Typed, in the upper left corner of the
+   photograph. Spenser, 2026-09-18: on the caption line it pushed everything
+   down. Quiet on purpose, it is information and not a control: small grey
+   words on the same near-white the take-out button wears, which sits in the
+   opposite corner, and it takes no clicks. */
+.photo-frame .who {
+  position: absolute; top: calc(8px * var(--k, 1)); left: calc(8px * var(--k, 1));
+  padding: calc(2px * var(--k, 1)) calc(6px * var(--k, 1)); border-radius: 999px;
+  background: rgba(255, 255, 255, .88); color: var(--ink-on-quiet);
   font-size: calc(10.5px * var(--k, 1)); line-height: calc(14px * var(--k, 1));
-  color: var(--ink-muted); letter-spacing: 0.02em;
-  white-space: nowrap; overflow: hidden;
+  letter-spacing: 0.02em; white-space: nowrap; pointer-events: none;
 }
 .done { margin-top: calc(18px * var(--k, 1)); background: var(--ok-bg); color: var(--ok-ink); border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 /* A caption run has three endings and they are not all good news. Success
@@ -503,6 +506,46 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   gap: calc(24px * var(--k, 1)); flex-wrap: nowrap; min-height: calc(76px * var(--k, 1)); margin: calc(26px * var(--k, 1)) 0 calc(12px * var(--k, 1));
 }
 .screen-head > :first-child { min-width: 0; }
+/* The photographs screen's header stays at the top while he scrolls, so
+   what is happening is always in view. Spenser, 2026-09-18. It parks under
+   the dark bar, which is stuck to the top of the window already, so it starts
+   at `--bar-height`, the number both share, less one pixel: the bar draws
+   51.69px tall, so without the overlap a third of a pixel of photograph
+   shows between the two. Below the bar in z, never over it, so the overlap
+   is hidden.
+
+   The gap above it is padding rather than margin, so that once it is stuck
+   the title does not touch the bar, and its ground is opaque so nothing
+   scrolling under it shows through. */
+.frame.is-photos .screen-head:not(.is-asking) {
+  position: sticky; top: calc(var(--bar-height) - 1px); z-index: 5;
+  background: var(--ground);
+  margin-top: 0; margin-bottom: calc(14px * var(--k, 1));
+  padding-top: calc(26px * var(--k, 1)); padding-bottom: calc(12px * var(--k, 1));
+}
+/* A plain red line where the fixed part ends, the full width of the screen,
+   in the app's red. Not a progress bar: nothing in it moves. Spenser,
+   2026-09-18.
+
+   The frame is narrower than the screen, so the line is widened with a
+   shadow and cut back to its own height. A shadow never makes the page
+   scroll sideways; `100vw` would, because on Windows it counts the
+   scrollbar. */
+.frame.is-photos .screen-head:not(.is-asking)::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--brand);
+  box-shadow: 0 0 0 100vmax var(--brand);
+  clip-path: inset(0 -100vmax);
+}
+/* Anything that scrolls something into view on this screen, tabbing to a
+   caption box included, stops it below the fixed row rather than under it.
+   Set on the page's own scroller, and only while the photographs screen is
+   showing. The bar, then the row, which measures 133px in a browser at this
+   screen's 90 per cent, and a breath. The row's height is pinned by the
+   widget's, so this number does not move with the photographs. */
+:root:has(.frame.is-photos) {
+  scroll-padding-top: calc(var(--bar-height) + 148px);
+}
 /* The folder question is asked before any document is in view and holds no
    widget, so it takes no floor. */
 .screen-head.is-asking { min-height: 0; margin-bottom: calc(20px * var(--k, 1)); }
@@ -547,8 +590,10 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .quiet.k-wrong .said { color: var(--brand); }
 .quiet.k-standing .mark { background: var(--needs-ink); }
 .quiet.k-standing .said { color: var(--needs-ink); }
-/* A run's progress, on the same line rather than in a block of its own. */
-.thread { flex: none; display: inline-block; width: calc(54px * var(--k, 1)); height: calc(3px * var(--k, 1));
+/* A run's progress, on the same line rather than in a block of its own. It
+   runs the width the line has, after the words. It was a 54px stub until
+   Spenser, 2026-09-18: "make its progress bar longer". */
+.thread { flex: 1 1 0; min-width: calc(54px * var(--k, 1)); display: inline-block; height: calc(3px * var(--k, 1));
   border-radius: calc(2px * var(--k, 1)); background: var(--line); overflow: hidden; }
 .thread span { display: block; height: 100%; border-radius: calc(2px * var(--k, 1)); background: var(--link); }
 .quiet .linky { margin-left: 0; flex: none; }
@@ -600,7 +645,14 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(7px * var(--k, 1)) calc(14px * var(--k, 1));
   background: var(--paper); border: 1px solid var(--line); border-radius: calc(6px * var(--k, 1));
   box-shadow: var(--shadow-raised);
+  /* How far Build photo pages and Generate captions reach into the side
+     padding. Spenser, 2026-09-18: slightly wider, within the widget's size.
+     The widget's width and its padding stay; only the top row, and the photo
+     button that has to stay under Build, reach out by this much. */
+  --w-bleed: calc(5px * var(--k, 1));
 }
+.screen-actions.control-panel .w-row:not(.two) { margin: 0 calc(-1 * var(--w-bleed)); }
+.screen-actions.control-panel .w-row.two .w-icon { margin-left: calc(-1 * var(--w-bleed)); }
 /* Spread, not right. This is what puts Build photo pages hard against the
    left edge, which is what puts the photo button directly underneath it on
    the row below. Right-justifying floats Build inward and the button lands
@@ -1019,6 +1071,24 @@ input::placeholder, textarea::placeholder {
   background: rgba(255, 255, 255, .88);
 }
 .cut-dot:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+/* What one photograph is saying about itself, laid over the picture: that
+   its caption is being refreshed, in Spenser's words, "Refreshing caption",
+   and why a refresh failed. 2026-09-18. Charcoal at the nav bar's own value
+   so white words read on any photograph. The take-out button comes after it
+   in the markup and stays on top of it, live. */
+.photo-says {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: calc(10px * var(--k, 1)) calc(14px * var(--k, 1));
+  border-radius: calc(4px * var(--k, 1)); background: rgba(52, 53, 56, 0.72);
+  color: var(--box-ink); font-size: calc(13px * var(--k, 1)); font-weight: 600;
+  line-height: 1.35; text-align: center; pointer-events: none;
+}
+/* A failure stays until he puts it away, so it takes clicks; the working
+   state never does, so nothing under it is blocked. */
+.photo-says.is-failed { pointer-events: auto; background: rgba(110, 9, 3, 0.86); font-weight: 500;
+  padding-left: calc(28px * var(--k, 1)); padding-right: calc(28px * var(--k, 1)); }
+.photo-says .note-x { color: #fff; top: calc(2px * var(--k, 1)); right: calc(2px * var(--k, 1)); }
+.photo-says .note-x:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
 .band-dot.is-on {
   background: var(--brand);
   border-color: var(--brand);
@@ -1365,8 +1435,8 @@ input::placeholder, textarea::placeholder {
    `margin: 0` because `.done` is also the app's finished-message box and its
    18px top margin reached this pill through the shared name. It hung 6.7px
    below the bar in 0.7.6.3. */
-.pill.done { color: var(--tick); background: rgba(58, 143, 82, 0.07);
-  border: 1px solid rgba(58, 143, 82, 0.36); margin: 0; }
+.pill.done { color: var(--tick); background: color-mix(in srgb, var(--tick) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tick) 36%, transparent); margin: 0; }
 
 /* Red, and a link rather than a button: "the same exact thing, just red." The
    gap to the money is pushed by this, so when there is nothing to clear the

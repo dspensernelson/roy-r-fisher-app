@@ -55,24 +55,30 @@ const tick = (tile) => tile.querySelector(".tick-dot");
 const who = (tile) => tile.querySelector(".who");
 
 describe("who wrote it, on the photograph", () => {
-  it("marks an AI caption and a typed one under the caption", async () => {
+  // Spenser, 2026-09-18: AI or Typed moves to the upper left corner of the
+  // photograph, laid quietly over the picture. On the caption line it pushed
+  // everything down.
+  it("marks an AI caption and a typed one on the photograph", async () => {
     setUp();
     await waitFor(() => expect(tiles()).toHaveLength(5));
     expect(who(tiles()[0]).textContent).toBe("AI");
     expect(who(tiles()[1]).textContent).toBe("AI");
     expect(who(tiles()[2]).textContent).toBe("Typed");
+    for (const n of [0, 1, 2]) expect(who(tiles()[n]).closest(".photo-frame")).not.toBeNull();
   });
 
-  it("says nothing when there is no caption, and keeps its place", async () => {
+  it("says nothing, and draws nothing, when there is no caption", async () => {
     setUp();
     await waitFor(() => expect(tiles()).toHaveLength(5));
-    expect(who(tiles()[3])).toBeTruthy();
-    expect(who(tiles()[3]).textContent).toBe("");
+    expect(who(tiles()[3])).toBeNull();
   });
 
-  it("sits with the caption, not in the row of controls", async () => {
+  it("is off the caption line and out of the row of controls", async () => {
     setUp();
     await waitFor(() => expect(tiles()).toHaveLength(5));
+    // Nothing stands between the caption box and the row under it.
+    const box = within(tiles()[0]).getByRole("textbox");
+    expect(box.nextElementSibling).toHaveClass("review-line");
     expect(who(tiles()[0]).closest(".review-line")).toBeNull();
     expect(who(tiles()[0]).tagName).not.toBe("BUTTON");
   });

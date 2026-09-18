@@ -126,8 +126,11 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
             <span className="working-text">Checking...</span>
           </span>
         )}
+        {/* Spenser, 2026-09-18: "This should be off to the right of the
+            button, not below it." Last in the row, so it reads after the
+            buttons. The row wraps, so on a narrow screen it falls under. */}
+        {looked && <span className="check-answer">{looked}</span>}
       </div>
-      {looked && <p className="setting-fine">{looked}</p>}
     </div>
   );
 

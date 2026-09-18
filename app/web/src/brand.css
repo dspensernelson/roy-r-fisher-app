@@ -1407,3 +1407,15 @@ input::placeholder, textarea::placeholder {
    right edge after them. */
 .control-panel .barline .clear + .bar-back { margin-left: 0; }
 .control-panel .barline .bar-back + .money { margin-left: 0; }
+
+
+/* ── Settings ─────────────────────────────────────────────────────────────
+   Check now's answer, on the same row as the button. Spenser, 2026-09-18:
+   "This should be off to the right of the button, not below it." It takes
+   whatever the buttons leave, and only drops under them when less than
+   120px is left, which is a narrow screen. 120px because with Check now and
+   Update available both in the row, the card at 1280px wide leaves about
+   170px; at 200px the answer fell under the buttons there, measured
+   2026-09-18. No cap on its width: text fills the box it sits in. */
+.setting-actions .check-answer { flex: 1 1 120px; min-width: 0;
+  font-size: calc(12.5px * var(--k, 1)); color: var(--ink-muted); }

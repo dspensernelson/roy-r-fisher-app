@@ -52,6 +52,24 @@ Delete this file when the batch is fixed and merged. That is the last task.
 - [ ] **The tick green goes a shade darker**, enough to read as small text on
       its pale background.
 
+## From his check results, 18 September, to build in this batch
+
+All 28 checks passed. The two he could not run, a stopped update writing its
+reason to the log and the loading page when the app does not answer, stay
+unverified on Windows.
+
+- [ ] Build photo pages and Generate captions slightly wider.
+- [ ] **A switched-off button: same colour, faded.** Build stays red and
+      Generate stays blue, faded, and resting on it still says why. Replaces
+      the pale fill with a coloured edge.
+- [ ] **Refresh shows "Refreshing caption" on the photograph** while its
+      caption is written, and it goes away when done. His words.
+- [ ] **AI or Typed moves to the upper left corner of the photograph.** On
+      the caption line it pushes everything down.
+- [ ] **Check now's answer sits to the right of the button**, not under it.
+- [ ] **The whole update happens inside the version card in Settings**, not
+      in a box above everything.
+
 ## Waiting on Spenser
 
 - [ ] Clicking the version badge shows plain-words notes for that version and

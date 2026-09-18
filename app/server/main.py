@@ -866,6 +866,16 @@ def create_app() -> FastAPI:
             "needs_confirmation": len(waiting) > captions.CONFIRM_ABOVE,
             "confirm_above": captions.CONFIRM_ABOVE,
             "estimate": cost.estimate(len(waiting), _bucket()),
+            # What one photograph costs, for the refresh control that sits on
+            # every tile. It rides on this answer rather than having a route
+            # of its own, and that is deliberate: this app already shipped a
+            # fault where the screen asked the server for the caption price on
+            # every keystroke, one trip across the office network per letter.
+            # A figure on sixty tiles must be asked for once, not sixty times
+            # and not on every redraw. The screen asks for this when it opens,
+            # after a run and when it opens the spending window, and nowhere
+            # else.
+            "one_photo": cost.estimate(1, _bucket()),
             # The other thing on that window that spends. Opening it captions
             # his first few photographs in both styles, so the figure is
             # photographs times styles. It is not drawn on the window any
@@ -1147,6 +1157,107 @@ def create_app() -> FastAPI:
             answer["error_kind"] = failure.kind
             answer["partial"] = done > 0
         return answer
+
+    @app.post("/api/jobs/{name}/photos/{file}/caption")
+    def draft_one_caption(name: str, file: str):
+        """Write a new caption for this one photograph. One model call.
+
+        The refresh control on a tile. It is the smallest thing in this app
+        that spends money, and the price is drawn inside the control itself,
+        so pressing it is the agreement. There is no window: `CONFIRM_ABOVE`
+        exists because a sixty-photograph run is a number he should see first,
+        and one photograph at the price already printed on the button is not.
+
+        Everything the whole-job run does before it reaches the network, this
+        does in the same order and for the same reason: the policy is asked
+        before a client can exist, so a refusal costs nothing.
+
+        The caption is replaced whether or not there was one. Refresh is for
+        the caption he does not like, so it has to be able to write over it,
+        and the tick comes off with the old words.
+
+        The spare from a clear is left alone. A caption written here is one of
+        the ones the job-wide back must spare, and its own Back still has
+        somewhere to go.
+        """
+        job = photos_routes._job_or_404(name)
+        manifest = photos_routes.load_manifest(job)
+
+        try:
+            verdict = aipolicy.classify_job(job)
+        except state.StateUnreadable:
+            raise HTTPException(409, aipolicy.UNREADABLE_MESSAGE)
+        if verdict == aipolicy.LOCAL_ONLY:
+            raise HTTPException(403, aipolicy.LOCAL_ONLY_MESSAGE)
+        if not captions.ai_available():
+            raise HTTPException(
+                409, "Writing captions needs a key on this computer. Open "
+                     "Settings to add one. You can still type every caption "
+                     "in yourself.")
+
+        photos_dir = jobs.photos_dir(job)
+        wanted = None
+        for entry in photos_routes.included(manifest):
+            if entry.get("file") == file:
+                wanted = entry
+                break
+        if wanted is None:
+            raise HTTPException(404, "No photo named %r in this job." % file)
+        resolved = photos_routes._resolve_confined(
+            jobs.photo_path(job, wanted), photos_dir)
+        if resolved is None or not resolved.is_file():
+            raise HTTPException(404, "That photograph is not in the job folder.")
+
+        shown = cost.estimate(1, _bucket())
+        try:
+            drafted, used = captions.draft_captions(
+                manifest.get("context", ""), [resolved],
+                style=manifest.get("caption_style", captions.DEFAULT_STYLE))
+        except captions.CaptionError as exc:
+            raise HTTPException(502, exc.message)
+
+        fresh = str(drafted.get(resolved.name, "")).strip()
+        if fresh:
+            with busy.writing():
+                wanted["caption"] = fresh
+                wanted.pop(photos_routes.REVIEWED, None)
+                photos_routes.save_manifest(job, manifest)
+
+        measured = cost.measured(captions.MODEL, [used])
+        # Recorded the way every other paid call is. Money he has spent
+        # belongs in the history he can read, and the rate learns from a
+        # single photograph exactly as it learns from sixty.
+        try:
+            usage_store.open_bucket(_bucket())
+            usage_store.record_run({
+                "run_id": "%s-%d" % (_bucket().split("/")[0],
+                                     len(usage_store.runs()) + 1),
+                "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+                "model": captions.MODEL,
+                "pricing_version": measured["pricing_version"],
+                "pricing_rates": pricing.rates_for(captions.MODEL) or {},
+                "image_settings_version": _image_settings_version(),
+                "purpose": "one photograph",
+                "photos_requested": 1,
+                "photos_captioned": 1 if fresh else 0,
+                "photos_remaining": 0,
+                "api_requests": 1,
+                "status": ("completed" if fresh else "failed")
+                          if measured["calculated_cost"] is not None
+                          else usage_store.COST_UNAVAILABLE,
+                "estimate": shown["total"],
+                "token_usage": [used],
+                "calculated_cost": measured["calculated_cost"],
+                "learned_rate": round(cost.rate_including(
+                    _bucket(), measured["calculated_cost"], 1 if fresh else 0), 6),
+            })
+        except Exception as exc:
+            applog.note("usage bookkeeping failed", job=name, error=str(exc))
+
+        fresh_manifest = photos_routes.load_manifest(job)
+        return {**fresh_manifest, "ai_available": True, "written": bool(fresh),
+                "estimate_shown": shown, "measured": measured,
+                "review": photos_routes.review_progress(fresh_manifest)}
 
     @app.get("/api/jobs/{name}/reading")
     def reading_progress(name: str):

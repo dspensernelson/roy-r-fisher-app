@@ -611,7 +611,18 @@ describe("the bands switch", () => {
     expect(screen.getByRole("button", { name: "Band C" })).toBeInTheDocument();
   });
 
-  it("asks the server to turn them off, and the dots go", async () => {
+  // Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
+  // checkmark, those should remain in the same spot at all times. When the
+  // bands are gone, the bands are gone, but they should be evenly spaced so
+  // the bands are there."* So the dots go quiet where they stand rather than
+  // leaving the row. Hidden, not removed, is what holds the other three
+  // controls on the same pixel.
+  //
+  // What is hidden cannot be checked from here: the stylesheet is not loaded
+  // in jsdom, so `visibility: hidden` is not in force and a query by role
+  // still finds these. The class is what this can prove, and the pixels are
+  // measured in a real browser and written into `.band-dot.off` in brand.css.
+  it("asks the server to turn them off, and the dots go quiet in place", async () => {
     api.getManifest.mockResolvedValue(banded());
     const put = vi.spyOn(api, "putBands").mockResolvedValue(
       manifest({ bands_on: false, bands: BANDS }));
@@ -619,7 +630,29 @@ describe("the bands switch", () => {
     await userEvent.click(await screen.findByRole("switch", { name: "Bands" }));
     expect(put).toHaveBeenCalledWith(JOB, { bands_on: false });
     await waitFor(() =>
-      expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0));
+      expect(document.querySelectorAll(".band-dot.off").length)
+        .toBe(document.querySelectorAll(".band-dot").length));
+    // Hidden is not gone. Nothing here may be reached or pressed.
+    for (const dot of document.querySelectorAll(".band-dot")) {
+      expect(dot).toBeDisabled();
+      expect(dot).toHaveAttribute("tabindex", "-1");
+      expect(dot).not.toHaveClass("is-on");
+    }
+  });
+
+  it("holds the same slots in the row whether bands are on or off", async () => {
+    // The whole of what he asked for, in one number: the row has the same
+    // children either way, so `space-between` has the same arithmetic to do
+    // and the tick, Back and refresh cannot move.
+    api.getManifest.mockResolvedValue(banded());
+    await show();
+    const on = document.querySelector(".review-line").children.length;
+    cleanup();
+    api.getManifest.mockResolvedValue(manifest({ bands_on: false, bands: BANDS }));
+    await show();
+    const off = document.querySelector(".review-line").children.length;
+    expect(off).toBe(on);
+    expect(on).toBe(3 + BANDS.length);  // the tick, the bands, Back, refresh
   });
 
   it("moves no photograph of its own accord", async () => {
@@ -1138,12 +1171,16 @@ describe("one widget, upper right", () => {
     expect(document.querySelector(".values [role=switch]")).toBeNull();
   });
 
-  it("keeps the band chips' place when bands are off", async () => {
+  it("keeps the band chips' place when bands are off, and the dots' too", async () => {
     api.getManifest.mockResolvedValue(manifest({ bands_on: false, bands: BANDS }));
     await show();
     await screen.findAllByPlaceholderText("Caption...");
     expect(document.querySelector(".w-chips")).toHaveClass("off");
-    expect(screen.queryAllByRole("button", { name: /^Put in band / })).toHaveLength(0);
+    // The same answer on the tiles as in the bar above them, by the same
+    // mechanism, so turning bands off moves nothing anywhere on this screen.
+    const dots = document.querySelectorAll(".band-dot");
+    expect(dots.length).toBeGreaterThan(0);
+    for (const dot of dots) expect(dot).toHaveClass("off");
   });
 });
 

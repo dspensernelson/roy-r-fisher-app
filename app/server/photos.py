@@ -57,6 +57,43 @@ def is_cut(entry: dict) -> bool:
 
 REVIEWED = "reviewed"
 
+# The words a clear took off this photograph, kept beside the caption they
+# came out of. Nothing new on disk: the manifest is the app's own note for the
+# job and it already holds every caption, so the spare copy goes in the entry
+# next to the live one rather than in a file of its own.
+CLEARED = "cleared_caption"
+
+
+def cleared_caption(entry: dict) -> str:
+    """What this photograph said before its caption was cleared, or "".
+
+    A missing key means nothing was ever cleared for it, which is every entry
+    in every manifest written before this existed. That reads as "there is
+    nothing to put back", which is the safe direction and needs no migration.
+    """
+    return str(entry.get(CLEARED) or "")
+
+
+def _put_one_back(entry: dict) -> bool:
+    """Put this photograph's cleared caption back, and take its tick off.
+
+    The tick never comes back with the words. A tick says Mark has read the
+    caption that is on the photograph now, and these words have been off the
+    screen since the clear, so they are read again. `reset_changed_reviews`
+    already holds that rule for a caption edited by hand or on disk; this is
+    the same rule on the way back in, said here because this route never goes
+    through that one.
+
+    The spare is kept, not spent. Back on a photograph works on its own and
+    stays available: a caption put back can be typed over and put back again.
+    """
+    words = cleared_caption(entry)
+    if not words.strip():
+        return False
+    entry["caption"] = words
+    entry.pop(REVIEWED, None)
+    return True
+
 
 def is_reviewed(entry: dict) -> bool:
     """Whether Mark has looked at this caption and said so.
@@ -855,6 +892,11 @@ def _validate_manifest_shape(job: Path, manifest) -> Optional[str]:
             return "A photo's reviewed flag must be true or false."
         if "cut" in entry and not isinstance(entry["cut"], bool):
             return "A photo's 'cut' must be true or false."
+        # The words a clear took off. Checked to the same depth as the tick
+        # and the cut flag, because Back writes it straight back into the
+        # caption and the manifest is hand-editable by design.
+        if CLEARED in entry and not isinstance(entry[CLEARED], str):
+            return "A photo's cleared caption must be text."
         if BAND in entry:
             # An unknown letter is an error rather than a silent unassign.
             # Quietly dropping it would hide whatever wrote it, the same
@@ -1216,9 +1258,96 @@ def clear_captions(name: str):
 
     with busy.writing():
         for entry in manifest["photos"]:
+            # The words are kept before they are wiped, beside the caption
+            # they came out of. This is the only place a caption is taken away
+            # wholesale, so it is the only place the copy has to be made.
+            #
+            # A caption that is already blank is skipped rather than
+            # overwritten with nothing. A photograph put back and then cleared
+            # by hand would otherwise lose the spare it still had, and a
+            # second clear would quietly empty every spare in the job.
+            if str(entry.get("caption", "")).strip():
+                entry[CLEARED] = entry["caption"]
             entry["caption"] = ""
+            # The tick goes with the words. A tick says Mark has read the
+            # caption on this photograph, and there is no longer a caption on
+            # it, so the claim is not true any more. It used to survive the
+            # clear, which left a filled green tick sitting under an empty
+            # caption box, and a photograph counted as reviewed that nobody
+            # could have reviewed. Found on screen on 2026-09-17 while proving
+            # Back. It is the same rule `reset_changed_reviews` already holds
+            # for a caption whose words changed; this is the extreme case of
+            # that, where the words changed to none.
+            entry.pop(REVIEWED, None)
         save_manifest(job, manifest)
     return {"cleared": cleared, **load_manifest(job)}
+
+
+@router.post("/api/jobs/{name}/photos/{file}/caption/back")
+def caption_back(name: str, file: str):
+    """Put this one photograph's cleared caption back.
+
+    It works on its own. Spenser decided that on 2026-09-17: Back on a
+    photograph does not need the job-wide one to have been pressed, and it
+    does not care what any other photograph is doing.
+
+    The tick does not come back with the words.
+    """
+    job = _job_or_404(name)
+    manifest = load_manifest(job)
+    for entry in manifest.get("photos", []):
+        if entry.get("file") != file:
+            continue
+        if not _put_one_back(entry):
+            raise HTTPException(400, "Nothing was cleared for this photograph.")
+        with busy.writing():
+            save_manifest(job, manifest)
+        return load_manifest(job)
+    raise HTTPException(404, "No photo named %r in this job." % file)
+
+
+@router.post("/api/jobs/{name}/captions/back")
+def captions_back(name: str):
+    """Put back the captions a clear took off, and spare what he changed.
+
+    Spenser's rule, 2026-09-17: only the photographs *still empty* since the
+    clear are put back. Anything he typed, or had written again, after the
+    clear is left exactly as it is. That is what makes this safe to press
+    twice: the second press has nothing left to act on and says so.
+
+    The spare is not spent. A photograph whose words were left alone here
+    keeps its copy, so its own Back on the tile still works.
+
+    Read off disk rather than through `load_manifest`, exactly the way the
+    clear this undoes is read, and for the same reason. The clear blanks every
+    caption in the file, including photographs outside the folder the report
+    is currently drawn from. Going through the view would put back only the
+    ones on screen and quietly leave the rest empty, so the two would not be
+    each other's opposite.
+    """
+    job = _job_or_404(name)
+    path = manifest_path(job)
+    if not path.is_file():
+        raise HTTPException(400, "There are no captions to put back.")
+    try:
+        manifest = json.loads(path.read_text())
+    except ValueError:
+        raise HTTPException(400, "This job's photo list could not be read.")
+    error = _validate_manifest_shape(job, manifest)
+    if error:
+        raise HTTPException(400, error)
+
+    back = 0
+    for entry in manifest["photos"]:
+        if str(entry.get("caption", "")).strip():
+            continue                      # he changed it. Leave it alone.
+        if _put_one_back(entry):
+            back += 1
+    if not back:
+        raise HTTPException(400, "There are no captions to put back.")
+    with busy.writing():
+        save_manifest(job, manifest)
+    return {"back": back, **load_manifest(job)}
 
 
 def _where_it_sits(job: Path, photos_dir: Path, bare: str) -> Optional[Path]:

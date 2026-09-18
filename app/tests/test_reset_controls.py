@@ -117,9 +117,15 @@ def test_the_same_folder_can_be_chosen_again(client, home):
 
 # ------------------------------------------------------- clear captions -----
 def test_only_the_captions_change(client, home):
-    """The whole manifest before and after, with only caption values allowed
-    to differ. This is the guard against ever fixing captions by deleting
-    the manifest, which would take the order and the style with it."""
+    """The whole manifest before and after, with only the caption and its
+    spare allowed to differ. This is the guard against ever fixing captions by
+    deleting the manifest, which would take the order and the style with it.
+
+    The spare joined the mask on 2026-09-17, when clearing started keeping the
+    words it takes off so Back has somewhere to go. It is the only key a clear
+    is allowed to add, and `test_a_caption_can_come_back.py` is what says the
+    right words landed in it.
+    """
     job = make_job(home, "DAVENPORT_2840 Brady Street - 2026 Tax")
     client.put("/api/workspace", json={"path": str(home)})
     path = job / "Photos" / "photo-manifest.json"
@@ -139,6 +145,7 @@ def test_only_the_captions_change(client, home):
         m = copy.deepcopy(m)
         for entry in m["photos"]:
             entry["caption"] = "<masked>"
+            entry.pop("cleared_caption", None)
         return m
 
     assert masked(after) == masked(before)

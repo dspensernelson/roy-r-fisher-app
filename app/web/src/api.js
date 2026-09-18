@@ -84,6 +84,21 @@ export const uncutPhoto = (name, file) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/uncut`, { method: "POST" }).then(j);
 export const clearCaptions = (name) =>
   fetch(`/api/jobs/${encodeURIComponent(name)}/captions/clear`, { method: "POST" }).then(j);
+// Put one photograph's cleared caption back. It works on its own: it does not
+// need the job-wide one and it does not care what any other photograph holds.
+export const captionBack = (name, file) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/caption/back`,
+        { method: "POST" }).then(j);
+// Put back the captions the clear took off, sparing anything he has changed
+// since. Safe to press twice, because the second press finds nothing to do.
+export const captionsBack = (name) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/captions/back`, { method: "POST" }).then(j);
+// A new caption for one photograph. One model call, and it spends. The price
+// is printed inside the control that calls this, so pressing it is the
+// agreement and there is no window in front of it.
+export const refreshCaption = (name, file) =>
+  fetch(`/api/jobs/${encodeURIComponent(name)}/photos/${encodeURIComponent(file)}/caption`,
+        { method: "POST" }).then(j);
 export const getSettings = () => fetch("/api/settings").then(j);
 export const saveKey = (key) =>
   fetch("/api/settings/key", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }).then(j);

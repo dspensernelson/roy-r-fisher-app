@@ -52,8 +52,8 @@ are in its phases.
 
 ## Press Update: the new app opens, the old one closes, nothing else happens
 
-- [ ] Confirm the fixed port is how we get to one tab · Star 1
-- [ ] An update must leave one tab: unproven until an update starts from 0.7.6.1 · Star 1
+- [x] Confirm the fixed port is how we get to one tab · Star 1
+- [x] An update must leave one tab: unproven until an update starts from 0.7.6.1 · Star 1
 - [x] Prove an update Spenser can take himself, end to end · Star 1
 
 ## Double-click the icon: it opens, anything else running shuts down

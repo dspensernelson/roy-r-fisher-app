@@ -145,19 +145,68 @@ def test_a_written_example_never_sits_beside_one_of_his_photographs():
 
 
 # --- the money is shown before anything is spent -------------------------
-def test_the_estimate_covers_every_call_that_can_cost(client, never_called):
+def test_every_route_that_touches_captions_is_named_here(client, never_called):
     """Nothing bills outside what the estimate describes.
 
-    Two routes can reach the provider: the run, and the samples behind their
-    own press. `GET /caption-estimate` carries a figure for each, so the
-    window he is looking at can price every press on it.
-    `test_the_chooser_shows_his_photographs.py` holds the second figure.
+    Every POST that touches a job's captions is listed, paid or free, so a new
+    one cannot arrive without somebody saying in this file which it is. The
+    list is what makes the two below exhaustive rather than a sample.
+
+    Three can reach the provider: the whole-job run, the samples the style
+    window buys as it opens, and refresh on one photograph. `GET
+    /caption-estimate` carries a figure for each: `estimate` for the run,
+    `samples.estimate` for the window, `one_photo` for refresh.
+    `test_the_chooser_shows_his_photographs.py` holds the second figure and
+    `test_a_caption_can_come_back.py` holds the third.
     """
-    paid = [r for r in client.app.routes
-            if getattr(r, "path", "").startswith("/api/jobs/{name}/caption")
-            and "POST" in getattr(r, "methods", set())]
-    paths = sorted(r.path for r in paid)
-    assert paths == ["/api/jobs/{name}/caption-samples",
-                     "/api/jobs/{name}/captions",
-                     "/api/jobs/{name}/captions/clear"]
+    touching = sorted(
+        r.path for r in client.app.routes
+        if "POST" in getattr(r, "methods", set())
+        and "caption" in getattr(r, "path", ""))
+    assert touching == ["/api/jobs/{name}/caption-samples",
+                        "/api/jobs/{name}/captions",
+                        "/api/jobs/{name}/captions/back",
+                        "/api/jobs/{name}/captions/clear",
+                        "/api/jobs/{name}/photos/{file}/caption",
+                        "/api/jobs/{name}/photos/{file}/caption/back"]
+
+
+def test_the_free_ones_never_reach_the_provider(client, never_called):
+    """Clearing captions and putting them back are the app's own arithmetic
+    over a file it already has. They must stay that way: both are pressed
+    freely and neither shows a price."""
+    assert client.post("/api/jobs/anything/captions/clear").status_code in (400, 404)
+    assert client.post("/api/jobs/anything/captions/back").status_code in (400, 404)
+    assert client.post(
+        "/api/jobs/anything/photos/a.jpg/caption/back").status_code in (400, 404)
+
+
+def test_the_paid_ones_each_have_a_figure_on_the_estimate(client, never_called):
+    """One figure per paid route, on the one answer the screen already asks
+    for. A press that spends without a number beside it is the fault this
+    whole file exists for."""
+    import io
+    import json
+
+    import jobs as jobs_module
+    import workspace
+    from PIL import Image
+
+    # A job with one photograph, so every figure has something to count.
+    place = Path(workspace.jobs_home())
+    job = place / "A JOB"
+    for folder in jobs_module.MARK_FOLDERS:
+        (job / folder).mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    Image.new("RGB", (30, 20), (10, 20, 30)).save(buf, format="JPEG")
+    (job / "Photos" / "a.jpg").write_bytes(buf.getvalue())
+    (job / "Photos" / "photo-manifest.json").write_text(json.dumps(
+        {"job": "A JOB", "context": "", "report_year": 2026,
+         "caption_style": "view", "photos": [{"file": "a.jpg", "caption": ""}]}))
+
+    quote = client.get("/api/jobs/A JOB/caption-estimate").json()
+    assert quote["estimate"]["total"] is not None          # the whole-job run
+    assert quote["samples"]["estimate"]["total"] is not None   # the style window
+    assert quote["one_photo"]["photos"] == 1                   # refresh on a tile
+    assert quote["one_photo"]["total"] > 0
 

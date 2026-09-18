@@ -11,8 +11,10 @@ Delete this file when the batch is fixed and merged. That is the last task.
 - [ ] "11 of 12 reviewed" shows a tick although not everything is reviewed.
 - [ ] A, B and C appear only when Bands is switched on. They should always
       be there, greyed when Bands is off, so nothing moves.
-- [ ] "5 of 5 reviewed" goes to done while 17 photographs have no caption.
-      Count every photograph in the report.
+- [ ] "5 of 5 reviewed" goes to done while 17 photographs have no caption,
+      and after typing one caption it thought there was only one to review.
+      Spenser chose: count every photograph in the report, typed captions
+      counted as reviewed. "5 of 17 reviewed" is right.
 - [ ] The done state of the reviewed pill is a dark green he does not like.
       Use the light tick green `#3A8F52` on a pale tint.
 - [ ] Check that typing a caption drops the count on Generate captions.
@@ -21,6 +23,11 @@ Delete this file when the batch is fixed and merged. That is the last task.
 
 - [ ] The "Writing captions · 0 of 12 written" line under the title: make its
       progress bar longer. It is a short stub today.
+
+- [ ] **A rule for the widget's bottom bar.** Spenser: "We need to be careful
+      with this box because I think it's becoming a catch-all." Before anything
+      new goes in the bar, something has to come out or it goes elsewhere.
+      Write this into HOW-WE-WORK.md with the bar's current contents listed.
 
 ## Waiting on Spenser
 

@@ -397,14 +397,17 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(4px * var(--k, 1)) calc(2px * var(--k, 1)); resize: vertical; overflow: hidden; min-height: calc(44px * var(--k, 1));
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
-/* Who wrote the caption above it: AI, or Typed. Spenser, 2026-09-18. Quiet on
-   purpose, it is information and not a control. A fixed height, so a tile
-   with no caption keeps its row at the same pixel as its neighbours. */
-.grid .who {
-  height: calc(14px * var(--k, 1)); margin-top: calc(2px * var(--k, 1));
+/* Who wrote the caption: AI, or Typed, in the upper left corner of the
+   photograph. Spenser, 2026-09-18: on the caption line it pushed everything
+   down. Quiet on purpose, it is information and not a control: small grey
+   words on the same near-white the take-out button wears, which sits in the
+   opposite corner, and it takes no clicks. */
+.photo-frame .who {
+  position: absolute; top: calc(8px * var(--k, 1)); left: calc(8px * var(--k, 1));
+  padding: calc(2px * var(--k, 1)) calc(6px * var(--k, 1)); border-radius: 999px;
+  background: rgba(255, 255, 255, .88); color: var(--ink-on-quiet);
   font-size: calc(10.5px * var(--k, 1)); line-height: calc(14px * var(--k, 1));
-  color: var(--ink-muted); letter-spacing: 0.02em;
-  white-space: nowrap; overflow: hidden;
+  letter-spacing: 0.02em; white-space: nowrap; pointer-events: none;
 }
 .done { margin-top: calc(18px * var(--k, 1)); background: var(--ok-bg); color: var(--ok-ink); border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 /* A caption run has three endings and they are not all good news. Success

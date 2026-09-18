@@ -1213,6 +1213,18 @@ export default function PhotosScreen({ job }) {
                   line of text: the photographs afford dragging. */}
               <span className="photo-frame">
                 <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+                {/* Who wrote the caption: AI, or Typed. Read from `author`,
+                    which the server puts on every caption (`author_of` in
+                    app/server/photos.py). Information, not a control, laid
+                    quietly over the upper left of the picture and taking no
+                    clicks. It sat on its own line under the caption until
+                    Spenser, 2026-09-18: it pushed everything down. Nothing
+                    at all when there is no caption, because over the picture
+                    an empty label holds no place for anything. The words are
+                    his to change. */}
+                {(p.caption || "").trim() && (p.author === "person" || p.author === "ai") && (
+                  <span className="who">{p.author === "person" ? "Typed" : "AI"}</span>
+                )}
                 {/* Laid over the picture while its one caption is being
                     written, and gone when it arrives. A failure stays until
                     he puts it away. Before the take-out button in the
@@ -1254,18 +1266,6 @@ export default function PhotosScreen({ job }) {
                 value={p.file in typing ? typing[p.file] : p.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => commitCaption(i)} />
-              {/* Who wrote the caption, quietly, under it. Information, not a
-                  control, and never in the row below, which is exactly full.
-                  Always here so every tile's row sits at the same height;
-                  empty when there is no caption. Read from `author`, which
-                  the server puts on every caption (`author_of` in
-                  app/server/photos.py). The words are Spenser's to change.
-                  2026-09-18. */}
-              <div className="who">
-                {(p.caption || "").trim()
-                  ? (p.author === "person" ? "Typed" : p.author === "ai" ? "AI" : "")
-                  : ""}
-              </div>
               {/* The tick is the first thing in the row and stays there,
                   however many bands the job grows. Spenser, 2026-09-07. It
                   is one photograph at a time, with the all-at-once shortcut

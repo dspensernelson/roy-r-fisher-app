@@ -249,6 +249,18 @@ Build button already says why it is off when he hovers it.
 Per page is a value. Today they are identical pills, which is why they read as
 noise rather than as two different questions.
 
+**The widget's bottom bar is not a catch-all.** Spenser, 2026-09-18: *"We
+need to be careful with this box because I think it's becoming a
+catch-all."* The bar answers one question, how he gets to done, and nothing
+new goes into it unless something comes out or the new thing goes elsewhere.
+Today it holds four things: the `N of M reviewed` pill, which is also the
+offer to tick them all once every photograph has words; `Clear captions`,
+only while there is a caption to clear; the curved arrow that restores
+cleared captions (`Restore cleared captions`), grey until a clear; and the
+money, an estimate with a tilde before anything is spent and what was spent
+after. `app/tests/test_the_bar_is_not_a_catch_all.py` fails when a fifth
+appears, so the trade is made on purpose.
+
 **The photographs screen is the worked example**, and it is saved at
 `docs/design/photos-screen.html`. Open it in any browser. It is built from this
 app's own stylesheet, so its values are this app's values, and the buttons

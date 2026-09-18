@@ -893,8 +893,8 @@ here because the checklist lines that asked these questions have come off it.
 
 - **A caption he types himself counts as reviewed.** He wrote it, so he has
   read it. Only captions the AI wrote wait for his tick. The app records who
-  wrote each caption, and the bar counts written by the AI, typed by him, and
-  reviewed. His standing rule is that a person reviews everything the AI does;
+  wrote each caption and shows it quietly on the photograph; the bar shows only
+  "N of M reviewed", because three counts did not fit in it. His standing rule is that a person reviews everything the AI does;
   a typed caption was never the AI's.
 - **The job-wide back reads "Restore cleared captions".** It fills only the
   photographs whose caption is still empty since the clear.

@@ -301,10 +301,12 @@ def test_the_money_holds_the_right_edge_of_the_bar():
 def test_the_tick_green_is_one_token():
     """The light green he chose for every tick on 2026-09-17, in the
     Description of Improvements drawing (`--tick` there). Written once, in the
-    root, and pointed at from everywhere else."""
+    root, and pointed at from everywhere else. A shade darker from
+    2026-09-18, #3A8F52 to #2E7242, so it reads as small text on its tint:
+    `test_the_tick_green.py` measures that."""
     css = CSS.read_text()
-    assert len(re.findall(r"--tick:\s*#3A8F52;", css)) == 1
-    assert css.count("#3A8F52") == 1, "the tick green is written out a second time"
+    assert len(re.findall(r"--tick:\s*#2E7242;", css)) == 1
+    assert css.count("#2E7242") == 1, "the tick green is written out a second time"
 
 
 def test_done_is_the_pale_tint_and_not_a_dark_fill():

@@ -24,10 +24,13 @@
   --link-on-dark: #248CC8;    /* only on the charcoal bar */
   --ok-bg: #E8F5EC;
   --ok-ink: #1E7A3C;
-  --tick: #3A8F52;            /* the tick green, lighter than --ok-ink. Chosen by
-                                 Spenser on 2026-09-17 for the Description of
+  --tick: #2E7242;            /* the tick green. Spenser chose #3A8F52 on
+                                 2026-09-17 for the Description of
                                  Improvements drawing, where it is `--tick`
-                                 too. The done state of the reviewed pill. */
+                                 too, and on 2026-09-18 asked for it a shade
+                                 darker, enough to read as small text on its
+                                 pale tint: 3.29:1 there before, 4.71:1 now.
+                                 The done state of the reviewed pill. */
 
   /* Paper. Two surfaces and only two: eggshell is the page, white is
      everything sitting on it. Charcoal survives in one place, the nav bar,
@@ -1425,8 +1428,8 @@ input::placeholder, textarea::placeholder {
    `margin: 0` because `.done` is also the app's finished-message box and its
    18px top margin reached this pill through the shared name. It hung 6.7px
    below the bar in 0.7.6.3. */
-.pill.done { color: var(--tick); background: rgba(58, 143, 82, 0.07);
-  border: 1px solid rgba(58, 143, 82, 0.36); margin: 0; }
+.pill.done { color: var(--tick); background: color-mix(in srgb, var(--tick) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tick) 36%, transparent); margin: 0; }
 
 /* Red, and a link rather than a button: "the same exact thing, just red." The
    gap to the money is pushed by this, so when there is nothing to clear the

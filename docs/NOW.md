@@ -110,6 +110,8 @@ are in its phases.
 
 ## Get the office a working update
 
+- [ ] The practice jobs live inside each version and are deleted three updates later · No star
+- [ ] Nothing says why the app forgot which jobs folder was current · Star 5
 - [ ] The photographs screen must be readable the way it is at 90 per cent · No star
 - [ ] Trim the rules file, now 300 lines and growing every time a rule is stated · No star
 - [ ] Run the 28 by-hand checks on Windows · No star

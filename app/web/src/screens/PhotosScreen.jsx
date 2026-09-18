@@ -119,6 +119,10 @@ export default function PhotosScreen({ job }) {
   // Which of the quiet line's messages he is looking at. One line shows one
   // thing; the rest are a click away, and never a second box.
   const [at, setAt] = useState(0);
+  // The band whose photographs are the only ones showing, or null for all of
+  // them. The screen's own business: never sent, never saved, and it never
+  // changes the report's order. Spenser, 2026-09-17.
+  const [onlyBand, setOnlyBand] = useState(null);
   // What he is typing right now, by file name, before it is saved. It is
   // deliberately not in the manifest. Everything that watches the manifest
   // reacts to every change of it, including the price question, which opens
@@ -692,6 +696,13 @@ export default function PhotosScreen({ job }) {
   // than closing the gap, so turning bands on and off moves nothing.
   const chips = manifest.bands || [];
   const waiting = bandsOn ? inPhotos.filter((x) => !x.p.band).length : 0;
+  // What the grid draws. A third view of the one list, made the same way as
+  // `inPhotos` and `cutPhotos`, so every index is still the photograph's own
+  // place in the job and dragging inside a band moves it in the real order.
+  // Every count above reads `inPhotos`, never this, so the numbers keep
+  // counting the whole job. With bands off there is no filter at all.
+  const filter = bandsOn && chips.some((b) => b.letter === onlyBand) ? onlyBand : null;
+  const gridPhotos = filter ? inPhotos.filter((x) => x.p.band === filter) : inPhotos;
   const waitingText = `${waiting} photograph${waiting === 1 ? " is" : "s are"} waiting for a band`;
 
   const buildReady = inPhotos.length > 0 && allReviewed && waiting === 0
@@ -1003,14 +1014,21 @@ export default function PhotosScreen({ job }) {
             <span className="w-name">Bands</span>
             <button className="switch" role="switch" aria-checked={bandsOn}
                     aria-label="Bands" disabled={!!busy}
-                    onClick={() => onBands({ bands_on: !bandsOn })}>
+                    onClick={() => { setOnlyBand(null); onBands({ bands_on: !bandsOn }); }}>
               <span className="knob" />
             </button>
+            {/* Each chip is a filter. Click one and only that band's
+                photographs show; click it again and they all do; click
+                another and it switches. Screen only, and the counts do not
+                follow it. Spenser, 2026-09-17. */}
             <span className={`w-chips${bandsOn ? "" : " off"}`}>
               {chips.map((b) => (
-                <button key={b.letter} className="w-chip"
+                <button key={b.letter}
+                        className={`w-chip${filter === b.letter ? " is-on" : ""}`}
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
-                        title={b.name === b.letter ? `Band ${b.letter}` : b.name}>
+                        aria-pressed={filter === b.letter}
+                        title={b.name === b.letter ? `Band ${b.letter}` : b.name}
+                        onClick={() => setOnlyBand(filter === b.letter ? null : b.letter)}>
                   {b.letter}
                 </button>
               ))}
@@ -1085,7 +1103,7 @@ export default function PhotosScreen({ job }) {
         </div>
       ) : (
         <div className="grid">
-          {inPhotos.map(({ p, i }) => (
+          {gridPhotos.map(({ p, i }) => (
             <figure key={p.file} style={{ margin: 0 }} draggable
               onDragStart={() => (dragFrom.current = i)}
               onDragOver={(e) => e.preventDefault()}

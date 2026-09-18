@@ -652,6 +652,12 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   border: 1px solid #D7D4CF; background: var(--paper); color: #4A4A4A; cursor: pointer;
 }
 .w-chip:hover { border-color: #B9B5AE; }
+/* The chip that is filtering. Filled with ink, not a colour: red, blue and
+   green each already answer a question under the colour law of 2026-09-08,
+   and a filter answers none of them. It changes nothing and is undone by the
+   same click. White out of ink is the loudest neutral this app has, so it
+   cannot be mistaken for the white chips beside it. */
+.w-chip.is-on, .w-chip.is-on:hover { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
 
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .screen-actions .button { padding: 11px 20px; font-size: 15px; }

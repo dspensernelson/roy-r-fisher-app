@@ -41,16 +41,19 @@ Delete this file when the batch is fixed and merged. That is the last task.
       width of the screen, so what is happening is always in view. His words:
       "a static kind of progress bar."
 
+## Decided by Spenser, 18 September, to build in this batch
+
+- [ ] **Back undoes a Refresh too.** Refresh keeps the words it replaced, and
+      Back puts them back, the same way it does after Clear captions.
+- [ ] **The red line under the fixed row is a plain line**, in the app's red,
+      full width, marking where the fixed part ends. Not a progress bar.
+- [ ] **A photograph moved to another band stays in the filtered view** until
+      the filter changes or clears.
+- [ ] **The tick green goes a shade darker**, enough to read as small text on
+      its pale background.
+
 ## Waiting on Spenser
 
-- [ ] The red line under the fixed row: does it fill as the job gets done,
-      like a progress bar, or is it a plain line marking where the fixed part
-      ends?
-- [ ] Should Back undo a Refresh? Recommendation: Refresh keeps the words it
-      replaced, and Back puts them back, the same way it does after a clear.
-- [ ] A photograph moved to another band leaves the filtered view straight
-      away, which feels abrupt. Recommendation: it stays until the filter
-      changes.
 - [ ] Clicking the version badge shows plain-words notes for that version and
       checks for a newer one. Recommendation: the notes are written when each
       version is cut. Drawing to come.

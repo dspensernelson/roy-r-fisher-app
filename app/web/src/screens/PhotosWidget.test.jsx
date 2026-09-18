@@ -238,3 +238,66 @@ describe("the left hand side", () => {
     expect(quiet.querySelector("button")?.textContent || "").not.toMatch(/Mark all as reviewed/);
   });
 });
+
+// Spenser, 2026-09-18: "The caption button doesn't get smaller the more I
+// review." Its count is the photographs with no caption, so reviewing does
+// not move it, and it should not. Typing words into an empty one should, and
+// in 0.7.6.3 it did not: the count was asked for only when the screen opened,
+// after a run and when the spending window opened. Seen in the running app
+// on 2026-09-18: two empty, one typed, the button still said (2).
+//
+// The count is the screen's own, counted from the photographs it holds. It
+// is not asked of the server on each caption: the price is asked for when the
+// screen opens and when the spending window opens (Spenser, 2026-09-14,
+// after Colleen's screen stopped answering on the office network).
+describe("the count on Generate captions", () => {
+  const generate = () => screen.getByRole("button", { name: /^Generate captions/ });
+  const boxes = () => document.querySelectorAll(".grid figure textarea");
+
+  it("drops by one when he types a caption into an empty photograph", async () => {
+    setUp({ written: 10, reviewed: 10, total: 12 });
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (2)"));
+    vi.spyOn(api, "putManifest").mockResolvedValue({ ok: true });
+    const asked = api.captionEstimate.mock.calls.length;
+    await userEvent.type(boxes()[10], "Side yard");
+    await userEvent.tab();
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (1)"));
+    // and without asking the server for a price
+    expect(api.captionEstimate.mock.calls.length).toBe(asked);
+  });
+
+  it("comes alive when he empties a caption on a job that had them all", async () => {
+    setUp({ written: 12, reviewed: 12, total: 12 });
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(generate()).toBeDisabled();
+    vi.spyOn(api, "putManifest").mockResolvedValue({ ok: true });
+    await userEvent.clear(boxes()[3]);
+    await userEvent.tab();
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (1)"));
+    expect(generate()).toBeEnabled();
+  });
+
+  it("does not move when he only reviews", async () => {
+    setUp({ written: 10, reviewed: 5, total: 12 });
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (2)"));
+    vi.spyOn(api, "markReviewed").mockResolvedValue({
+      job: JOB, caption_style: "view", bands_on: true, bands: ["A", "B", "C"], report_year: 2026,
+      photos: Array.from({ length: 12 }, (_, i) => photo(i, {
+        caption: i < 10 ? `A caption ${i}` : "", reviewed: i < 6 })) });
+    const tile = document.querySelectorAll(".grid figure")[5];
+    await userEvent.click(tile.querySelector('[aria-label="Mark reviewed"]'));
+    await waitFor(() => expect(pillText()).toEqual(["6 of 12 reviewed"]));
+    expect(generate()).toHaveTextContent("Generate captions (2)");
+  });
+
+  it("counts every photograph after the captions are cleared", async () => {
+    setUp({ written: 10, reviewed: 10, total: 12 });
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (2)"));
+    vi.spyOn(api, "clearCaptions").mockResolvedValue({
+      job: JOB, caption_style: "view", bands_on: true, bands: ["A", "B", "C"], report_year: 2026,
+      photos: Array.from({ length: 12 }, (_, i) => photo(i)), cleared: 10 });
+    await userEvent.click(bar().querySelector(".clear"));
+    await userEvent.click(await screen.findByRole("button", { name: "Clear 10 captions" }));
+    await waitFor(() => expect(generate()).toHaveTextContent("Generate captions (12)"));
+  });
+});

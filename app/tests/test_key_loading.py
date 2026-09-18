@@ -210,7 +210,11 @@ def test_generating_captions_is_genuinely_disabled_when_there_is_no_key():
     # `!!quote &&` was added on 2026-08-22: the button must also wait for the
     # estimate, or it can be pressed before the app knows a confirmation is
     # needed. The no-key half of the condition is unchanged.
-    assert "const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause" in source
+    # 2026-09-18: "nothing left to caption" is counted on the screen now, so
+    # a stale answer from the server no longer holds the button off once a
+    # box is emptied. Every other reason, the key among them, still does.
+    assert "const canGenerate = !!quote && inPhotos.length > 0 && emptyHere > 0" in source
+    assert '&& (!blockedBecause || blockedBecause === "nothing_to_do");' in source
 
     build = _element(source, "Build photo pages")
     assert "aiOn" not in build, "building a report does not need a key"

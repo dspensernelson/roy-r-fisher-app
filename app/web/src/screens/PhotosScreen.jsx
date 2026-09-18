@@ -758,7 +758,19 @@ export default function PhotosScreen({ job }) {
   // shown. The server refused it, so nothing was ever spent, but what Mark saw
   // was a raw refusal instead of the window asking him to agree to the money.
   // Found while photographing this screen, not by a test.
-  const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause && toSend > 0;
+  //
+  // The count on the button is counted here, from the photographs on this
+  // screen, and not read off the quote. Spenser, 2026-09-18: "The caption
+  // button doesn't get smaller." The quote is asked for when the screen opens
+  // and when the spending window opens, and on purpose not on every caption
+  // saved (Colleen's network, 2026-09-14), so read off the quote the number
+  // stood still while he typed. The window still quotes the server's own
+  // count, asked for again as it opens. Both count the same photographs: the
+  // screen never holds one whose file has gone. For the same reason a stale
+  // "nothing to do" does not hold the button off once a box has been emptied.
+  const emptyHere = inPhotos.filter((x) => !(x.p.caption || "").trim()).length;
+  const canGenerate = !!quote && inPhotos.length > 0 && emptyHere > 0
+                      && (!blockedBecause || blockedBecause === "nothing_to_do");
   // Refresh is stopped by the same two things a run is stopped by, and by
   // nothing else. `nothing_to_do` is not one of them: it means every
   // photograph already has a caption, which is precisely the job refresh
@@ -812,7 +824,7 @@ export default function PhotosScreen({ job }) {
     if (blockedBecause === "local_only") {
       return "These photos are demo material kept for local testing, so they are not sent anywhere.";
     }
-    if (blockedBecause === "nothing_to_do") return "Every photo already has a caption.";
+    if (quote && inPhotos.length > 0 && emptyHere === 0) return "Every photo already has a caption.";
     if (!quote) return "Working out the cost";
     if (inPhotos.length === 0) return "No photos in the report yet";
     return "";
@@ -1014,7 +1026,7 @@ export default function PhotosScreen({ job }) {
             <span className="act-wrap">
               <button className={`button secondary${canGenerate ? "" : " is-off"}`} onClick={openChooser}
                       disabled={!!busy || !canGenerate}>
-                {canGenerate ? `Generate captions (${toSend})` : "Generate captions"}
+                {canGenerate ? `Generate captions (${emptyHere})` : "Generate captions"}
               </button>
               <span className="why" data-has={generateWhy ? "yes" : "no"}>{generateWhy}</span>
             </span>

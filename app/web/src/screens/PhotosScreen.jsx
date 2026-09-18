@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import CloseX from "../CloseX.jsx";
+import { showMoney } from "../money.js";
 import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl, captionStyles, clearCaptions, cutPhoto, uncutPhoto,
          captionEstimate, captionProgress, captionSamples, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress, captionBack, captionsBack, refreshCaption } from "../api.js";
@@ -677,7 +678,9 @@ export default function PhotosScreen({ job }) {
   const money = (function () {
     const n = captioned > 0 && spentTotal !== null ? spentTotal : estimate;
     if (n === null || n === undefined) return null;
-    return n < 1 ? `${Math.round(n * 100)}\u00A2` : `$${n.toFixed(2)}`;
+    // One rule for every figure on this screen, in app/web/src/money.js:
+    // whole dollars, rounded up, from $10.
+    return showMoney(n, { cents: true });
   }());
 
   // What one photograph costs, printed inside the refresh control on every
@@ -690,8 +693,7 @@ export default function PhotosScreen({ job }) {
   //
   // The same shape as the money in the bar, so a penny reads as a penny.
   const onePhoto = quote && quote.one_photo ? quote.one_photo.total : null;
-  const onePhotoPrice = onePhoto === null || onePhoto === undefined ? null
-    : (onePhoto < 1 ? `${Math.round(onePhoto * 100)}¢` : `$${onePhoto.toFixed(2)}`);
+  const onePhotoPrice = showMoney(onePhoto, { cents: true });
   const onePhotoCents = onePhoto === null || onePhoto === undefined ? null
     : Math.round(onePhoto * 100);
 
@@ -868,7 +870,7 @@ export default function PhotosScreen({ job }) {
       {spent.summary && <p className="outcome-said">{spent.summary}</p>}
       <strong>{spent.label}</strong>
       {spent.calculated_cost !== null && spent.calculated_cost !== undefined ? (
-        <> : <code>${spent.calculated_cost.toFixed(2)}</code> for {spent.captioned}{" "}
+        <> : <code>{showMoney(spent.calculated_cost)}</code> for {spent.captioned}{" "}
           {spent.captioned === 1 ? "caption" : "captions"}.</>
       ) : (
         <span className="cost-unavailable"> . {spent.note}</span>
@@ -1339,7 +1341,7 @@ export default function PhotosScreen({ job }) {
             <div className="sheet-head">
               <h2>Generate captions for {toSend} {toSend === 1 ? "photo" : "photos"}?</h2>
               {quote && quote.estimate && (
-                <p className="sheet-cost">${quote.estimate.total.toFixed(2)} max</p>
+                <p className="sheet-cost">{showMoney(quote.estimate.total)} max</p>
               )}
             </div>
 
@@ -1392,7 +1394,7 @@ export default function PhotosScreen({ job }) {
               <button className="linky" onClick={() => setAsking(false)}>Cancel</button>
               <button className="button secondary" onClick={() => beginCaptions(showing)}>
                 Generate captions{quote && quote.estimate
-                  ? ` ($${quote.estimate.total.toFixed(2)})` : ""}
+                  ? ` (${showMoney(quote.estimate.total)})` : ""}
               </button>
             </div>
           </div>
@@ -1452,7 +1454,6 @@ export default function PhotosScreen({ job }) {
             <h2>Clear {captioned} {captioned === 1 ? "caption" : "captions"}?</h2>
             <p className="fine">
               The photographs, their order and the caption style are unchanged.
-              Cleared captions cannot be recovered.
             </p>
             <div className="sheet-acts">
               <button className="linky" onClick={() => setClearing(false)}>Cancel</button>

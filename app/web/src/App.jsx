@@ -7,7 +7,7 @@ import Settings from "./screens/Settings.jsx";
 import NewJob from "./screens/NewJob.jsx";
 import ChooseFolder from "./screens/ChooseFolder.jsx";
 import ActiveJobs from "./screens/ActiveJobs.jsx";
-import UpdateStep from "./screens/UpdateStep.jsx";
+import { useUpdateRun, UpdateStepView, UpdateCover, covers } from "./screens/UpdateStep.jsx";
 import CloseX from "./CloseX.jsx";
 import { getWorkspace, getDemo, resetDemo, appVersion, listJobs, updateStatus, closeTheApp } from "./api.js";
 
@@ -124,12 +124,40 @@ export default function App() {
   const offered = !!(update && update.available);
   // The one way into the update step. The masthead button and the button
   // beside Check now on Settings both press this, so they cannot drift.
-  const openUpdate = () => setUpdating(true);
+  //
+  // Spenser, 2026-09-18: "the whole update should take place in the update
+  // box, not above the settings." So it takes him to Settings, where the
+  // version card draws the step. The job comes with him, as it does from the
+  // Settings button in the bar. The two setup screens have no Settings to go
+  // to, so there the step is drawn where it always was.
+  const inShell = !!(ws && ws.valid && !setup);
+  const openUpdate = () => {
+    setUpdating(true);
+    if (inShell) setView((was) => ({ screen: "settings", job: was.job }));
+  };
+  const closeUpdate = () => { runner.reset(); setUpdating(false); };
 
-  const updateStep = updating && (
-    <UpdateStep version={version} available={update.available} size={update.size}
-                onClose={() => setUpdating(false)} />
+  // The run belongs to the app, not to the card that draws it, so leaving
+  // Settings mid-download does not stop this tab becoming the new version.
+  const runner = useUpdateRun(version);
+  const inFlight = runner.started && !runner.error && !(runner.run && runner.run.error);
+
+  // A question he walked away from is not waiting for him when he comes back,
+  // and neither is a failure he did not stay to read. North star 4: never an
+  // old screen. A run that is going keeps going.
+  useEffect(() => {
+    if (inShell && updating && view.screen !== "settings" && !inFlight) closeUpdate();
+  }, [view.screen]);
+
+  // Drawn boxed on the two setup screens, and as part of the version card on
+  // Settings. One run behind both.
+  const stepFor = (inCard) => updating && update && (
+    <UpdateStepView version={version} available={update.available} size={update.size}
+                    runner={runner} onClose={closeUpdate} inCard={inCard} />
   );
+  const updateStep = stepFor(false);
+  // Full screen, and drawn wherever he is. See UpdateCover.
+  const cover = covers(runner) && <UpdateCover stuck={runner.stuck} />;
 
   // The band and the mark travel together, inside one constant, because the
   // masthead is rendered from five places below and a band added at each of
@@ -258,7 +286,7 @@ export default function App() {
       <>
         {masthead}
         <div className="frame">
-          {updateStep}{resetStep}{resetNote}
+          {updateStep}{cover}{resetStep}{resetNote}
           <ChooseFolder first missing={ws.chosen ? ws.path : ""}
                         onSaved={(saved) => { setWs(saved); setSetup(true); }} />
         </div>
@@ -272,7 +300,7 @@ export default function App() {
       <>
         {masthead}
         <div className="frame">
-          {updateStep}{resetStep}{resetNote}
+          {updateStep}{cover}{resetStep}{resetNote}
           <ActiveJobs first onDone={() => { setSetup(false); setView({ screen: "jobs", job: null }); }} />
         </div>
       </>
@@ -329,7 +357,7 @@ export default function App() {
       {/* Marked while the photographs screen is in it, which draws that screen
           at 90 per cent of its design sizes. See `.frame.is-photos`. */}
       <div className={`frame${view.screen === "photos" ? " is-photos" : ""}`}>
-        {updateStep}{resetStep}{resetNote}
+        {resetStep}{resetNote}
         {view.screen === "jobs" && <JobsPortal onOpen={(job) => setView({ screen: "job", job })}
                                             onNew={() => setView({ screen: "new", job: null })}
                                             onManage={() => setView({ screen: "active", job: null })}
@@ -357,11 +385,12 @@ export default function App() {
                     onChangeFolder={() => setView({ screen: "choose", job: null })}
                     onWorkspaceChanged={(saved) => { setWs(saved); toJobs(); }}
                     onUpdateChecked={refreshUpdate}
-                    onUpdate={offered ? openUpdate : undefined} />
+                    onUpdate={offered ? openUpdate : undefined}
+                    updateStep={stepFor(true)} />
         )}
       </div>
       </div>
-      {closeStep}
+      {cover}{closeStep}
     </div>
   );
 }

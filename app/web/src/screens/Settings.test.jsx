@@ -87,6 +87,36 @@ describe("Check now", () => {
     expect(screen.queryByText("Could not check for a new version.")).toBeNull();
   });
 
+  // Spenser, 2026-09-18, on 0.7.6.3: "This should be off to the right of the
+  // button, not below it." Each of the three answers sits in the button row,
+  // after the buttons, so at desktop width it reads beside them. The row
+  // wraps, so on a narrow screen it can still fall under.
+  it.each([
+    [{ available: "", could_not_check: true }, "Could not check for a new version."],
+    [{ available: "", could_not_check: false }, "You are on the newest version."],
+    [{ available: "0.6.5" }, "Version 0.6.5 is available."],
+  ])("puts the answer to the right of the buttons (%#)", async (found, words) => {
+    vi.spyOn(api, "checkForUpdate").mockResolvedValue(found);
+    render(<Settings workspace={WORKSPACE} version="0.6.4"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}}
+                     onUpdateChecked={() => Promise.resolve()} onUpdate={() => {}} />);
+    const check = await screen.findByRole("button", { name: "Check now" });
+    await userEvent.click(check);
+    const answer = await screen.findByText(words);
+    expect(answer.parentElement).toBe(check.parentElement);
+    expect(answer.parentElement.lastElementChild).toBe(answer);
+  });
+
+  it("puts the answer beside the button when the server cannot be reached either", async () => {
+    vi.spyOn(api, "checkForUpdate").mockRejectedValue(new Error("Failed to fetch"));
+    render(<Settings workspace={WORKSPACE} version="0.6.4"
+                     onChangeFolder={() => {}} onWorkspaceChanged={() => {}} />);
+    const check = await screen.findByRole("button", { name: "Check now" });
+    await userEvent.click(check);
+    const answer = await screen.findByText(/could not be reached just now/);
+    expect(answer.parentElement).toBe(check.parentElement);
+  });
+
   it("still works when nothing is listening", async () => {
     vi.spyOn(api, "checkForUpdate").mockResolvedValue({ available: "" });
     render(<Settings workspace={WORKSPACE} version="0.6.4"

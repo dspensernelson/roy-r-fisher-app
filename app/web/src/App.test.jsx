@@ -54,23 +54,27 @@ describe("the notice in the masthead", () => {
   it("asks the question inside the action rather than beside it", async () => {
     // Nothing about updating is on the screen until he clicks the notice.
     quiet({ available: "0.5.4", size: 55939858 });
+    vi.spyOn(api, "getSettings").mockResolvedValue({ key_set: false, ends_with: "" });
     render(<App />);
     const notice = await screen.findByRole("button", { name: "Update available" });
     expect(screen.queryByText(/Update to version 0\.5\.4\?/)).toBeNull();
     await userEvent.click(notice);
-    expect(screen.getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
+    expect(await screen.findByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
     expect(screen.getByText(/about 53 MB/)).toBeInTheDocument();
   });
 
-  it("closes again on Not now, leaving the app where it was", async () => {
+  it("closes again on Not now, and the notice stays", async () => {
     quiet({ available: "0.5.4", size: 55939858 });
+    vi.spyOn(api, "getSettings").mockResolvedValue({ key_set: false, ends_with: "" });
     render(<App />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Update available" }));
-    await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Not now" }));
     expect(screen.queryByText(/Update to version 0\.5\.4\?/)).toBeNull();
     expect(screen.getByRole("button", { name: "Update available" }))
       .toBeInTheDocument();
+    // The card as it normally is, with Check now back in it.
+    expect(screen.getByRole("button", { name: "Check now" })).toBeInTheDocument();
   });
 
   it("never looks for an update itself", async () => {
@@ -106,8 +110,112 @@ describe("the update button on Settings", () => {
       .findByRole("button", { name: "Update available" });
     expect(screen.queryByText(/Update to version 0\.5\.4\?/)).toBeNull();
     await userEvent.click(beside);
-    expect(screen.getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
-    expect(screen.getByText(/about 53 MB/)).toBeInTheDocument();
+    expect(within(versionCard()).getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
+    expect(within(versionCard()).getByText(/about 53 MB/)).toBeInTheDocument();
+  });
+});
+
+// Spenser, 2026-09-18, on 0.7.6.3: "I actually think the whole update should
+// take place in the update box, not above the settings." One place: the card
+// "The version you are running" on Settings. The masthead's button takes him
+// there.
+function versionCard() {
+  return screen.getByRole("heading", { name: "The version you are running" })
+    .closest(".setting");
+}
+
+function run(over = {}) {
+  return { running: true, stage: "Downloading", done: 0, total: 55939858,
+           error: "", version: "0.5.4", cancelling: false, ...over };
+}
+
+async function openFromTheMasthead() {
+  quiet({ available: "0.5.4", size: 55939858 });
+  vi.spyOn(api, "getSettings").mockResolvedValue({ key_set: false, ends_with: "" });
+  render(<App />);
+  await userEvent.click(await screen.findByRole("button", { name: "Update available" }));
+  await screen.findByRole("heading", { name: "The version you are running" });
+}
+
+describe("the update happens inside the version card", () => {
+  it("takes him from the masthead to Settings with the question in the card", async () => {
+    await openFromTheMasthead();
+    const card = versionCard();
+    expect(within(card).getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Update now" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Not now" })).toBeInTheDocument();
+    // His words, 2026-09-17, kept exactly.
+    expect(card.textContent.replace(/\s+/g, " ")).toContain(
+      "You are on version 0.5.3. The download is about 53 MB. The app closes " +
+      "itself and opens again as a new version. Your settings remain the same.");
+    // Nothing drawn above the cards, and one of it.
+    expect(document.querySelectorAll(".update-step")).toHaveLength(1);
+    expect(card.contains(document.querySelector(".update-step"))).toBe(true);
+  });
+
+  it("shows the progress in the card", async () => {
+    await openFromTheMasthead();
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    vi.spyOn(api, "updateProgress").mockResolvedValue(run({ done: 12 * 1024 * 1024 }));
+    await userEvent.click(within(versionCard()).getByRole("button", { name: "Update now" }));
+    await waitFor(() => expect(
+      within(versionCard()).getByText("Downloading 12 MB of 53 MB")).toBeInTheDocument());
+    expect(versionCard().querySelector(".update-bar")).not.toBeNull();
+    expect(document.querySelectorAll(".update-bar")).toHaveLength(1);
+  });
+
+  it("shows a failed download in the card", async () => {
+    await openFromTheMasthead();
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    vi.spyOn(api, "updateProgress").mockResolvedValue(run({
+      running: false, stage: "",
+      error: "The update did not arrive intact and was not installed." }));
+    await userEvent.click(within(versionCard()).getByRole("button", { name: "Update now" }));
+    await waitFor(() => expect(
+      within(versionCard()).getByText(/did not arrive intact/)).toBeInTheDocument());
+    await userEvent.click(within(versionCard()).getByRole("button", { name: "Close" }));
+    expect(screen.queryByText(/did not arrive intact/)).toBeNull();
+    expect(within(versionCard()).getByRole("button", { name: "Check now" })).toBeInTheDocument();
+  });
+
+  it("keeps running if he leaves Settings, and the closing cover still finds him", async () => {
+    // The run belongs to the app, not to the card. Leaving Settings in the
+    // middle of a download must not stop this tab becoming the new version.
+    await openFromTheMasthead();
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    const progress = vi.spyOn(api, "updateProgress").mockResolvedValue(run());
+    await userEvent.click(within(versionCard()).getByRole("button", { name: "Update now" }));
+    await waitFor(() => within(versionCard()).getByText(/Downloading/));
+
+    await userEvent.click(screen.getByRole("button", { name: /Back to Jobs/ }));
+    expect(screen.queryByRole("heading", { name: "The version you are running" })).toBeNull();
+
+    progress.mockResolvedValue(run({ running: false, stage: "Closing" }));
+    await waitFor(() => expect(
+      screen.getByText("Installing the new version.")).toBeInTheDocument(), { timeout: 3000 });
+  });
+
+  it("shows the run where it is when he comes back to Settings", async () => {
+    await openFromTheMasthead();
+    vi.spyOn(api, "startUpdate").mockResolvedValue({});
+    vi.spyOn(api, "updateProgress").mockResolvedValue(run({ done: 12 * 1024 * 1024 }));
+    await userEvent.click(within(versionCard()).getByRole("button", { name: "Update now" }));
+    await waitFor(() => within(versionCard()).getByText("Downloading 12 MB of 53 MB"));
+    await userEvent.click(screen.getByRole("button", { name: /Back to Jobs/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await waitFor(() => expect(
+      within(versionCard()).getByText("Downloading 12 MB of 53 MB")).toBeInTheDocument());
+  });
+
+  it("does not keep an unanswered question waiting after he walks away", async () => {
+    // North star 4: never an old screen. He opened the question and left
+    // without answering; coming back, the card is as it normally is.
+    await openFromTheMasthead();
+    await userEvent.click(screen.getByRole("button", { name: /Back to Jobs/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    await screen.findByRole("heading", { name: "The version you are running" });
+    expect(screen.queryByText(/Update to version 0\.5\.4\?/)).toBeNull();
+    expect(within(versionCard()).getByRole("button", { name: "Check now" })).toBeInTheDocument();
   });
 });
 

@@ -6,18 +6,19 @@ at once instead of one agent per remark.
 
 Delete this file when the batch is fixed and merged. That is the last task.
 
-## Already with a builder, branch `the-widget-says-what-it-means`
+## Done on branch `the-widget-says-what-it-means`, not merged
 
-- [ ] "11 of 12 reviewed" shows a tick although not everything is reviewed.
-- [ ] A, B and C appear only when Bands is switched on. They should always
+- [x] "11 of 12 reviewed" shows a tick although not everything is reviewed.
+- [x] A, B and C appear only when Bands is switched on. They should always
       be there, greyed when Bands is off, so nothing moves.
-- [ ] "5 of 5 reviewed" goes to done while 17 photographs have no caption,
+- [x] "5 of 5 reviewed" goes to done while 17 photographs have no caption,
       and after typing one caption it thought there was only one to review.
       Spenser chose: count every photograph in the report, typed captions
       counted as reviewed. "5 of 17 reviewed" is right.
-- [ ] The done state of the reviewed pill is a dark green he does not like.
+- [x] The done state of the reviewed pill is a dark green he does not like.
       Use the light tick green `#3A8F52` on a pale tint.
-- [ ] Check that typing a caption drops the count on Generate captions.
+- [x] Check that typing a caption drops the count on Generate captions.
+- [x] Found on the way: the done pill sat 6.7px below the bar. Fixed.
 
 ## Batched, not yet sent
 

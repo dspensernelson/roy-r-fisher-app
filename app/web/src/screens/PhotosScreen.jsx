@@ -637,11 +637,6 @@ export default function PhotosScreen({ job }) {
   // filters of that one list, so nothing is reordered by cutting.
   const inPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => !x.p.cut);
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
-  // Written, counted the way every other count here is: only photographs
-  // still in the report. It counted every caption until 2026-09-17, so it
-  // could say more was written than the report holds. It is the M of the
-  // bar's "N of M reviewed": Spenser, 2026-09-18.
-  const written = inPhotos.filter((x) => (x.p.caption || "").trim()).length;
   // How many photographs share a page. The server normalises this on the way
   // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
   // a guard for a manifest that never came from the server, not a second copy
@@ -664,9 +659,18 @@ export default function PhotosScreen({ job }) {
   // "9 of 12 reviewed" while the box said everything was done. 2026-09-16.
   const allWritten = inPhotos.length > 0
                      && inPhotos.every((x) => (x.p.caption || "").trim());
-  // Every caption there is has been read. The bar's done state; not the
-  // build gate, which still wants every photograph written and read.
-  const captionsRead = written > 0 && reviewedCount >= written;
+  // The bar's "N of M reviewed". M is every photograph in the report,
+  // captioned or not; N is those whose caption he has read, and a caption he
+  // typed counts as read (the server decides that, `record_typed_captions`).
+  // Spenser chose this on 2026-09-18, from 0.7.6.3. M used to be the
+  // captioned photographs only, so the pill said "✓ 5 of 5 reviewed" with
+  // seventeen that had no words, and after he typed one caption it thought
+  // there was one to review. docs/CHECKS.md, Check 40, says the same.
+  const barOf = inPhotos.length;
+  const barRead = inPhotos.filter((x) => x.p.reviewed && (x.p.caption || "").trim()).length;
+  // Done, and the only state that carries the tick: every photograph in the
+  // report has words and every one has been read.
+  const barDone = barOf > 0 && barRead === barOf;
 
   // What it costs, in the smallest true form. An estimate until money has
   // actually been spent, and then what was spent. Cents while it is pennies,
@@ -724,6 +728,16 @@ export default function PhotosScreen({ job }) {
   // The chips keep their place in the widget when the switch is off, rather
   // than closing the gap, so turning bands on and off moves nothing.
   const chips = manifest.bands || [];
+  // The widget's A, B and C are always in sight: greyed while bands are off,
+  // live when they are on. Spenser, 2026-09-18: "When you click it on, that's
+  // when the three things appear. I don't like that." A job that has never
+  // had bands has an empty list until the switch goes on and the server gives
+  // it these three (`default_bands` in app/server/photos.py), so the widget
+  // names them itself until then. A test holds this copy to the server's
+  // `LOCKED_BANDS`.
+  const SWITCH_BRINGS = ["A", "B", "C"];
+  const widgetChips = chips.length ? chips
+    : SWITCH_BRINGS.map((letter) => ({ letter, name: letter }));
   const waiting = bandsOn ? inPhotos.filter((x) => !x.p.band).length : 0;
   // What the grid draws. A third view of the one list, made the same way as
   // `inPhotos` and `cutPhotos`, so every index is still the photograph's own
@@ -744,7 +758,19 @@ export default function PhotosScreen({ job }) {
   // shown. The server refused it, so nothing was ever spent, but what Mark saw
   // was a raw refusal instead of the window asking him to agree to the money.
   // Found while photographing this screen, not by a test.
-  const canGenerate = !!quote && inPhotos.length > 0 && !blockedBecause && toSend > 0;
+  //
+  // The count on the button is counted here, from the photographs on this
+  // screen, and not read off the quote. Spenser, 2026-09-18: "The caption
+  // button doesn't get smaller." The quote is asked for when the screen opens
+  // and when the spending window opens, and on purpose not on every caption
+  // saved (Colleen's network, 2026-09-14), so read off the quote the number
+  // stood still while he typed. The window still quotes the server's own
+  // count, asked for again as it opens. Both count the same photographs: the
+  // screen never holds one whose file has gone. For the same reason a stale
+  // "nothing to do" does not hold the button off once a box has been emptied.
+  const emptyHere = inPhotos.filter((x) => !(x.p.caption || "").trim()).length;
+  const canGenerate = !!quote && inPhotos.length > 0 && emptyHere > 0
+                      && (!blockedBecause || blockedBecause === "nothing_to_do");
   // Refresh is stopped by the same two things a run is stopped by, and by
   // nothing else. `nothing_to_do` is not one of them: it means every
   // photograph already has a caption, which is precisely the job refresh
@@ -798,7 +824,7 @@ export default function PhotosScreen({ job }) {
     if (blockedBecause === "local_only") {
       return "These photos are demo material kept for local testing, so they are not sent anywhere.";
     }
-    if (blockedBecause === "nothing_to_do") return "Every photo already has a caption.";
+    if (quote && inPhotos.length > 0 && emptyHere === 0) return "Every photo already has a caption.";
     if (!quote) return "Working out the cost";
     if (inPhotos.length === 0) return "No photos in the report yet";
     return "";
@@ -1000,7 +1026,7 @@ export default function PhotosScreen({ job }) {
             <span className="act-wrap">
               <button className={`button secondary${canGenerate ? "" : " is-off"}`} onClick={openChooser}
                       disabled={!!busy || !canGenerate}>
-                {canGenerate ? `Generate captions (${toSend})` : "Generate captions"}
+                {canGenerate ? `Generate captions (${emptyHere})` : "Generate captions"}
               </button>
               <span className="why" data-has={generateWhy ? "yes" : "no"}>{generateWhy}</span>
             </span>
@@ -1049,11 +1075,14 @@ export default function PhotosScreen({ job }) {
             {/* Each chip is a filter. Click one and only that band's
                 photographs show; click it again and they all do; click
                 another and it switches. Screen only, and the counts do not
-                follow it. Spenser, 2026-09-17. */}
+                follow it. Spenser, 2026-09-17. With bands off they stay where
+                they are, greyed and not clickable, so nothing in the widget
+                moves or appears when the switch changes. 2026-09-18. */}
             <span className={`w-chips${bandsOn ? "" : " off"}`}>
-              {chips.map((b) => (
+              {widgetChips.map((b) => (
                 <button key={b.letter}
                         className={`w-chip${filter === b.letter ? " is-on" : ""}`}
+                        disabled={!bandsOn}
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
                         aria-pressed={filter === b.letter}
                         title={b.name === b.letter ? `Band ${b.letter}` : b.name}
@@ -1067,39 +1096,31 @@ export default function PhotosScreen({ job }) {
           {/* THE BAR. How she gets to done, and nothing else. It is not a
               notification pane: those stay on the left, one quiet line at a
               time. The moment the two merge, this box becomes something to
-              clear rather than something to read.
-
-              Written and reviewed are two facts, not one, and both are read
-              from the manifest here so they cannot disagree. A slot changes
-              job when its job is finished: while captions are still being
-              written the first pill reports writing; the moment every one is
-              written, writing has nothing left to say, so it starts offering
-              the tick instead. */}
+              clear rather than something to read. */}
           <div className="barline">
-            {/* One pill: reviewed, out of the captions there are. Spenser,
-                2026-09-18. Who wrote each one is on the photograph, not
-                here; three pills did not fit the box.
+            {/* One pill: "N of M reviewed", where M is every photograph in the
+                report. Who wrote each one is on the photograph, not here;
+                three pills did not fit the box. Spenser, 2026-09-18.
 
-                It has three faces and never two pills. Amber while captions
-                are still being written. Once every photograph in the report
-                has words and some are unread, the count itself is the offer
-                to tick the lot: the glyph in front, the money's light green,
-                and pressing it asks the same warning `✓ all` asked. That
-                offer used to be a pill of its own, and with it the bar did
-                not fit at three digits. Filled green once every caption has
-                been read, blanks or not: a blank still holds Build back, and
-                Build's own hover says so. */}
-            {allWritten && !captionsRead ? (
-              <button className="pill act" disabled={!!busy}
+                The tick means one thing only: everything is reviewed. Then
+                the pill is the pale tick green with the tick in front. Until
+                then it is amber, the widget's colour for what still needs
+                him, with no tick. Once every photograph has words, the amber
+                pill is also the offer to tick the lot: pressing it asks the
+                same warning it always asked, and hovering it says so. It wore
+                the tick and a green while it was the offer, and "✓ 11 of 12
+                reviewed" read as done: Spenser, 2026-09-18, from 0.7.6.3. */}
+            {allWritten && !barDone ? (
+              <button className="pill hold act" disabled={!!busy}
                       aria-label="Mark every caption as reviewed"
                       title="Mark every caption as reviewed"
                       onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
-                &#10003;&nbsp;<b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+                <b>{barRead}</b>&nbsp;of&nbsp;<b>{barOf}</b>&nbsp;reviewed
               </button>
             ) : (
-              <span className={`pill ${captionsRead ? "done" : "hold"}`}>
-                {captionsRead && <>&#10003;&nbsp;</>}
-                <b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+              <span className={`pill ${barDone ? "done" : "hold"}`}>
+                {barDone && <>&#10003;&nbsp;</>}
+                <b>{barRead}</b>&nbsp;of&nbsp;<b>{barOf}</b>&nbsp;reviewed
               </span>
             )}
             {/* Red, and a link rather than a button: "the same exact thing,
@@ -1216,9 +1237,10 @@ export default function PhotosScreen({ job }) {
                     from `bands`, so that with the switch off they are still
                     here holding their slots, hidden. That is the whole of
                     what keeps the tick, Back and refresh on the same pixel
-                    whether bands are on or off. It is the widget's own
-                    mechanism for its chips, used again rather than a second
-                    one invented: a class, `visibility: hidden`, no tab stop.
+                    whether bands are on or off: a class, `visibility:
+                    hidden`, no tab stop. The widget's chips did the same
+                    until 2026-09-18 and are greyed in sight now; these are
+                    unchanged.
 
                     Off they are also `disabled` and carry no `is-on`. Hidden
                     is not gone, and a job that does not use bands must not

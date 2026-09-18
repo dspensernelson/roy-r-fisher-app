@@ -81,7 +81,7 @@ describe("who wrote it, on the photograph", () => {
     setUp();
     await waitFor(() => expect(bar()).toBeTruthy());
     expect(bar().textContent).not.toMatch(/\bAI\b|typed/);
-    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/2 of 3 reviewed/);
+    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/2 of 5 reviewed/);
   });
 });
 
@@ -110,7 +110,7 @@ describe("a caption he types", () => {
     await userEvent.tab();
     await waitFor(() => expect(tick(tiles()[3])).toHaveClass("is-reviewed"));
     expect(who(tiles()[3]).textContent).toBe("Typed");
-    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/3 of 4 reviewed/);
+    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/3 of 5 reviewed/);
   });
 
   it("does not tick an AI caption on its own", async () => {

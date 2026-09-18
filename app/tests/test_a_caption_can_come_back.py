@@ -513,12 +513,31 @@ def test_the_band_slots_are_hidden_and_not_removed():
             "the band dots close their gap again, so the row moves"
 
 
-def test_the_row_hides_its_band_slots_the_way_the_widget_does():
-    """One mechanism on this screen, not two. The widget's chips already kept
-    their place when bands went off, and the dots under the photographs now do
-    it the same way. A second way of hiding the same thing is how the two
-    drift apart."""
-    chips = rules(".w-chips.off")
-    dots = rules(".band-dot.off")
-    assert chips and dots
-    assert "visibility: hidden" in chips[0] and "visibility: hidden" in dots[0]
+def test_the_widget_greys_its_band_letters_rather_than_hiding_them():
+    """Spenser, 2026-09-18, from 0.7.6.3: with bands off the widget showed a
+    gap, and A, B and C appeared only when the switch went on. "I don't like
+    that." In the widget they are always there: greyed and unclickable while
+    bands are off, the way every other control in the widget is greyed
+    (`.switch:disabled`, `.values button:disabled`, `.bar-back:disabled`).
+
+    The dots under each photograph are a different question and keep their
+    hidden slots: that is the test above, and it is unchanged."""
+    for one in rules(".w-chips.off"):
+        assert "visibility: hidden" not in one, "the widget's letters are hidden again"
+        assert "display: none" not in one
+    greyed = rules(".w-chip:disabled")
+    assert greyed, "nothing greys a band letter that cannot be clicked"
+    assert "opacity: .45" in greyed[0] and "cursor: not-allowed" in greyed[0]
+
+
+def test_the_widget_shows_the_three_letters_the_switch_brings():
+    """A job that has never had bands has an empty band list until the switch
+    goes on, and then the server gives it A, B and C (`default_bands`). The
+    widget shows those three before then, so it names them itself. This holds
+    its copy to the server's."""
+    screen = (Path(__file__).resolve().parents[1] / "web" / "src" / "screens"
+              / "PhotosScreen.jsx").read_text()
+    found = re.search(r"const SWITCH_BRINGS = \[([^\]]*)\];", screen)
+    assert found, "the widget no longer names the letters the switch brings"
+    letters = tuple(re.findall(r'"([A-Z])"', found.group(1)))
+    assert letters == photos_routes.LOCKED_BANDS

@@ -25,7 +25,8 @@ describe("what he is told before he agrees", () => {
     open();
     expect(screen.getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
     expect(screen.getByText(/about 53 MB/)).toBeInTheDocument();
-    expect(screen.getByText(/You are on version 0\.5\.3/)).toBeInTheDocument();
+    // The version he is on is said once, by the card this sits in, not here.
+    expect(screen.queryByText(/You are on version/)).toBeNull();
   });
 
   it("says the app restarts and his settings stay, in his words", () => {
@@ -34,7 +35,7 @@ describe("what he is told before he agrees", () => {
     const { container } = open();
     const text = container.textContent.replace(/\s+/g, " ");
     expect(text).toContain(
-      "You are on version 0.5.3. The download is about 53 MB. The app closes " +
+      "The download is about 53 MB. The app closes " +
       "itself and opens again as a new version. Your settings remain the same.");
     expect(text).not.toMatch(/exactly what was published/);
     expect(text).not.toMatch(/not kept inside the app/);

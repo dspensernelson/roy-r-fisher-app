@@ -144,10 +144,14 @@ describe("the update happens inside the version card", () => {
     expect(within(card).getByText(/Update to version 0\.5\.4\?/)).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Update now" })).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Not now" })).toBeInTheDocument();
-    // His words, 2026-09-17, kept exactly.
-    expect(card.textContent.replace(/\s+/g, " ")).toContain(
-      "You are on version 0.5.3. The download is about 53 MB. The app closes " +
+    // His words, 2026-09-17, kept exactly, less the version: the card's own
+    // first line already says it (2026-09-18).
+    const said = card.textContent.replace(/\s+/g, " ");
+    expect(said).toContain(
+      "The download is about 53 MB. The app closes " +
       "itself and opens again as a new version. Your settings remain the same.");
+    expect(said).not.toMatch(/You are on version/);
+    expect(said.match(/0\.5\.3/g)).toHaveLength(1);
     // Nothing drawn above the cards, and one of it.
     expect(document.querySelectorAll(".update-step")).toHaveLength(1);
     expect(card.contains(document.querySelector(".update-step"))).toBe(true);

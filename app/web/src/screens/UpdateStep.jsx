@@ -265,7 +265,7 @@ export function UpdateStepView({ version, available, size, onClose, runner, inCa
         <strong>Update to version {available}?</strong>
       </p>
       <p className="setting-fine" style={{ margin: "0 0 12px" }}>
-        You are on version {version}. The download is about {megabytes(size)}.
+        The download is about {megabytes(size)}.
         The app closes itself and opens again as a new version. Your settings
         remain the same.
       </p>

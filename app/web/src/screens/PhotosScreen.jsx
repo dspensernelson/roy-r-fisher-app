@@ -135,6 +135,10 @@ export default function PhotosScreen({ job }) {
   // photograph files across the office network. A caption he has not finished
   // is not yet a fact about the job, so it waits here until he leaves the box.
   const [typing, setTyping] = useState({});
+  // What a photograph is saying about itself, by file name: that its caption
+  // is being refreshed, or why the refresh failed. Said on the photograph and
+  // nowhere else.
+  const [said, setSaid] = useState({});
   // The caption save that is still in the air, if there is one. `Mark
   // reviewed` reads the job's list on the server and answers with what it
   // read, so a caption sent a moment before and still travelling comes back
@@ -151,6 +155,7 @@ export default function PhotosScreen({ job }) {
     // A different job's photographs, so what was bought for the last one is
     // not his any more.
     setShots(null); setShotsError(""); bought.current = false;
+    setSaid({});
     // Polls alongside the call rather than after it. Nothing was watching at
     // mount, which is exactly when the waiting happens.
     let alive = true;
@@ -465,13 +470,28 @@ export default function PhotosScreen({ job }) {
   // printed inside the control, so pressing it is the agreement and no window
   // opens in front of it. The server keeps the words it replaces as this
   // photograph's spare, so Back on the tile undoes it. Spenser, 2026-09-18.
+  //
+  // While it works, the photograph itself says "Refreshing caption", his
+  // words, and a failure is said on that photograph too, never on the line
+  // under the title. Spenser, 2026-09-18.
   async function onRefreshCaption(file) {
     setError(null); setDone(null); setAt(0);
     setBusy("Writing captions...");
+    setSaid((now) => ({ ...now, [file]: { working: true } }));
+    let outcome = null;
     try {
       await saving.current;
-      setManifest(await refreshCaption(job, file));
-    } catch (e) { setError(e.message); }
+      const m = await refreshCaption(job, file);
+      setManifest(m);
+      if (m && m.written === false) {
+        outcome = { failed: "No caption was written. Nothing was changed." };
+      }
+    } catch (e) { outcome = { failed: e.message }; }
+    setSaid((now) => {
+      const rest = { ...now };
+      if (outcome) rest[file] = outcome; else delete rest[file];
+      return rest;
+    });
     setBusy("");
     // What the job has spent has moved, so the figure in the bar is asked for
     // again. Once, here, after the money was spent. Never on a redraw.
@@ -1184,6 +1204,26 @@ export default function PhotosScreen({ job }) {
                   line of text: the photographs afford dragging. */}
               <span className="photo-frame">
                 <img src={thumbUrl(job, p.file)} alt={p.file} title={p.file} draggable={false} />
+                {/* Laid over the picture while its one caption is being
+                    written, and gone when it arrives. A failure stays until
+                    he puts it away. Before the take-out button in the
+                    markup, so that button still sits on top and still
+                    works. */}
+                {said[p.file] && (
+                  <span className={`photo-says${said[p.file].failed ? " is-failed" : ""}`}
+                        role="status" aria-live="polite">
+                    {said[p.file].failed ? (
+                      <>
+                        <span className="photo-says-words">{said[p.file].failed}</span>
+                        <CloseX what="this message" onClose={() => setSaid((now) => {
+                          const rest = { ...now };
+                          delete rest[p.file];
+                          return rest;
+                        })} />
+                      </>
+                    ) : "Refreshing caption"}
+                  </span>
+                )}
                 <button className="dot cut-dot" aria-label="Take out" title="Take out"
                         onClick={() => onCut(p.file)}>
                   <span aria-hidden="true">&times;</span>

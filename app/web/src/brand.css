@@ -1021,6 +1021,24 @@ input::placeholder, textarea::placeholder {
   background: rgba(255, 255, 255, .88);
 }
 .cut-dot:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+/* What one photograph is saying about itself, laid over the picture: that
+   its caption is being refreshed, in Spenser's words, "Refreshing caption",
+   and why a refresh failed. 2026-09-18. Charcoal at the nav bar's own value
+   so white words read on any photograph. The take-out button comes after it
+   in the markup and stays on top of it, live. */
+.photo-says {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: calc(10px * var(--k, 1)) calc(14px * var(--k, 1));
+  border-radius: calc(4px * var(--k, 1)); background: rgba(52, 53, 56, 0.72);
+  color: var(--box-ink); font-size: calc(13px * var(--k, 1)); font-weight: 600;
+  line-height: 1.35; text-align: center; pointer-events: none;
+}
+/* A failure stays until he puts it away, so it takes clicks; the working
+   state never does, so nothing under it is blocked. */
+.photo-says.is-failed { pointer-events: auto; background: rgba(110, 9, 3, 0.86); font-weight: 500;
+  padding-left: calc(28px * var(--k, 1)); padding-right: calc(28px * var(--k, 1)); }
+.photo-says .note-x { color: #fff; top: calc(2px * var(--k, 1)); right: calc(2px * var(--k, 1)); }
+.photo-says .note-x:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
 .band-dot.is-on {
   background: var(--brand);
   border-color: var(--brand);

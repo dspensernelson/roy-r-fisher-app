@@ -462,8 +462,7 @@ Do not carry on to the next one.
 
 > ### Check 54. The update box says less
 > Open the update box.
-> **Should:** `Update to version X?`, then one paragraph: you are on version Y,
-> the download size, `The app closes itself and opens again as a new version.
+> **Should:** `Update to version X?`, then one paragraph: the download size, `The app closes itself and opens again as a new version.
 > Your settings remain the same.` Then `Update now` and `Not now`. The words
 > run the full width of the box.
 > **Wrong if:** there is a paragraph about checking the download, or the words

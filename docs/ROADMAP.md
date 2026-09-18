@@ -888,6 +888,22 @@ here because the checklist lines that asked these questions have come off it.
   - Settings, when Check now cannot reach the update server, says "Could not
     check for a new version." instead of "You are on the newest version."
 
+
+## Decisions on record (2026-09-18, Spenser, in chat)
+
+- **A caption he types himself counts as reviewed.** He wrote it, so he has
+  read it. Only captions the AI wrote wait for his tick. The app records who
+  wrote each caption, and the bar counts written by the AI, typed by him, and
+  reviewed. His standing rule is that a person reviews everything the AI does;
+  a typed caption was never the AI's.
+- **The job-wide back reads "Restore cleared captions".** It fills only the
+  photographs whose caption is still empty since the clear.
+- **The photographs slice is finished before the next test build**: the A B C
+  filter, who wrote each caption, the look of a switched-off button, and the
+  screen at normal zoom looking the way it does at 90 per cent.
+- **The one-tab fix works.** Updating 0.7.6.1 to 0.7.6.2 on the virtual
+  machine left one tab, the first update that could test it.
+
 ## The 8 September Fable analysis, recorded 17 September
 
 **Re-run it once description of improvements reaches Mark.** Spenser decided on

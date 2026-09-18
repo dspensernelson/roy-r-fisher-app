@@ -1075,6 +1075,7 @@ def create_app() -> FastAPI:
                             fresh = drafted.get(entry["file"], "")
                             if fresh:
                                 entry["caption"] = fresh
+                                entry[photos_routes.AUTHOR] = photos_routes.BY_AI
                                 entry.pop(photos_routes.REVIEWED, None)
                                 done += 1
                     photos_routes.save_manifest(job, manifest)
@@ -1220,6 +1221,7 @@ def create_app() -> FastAPI:
         if fresh:
             with busy.writing():
                 wanted["caption"] = fresh
+                wanted[photos_routes.AUTHOR] = photos_routes.BY_AI
                 wanted.pop(photos_routes.REVIEWED, None)
                 photos_routes.save_manifest(job, manifest)
 

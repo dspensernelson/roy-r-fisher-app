@@ -213,7 +213,25 @@ export default function PhotosScreen({ job }) {
 
   async function save(next) {
     setManifest(next);
-    await putManifest(job, next).catch((e) => setError(e.message));
+    return putManifest(job, next).catch((e) => { setError(e.message); return null; });
+  }
+
+  // Who wrote a caption he has just finished, and whether it is ticked, as
+  // the server decided them. Spenser, 2026-09-18: a caption he types counts
+  // as reviewed. That rule lives on the server (`record_typed_captions`), and
+  // the screen takes its answer rather than holding a second copy of it.
+  // Only if the words are still the ones that were sent: if he has changed
+  // them again since, the next save will bring the next answer.
+  function adoptWriter(file, answer) {
+    const saved = answer && answer.manifest && Array.isArray(answer.manifest.photos)
+      ? answer.manifest.photos.find((e) => e.file === file) : null;
+    if (!saved) return;
+    setManifest((now) => {
+      if (!now) return now;
+      const photos = now.photos.map((p) => (p.file === file && p.caption === saved.caption
+        ? { ...p, author: saved.author, reviewed: saved.reviewed } : p));
+      return { ...now, photos };
+    });
   }
 
   async function onFiles(files) {
@@ -490,7 +508,7 @@ export default function PhotosScreen({ job }) {
     if (caption === manifest.photos[i].caption) return;   // nothing changed
     const next = structuredClone(manifest);
     next.photos[i].caption = caption;
-    saving.current = save(next);
+    saving.current = save(next).then((answer) => adoptWriter(file, answer));
   }
 
   function drop(i) {
@@ -620,8 +638,12 @@ export default function PhotosScreen({ job }) {
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
   // Written, counted the way every other count here is: only photographs
   // still in the report. It counted every caption until 2026-09-17, so it
-  // could say more was written than the report holds.
-  const written = inPhotos.filter((x) => (x.p.caption || "").trim()).length;
+  // could say more was written than the report holds. Since 2026-09-18 it is
+  // two counts, by who wrote them: the AI, or him. Read from `author`, which the server puts
+  // on every caption it sends (`author_of` in app/server/photos.py holds the
+  // one default, for manifests older than the field). Spenser, 2026-09-18.
+  const byAi = inPhotos.filter((x) => (x.p.caption || "").trim() && x.p.author === "ai").length;
+  const typed = inPhotos.filter((x) => (x.p.caption || "").trim() && x.p.author === "person").length;
   // How many photographs share a page. The server normalises this on the way
   // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
   // a guard for a manifest that never came from the server, not a second copy
@@ -1063,7 +1085,13 @@ export default function PhotosScreen({ job }) {
                 </button>
               )
             ) : (
-              <span className="pill hold"><b>{written}</b>&nbsp;written</span>
+              <>
+                {/* Three counts while captions are still being written: the
+                    AI's, the ones he typed, then reviewed. The words on these
+                    pills are Spenser's to change. 2026-09-18. */}
+                <span className="pill hold"><b>{byAi}</b>&nbsp;AI</span>
+                <span className="pill hold"><b>{typed}</b>&nbsp;typed</span>
+              </>
             )}
             {!allReviewed && (
               <span className="pill hold"><b>{reviewedCount}</b>&nbsp;reviewed</span>

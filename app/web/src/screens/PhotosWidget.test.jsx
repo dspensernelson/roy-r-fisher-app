@@ -15,8 +15,12 @@ import PhotosScreen from "./PhotosScreen.jsx";
 
 const JOB = "A JOB";
 
-function photo(n, { caption = "", reviewed = false } = {}) {
-  return { file: `IMG_${n}.jpeg`, caption, reviewed };
+// Every caption the server sends carries who wrote it (`author_of` in
+// app/server/photos.py fills it in), so these do too. Written by the AI unless
+// a test says otherwise.
+function photo(n, { caption = "", reviewed = false, author } = {}) {
+  const who = caption.trim() ? { author: author || "ai" } : {};
+  return { file: `IMG_${n}.jpeg`, caption, reviewed, ...who };
 }
 
 function setUp({ written = 0, reviewed = 0, total = 12, taken = [] } = {}) {
@@ -57,7 +61,7 @@ describe("the bar, and the two counts", () => {
   it("counts captions as they are written", async () => {
     setUp({ written: 5, reviewed: 0 });
     await waitFor(() => expect(bar()).toBeTruthy());
-    expect(bar().textContent).toMatch(/5\s*written/);
+    expect(bar().textContent).toMatch(/5\s*AI/);
   });
 
   it("counts reviewed separately from written", async () => {
@@ -80,7 +84,7 @@ describe("the bar, and the two counts", () => {
     setUp({ written: 5, reviewed: 0 });
     await waitFor(() => expect(bar()).toBeTruthy());
     expect(screen.queryByRole("button", { name: /mark every caption as reviewed/i })).toBeNull();
-    expect(bar().textContent).toMatch(/5\s*written/);
+    expect(bar().textContent).toMatch(/5\s*AI/);
   });
 
   it("counts written only among the photographs still in the report", async () => {
@@ -92,7 +96,7 @@ describe("the bar, and the two counts", () => {
       { caption: "Taken out, also written" },
     ] });
     await waitFor(() => expect(bar()).toBeTruthy());
-    expect(bar().textContent).toMatch(/(?<!\d)5\s*written/);
+    expect(bar().textContent).toMatch(/(?<!\d)5\s*AI/);
     expect(bar().textContent).toMatch(/(?<!\d)2\s*reviewed/);
   });
 
@@ -105,8 +109,8 @@ describe("the bar, and the two counts", () => {
     ] });
     await waitFor(() => expect(bar()).toBeTruthy());
     const count = (word) => Number(bar().textContent.match(new RegExp(`(\\d+)\\s*${word}`))[1]);
-    expect(count("written")).toBe(3);
-    expect(count("reviewed")).toBeLessThanOrEqual(count("written"));
+    expect(count("AI") + count("typed")).toBe(3);
+    expect(count("reviewed")).toBeLessThanOrEqual(count("AI") + count("typed"));
   });
 
   it("offers the check when every photograph in the report is written", async () => {
@@ -122,7 +126,7 @@ describe("the bar, and the two counts", () => {
     expect(bar().textContent).toMatch(/All reviewed/);
     expect(screen.queryByRole("button", { name: /mark every caption as reviewed/i })).toBeNull();
     // and it does not also claim a count beside it
-    expect(bar().textContent).not.toMatch(/written/);
+    expect(bar().textContent).not.toMatch(/AI|typed/);
   });
 });
 
@@ -145,7 +149,7 @@ describe("what only appears when it is true", () => {
     // so it keeps counting those too, even though the written pill does not.
     setUp({ written: 0, taken: [{ caption: "Taken out, written" }] });
     await waitFor(() => expect(bar().querySelector(".clear")).toBeTruthy());
-    expect(bar().textContent).toMatch(/(?<!\d)0\s*written/);
+    expect(bar().textContent).toMatch(/(?<!\d)0\s*AI\s*0\s*typed/);
     await userEvent.click(bar().querySelector(".clear"));
     expect(screen.getByRole("heading", { name: "Clear 1 caption?" })).toBeInTheDocument();
   });

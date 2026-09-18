@@ -1363,7 +1363,7 @@ describe("clearing the captions", () => {
   it("says nothing is written and nothing is reviewed", async () => {
     await clearThem();
     const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
-    expect(bar.textContent).toMatch(/0\s*written/);
+    expect(bar.textContent).toMatch(/0\s*AI\s*0\s*typed/);
     expect(bar.textContent).toMatch(/0\s*reviewed/);
     expect(bar.textContent).not.toMatch(/All reviewed/);
   });

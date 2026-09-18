@@ -23,8 +23,8 @@ const BANDS = [
 
 // Two in A, three in B, none in C, one waiting for a band.
 const PHOTOS = [
-  { file: "a1.jpg", caption: "Front", band: "A", reviewed: true },
-  { file: "a2.jpg", caption: "Side", band: "A" },
+  { file: "a1.jpg", caption: "Front", band: "A", reviewed: true, author: "ai" },
+  { file: "a2.jpg", caption: "Side", band: "A", author: "ai" },
   { file: "b1.jpg", caption: "", band: "B" },
   { file: "b2.jpg", caption: "", band: "B" },
   { file: "b3.jpg", caption: "", band: "B" },
@@ -130,7 +130,7 @@ describe("what the filter never touches", () => {
     expect(shown()).toHaveLength(2);
     expect([figures(), bar()]).toEqual(before);
     expect(figures()).toMatch(/6 photographs · 2 pages/);
-    expect(bar()).toMatch(/2\s*written/);
+    expect(bar()).toMatch(/2\s*AI/);
     expect(bar()).toMatch(/1\s*reviewed/);
   });
 });

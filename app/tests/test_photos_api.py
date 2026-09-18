@@ -275,8 +275,10 @@ def test_manifest_keeps_existing_entries_and_appends_new_file_from_disk(client):
     (job / "Photos" / "c.jpg").write_bytes(jpg_bytes((30, 30, 30)))
 
     m2 = c.get("/api/jobs/JOB1/manifest").json()
-    assert m2["photos"][0] == {"file": "b.jpg", "caption": "Rear yard"}
-    assert m2["photos"][1] == {"file": "a.jpg", "caption": "Front entrance"}
+    # Typed by a person, so theirs and ticked (Spenser, 2026-09-18).
+    typed = {"author": "person", "reviewed": True}
+    assert m2["photos"][0] == {"file": "b.jpg", "caption": "Rear yard", **typed}
+    assert m2["photos"][1] == {"file": "a.jpg", "caption": "Front entrance", **typed}
     assert m2["photos"][2]["file"] == "c.jpg"
     assert m2["photos"][2]["caption"] == ""
 

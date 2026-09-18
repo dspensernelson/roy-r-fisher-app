@@ -146,6 +146,10 @@ def test_only_the_captions_change(client, home):
         for entry in m["photos"]:
             entry["caption"] = "<masked>"
             entry.pop("cleared_caption", None)
+            # Who wrote the words goes with them, and who wrote the spare is
+            # kept beside it for Back. 2026-09-18.
+            entry.pop("author", None)
+            entry.pop("cleared_author", None)
         return m
 
     assert masked(after) == masked(before)

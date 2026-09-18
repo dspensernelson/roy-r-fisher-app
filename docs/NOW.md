@@ -74,6 +74,7 @@ are in its phases.
 
 ## Never shown an old screen or an old message
 
+- [ ] Click the version: see what changed in it, and it checks for a newer one · Star 4
 - [ ] What is the black window that appears after an update · Star 4
 - [ ] The app looks for a new version on its own, and the version on screen says so · Star 4
 - [x] Stop the green and red boxes piling up · Star 4

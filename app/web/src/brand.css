@@ -360,30 +360,27 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .button:hover { background: var(--brand-hover); }
 .button:active { background: var(--brand-press); transform: translateY(1px); }
 .button[disabled] { opacity: 0.5; cursor: default; }
-/* A control that cannot be used stops looking like a control that can. Half
-   opacity alone still reads as a blue button he ought to be able to press.
+/* A switched-off button is the same button, faded. Spenser, 2026-09-18:
+   *"same colour, faded."* Build photo pages stays red and Generate captions
+   stays blue, and resting on either still says why it is off. The fade is
+   .45, the number every other switched-off control in this app already uses.
 
-   Pale fill, and an outline in the button's own colour: red for the red one,
-   blue for the blue one. Spenser, 2026-09-18, on the flat grey this replaced:
-   *"Everything looks like it's on top of the button, not part of the
-   button."* Build photo pages and Generate captions had become identical grey
-   slabs. With the edge they still read as off, still read as buttons, and
-   still read as two different buttons. `.button.final` is the same idea.
+   It replaced a pale fill with an edge in the button's own colour, which had
+   in turn replaced one flat grey for both: *"Everything looks like it's on
+   top of the button, not part of the button."* Same colour, faded, keeps the
+   two looking like two different buttons without anything sitting on them.
 
-   An inset shadow, never a border, so switching off cannot change the
-   button's size inside a widget whose height is pinned.
+   Nothing here touches the border or the padding, so switching off cannot
+   change a button's size inside a widget whose height is pinned.
 
-   The hover rules name the blue button outright because
-   `.button.secondary:hover`, further down, has the same weight as a plain
-   `.button.is-off:hover` and used to win: hovering a greyed Generate captions
-   painted it the live hover blue with grey words on it. */
+   The hover rules name each button outright because `.button:hover` and
+   `.button.secondary:hover` paint the live hover colour at the same weight,
+   and used to win. */
 .button.is-off, .button.is-off:hover {
-  background: var(--quiet-bg); color: var(--ink-on-quiet); opacity: 1;
-  box-shadow: inset 0 0 0 1.5px var(--brand);
+  background: var(--brand); color: #fff; opacity: .45; box-shadow: none;
 }
 .button.secondary.is-off, .button.secondary.is-off:hover {
-  background: var(--quiet-bg); color: var(--ink-on-quiet); opacity: 1;
-  box-shadow: inset 0 0 0 1.5px var(--link);
+  background: var(--link); color: #fff; opacity: .45; box-shadow: none;
 }
 .drop { border: calc(2px * var(--k, 1)) dashed var(--link); background: #FFFFFF; border-radius: calc(6px * var(--k, 1)); padding: calc(26px * var(--k, 1)); text-align: center; color: var(--ink-muted); margin-bottom: calc(22px * var(--k, 1)); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(200px * var(--k, 1)), 1fr)); gap: calc(18px * var(--k, 1)); }

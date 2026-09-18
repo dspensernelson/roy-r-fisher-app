@@ -242,3 +242,249 @@ how important a control is. The full rule is in `docs/ROADMAP.md`, 2026-09-08.
 > and tells you to press `Show what will be sent`, press `Copy`, and paste it
 > into an email to the address it names.
 > **Wrong if:** it says it was sent, or the message gives you no way through.
+
+## The photographs slice, 18 September 2026
+
+Everything in the next test build that a person can see or do on the
+photographs screen, and the update pieces that ship with it. Walk them in this
+order: each group leaves the job the way the next one expects.
+
+Use a job with a dozen or so photographs, most of them captioned. Check 38
+needs a key in Settings and a job the app is allowed to send photographs from.
+
+**Money.** Only one check here spends: 38, about 5 cents on the key in
+Settings. Every other check is free. **Do not press `Generate captions`** in
+any of them: opening its window alone writes six sample captions, about 30
+cents, before you agree to anything.
+
+**If a check marked "Read this one twice" fails, stop there and tell Spenser.**
+Do not carry on to the next one.
+
+Checks 40 and 41 are written from Spenser's decision of 18 September, before
+the build was finished. Confirm them against the build first: if the screen
+does something else, say so rather than marking it failed.
+
+**Opening a job**
+
+> ### Check 29. The photographs screen reads at normal zoom
+> Set the browser to 100 per cent (Ctrl and 0). Open a job's photographs.
+> **Should:** it looks the way it used to at 90 per cent, with as many
+> photographs to a row. Only the masthead and the dark bar at the top are a
+> little bigger. Jobs and Settings are the size they always were.
+> **Wrong if:** you want to zoom out to read it, or another screen changed size.
+
+> ### Check 30. Words fill the box they sit in
+> Open Settings, and open a job that asks which folder holds its photographs.
+> **Should:** every paragraph runs to the right edge of its box before it wraps.
+> **Wrong if:** a paragraph wraps a third of the way across and leaves the rest
+> of its box empty.
+
+**The widget**
+
+> ### Check 31. The photographs never cover the widget
+> Open a job with plenty of photographs. Look at the bottom row of the widget,
+> the one with the counts and the money. Scroll down and back up.
+> **Should:** that whole row is always visible, with nothing painted over it.
+> **Wrong if:** the first row of photographs covers any part of it.
+
+> ### Check 32. The two buttons share the top row equally
+> Look at `Build photo pages` and `Generate captions` in the widget. Do not
+> press `Generate captions`.
+> **Should:** the same width, filling the row edge to edge with only a hair
+> between them, and the photograph-with-a-plus button sits directly under the
+> left edge of `Build photo pages`.
+> **Wrong if:** one is wider, or there is a gap in the middle of the row.
+
+> ### Check 33. A switched-off button still looks like its own button
+> On a job with a caption not yet ticked, look at `Build photo pages`. On a
+> job where every photograph has a caption, look at `Generate captions`. Rest
+> the pointer on each.
+> **Should:** a pale fill with a thin edge in the button's own colour, red for
+> Build and blue for Generate, words still readable, and a few words saying why
+> it is off. Neither changes size when it switches on.
+> **Wrong if:** they are two identical flat grey slabs, or either looks like it
+> could be pressed.
+
+**The photographs**
+
+> ### Check 34. Back and Refresh are on every photograph
+> Look at the row under any photograph, then under several others.
+> **Should:** the tick circle at the left, band circles if Bands is on, then a
+> Back circle with a curved arrow, then a Refresh pill with a circular arrow
+> and a price such as `~5¢` inside it. The same price on every photograph.
+> **Wrong if:** any photograph is missing one of them, or two show different
+> prices.
+
+> ### Check 35. Refresh cannot spend where it is not allowed
+> Find a job where resting on `Generate captions` says `These photos are demo
+> material kept for local testing`. Press Refresh on one photograph.
+> **Should:** Refresh is switched off on every photograph, nothing happens, and
+> no caption changes. Free.
+> **Wrong if:** `Writing captions...` appears, or a caption changes.
+
+**Captions and ticks**
+
+> ### Check 36. A caption you type counts as reviewed
+> Type a caption into a photograph that has none, then click somewhere else.
+> Then change one word in a caption the AI wrote and click away.
+> **Should:** each time, the tick under it turns green on its own. Leave the
+> job and come back: still green.
+> **Wrong if:** either tick stays empty.
+
+> ### Check 37. A tick needs a caption
+> Delete every word from a ticked caption and click away. Rest the pointer on
+> its tick.
+> **Should:** the tick goes empty and cannot be clicked, and resting on it says
+> `Write a caption first`.
+> **Wrong if:** a green tick sits under an empty box.
+
+> ### Check 38. Refresh writes one new caption for the price on it
+> **Spends money: about 5 cents.** The figure on the pill is the most it can
+> cost. On a job the app is allowed to send, press Refresh once on one
+> captioned photograph.
+> **Should:** no window asks first. The line under the title says
+> `Writing captions...`, then that one caption is replaced with new words.
+> **Wrong if:** a window opens, more than one caption changes, or it fails and
+> nothing says why.
+
+> ### Check 39. The AI's captions wait for your tick. **Read this one twice.**
+> Look at the tick under the caption Check 38 just wrote, and under any other
+> caption the AI wrote that you have not ticked.
+> **Should:** empty, and it stays empty until you click it yourself.
+> **Wrong if:** a caption the AI wrote ever ticks itself. That breaks the one
+> rule about AI in this app: a person reads everything it writes. **Stop and
+> tell Spenser.**
+
+> ### Check 40. The bar counts reviewed, and nothing else. **Confirm against the build.**
+> With some captions ticked and some not, read the bottom row of the widget.
+> Tick one more.
+> **Should:** it reads `N of M reviewed`, where M is the photographs in the
+> report, and N goes up by one when you tick.
+> **Wrong if:** it shows separate counts for the AI and for you, or N does not
+> move.
+
+> ### Check 41. Who wrote each caption shows quietly on the photograph. **Confirm against the build.**
+> Look at a caption you typed in Check 36 and the one Refresh wrote in
+> Check 38.
+> **Should:** each photograph says, small and grey, whether you or the AI wrote
+> its caption. Editing an AI caption changes it to you.
+> **Wrong if:** nothing says who wrote it, it says the wrong one, or it shouts:
+> colour, a box, or anything that competes with the caption.
+
+**Bands**
+
+> ### Check 42. Clicking a band letter shows only that band
+> Turn Bands on. Put a few photographs in A and a few in B. Click `A` in the
+> widget.
+> **Should:** only band A's photographs show and the A is filled black. The
+> photograph and page counts under the title do not change.
+> **Wrong if:** other photographs still show, or the counts drop to band A's.
+
+> ### Check 43. Clicking it again shows them all
+> With A showing, click `A` again. Then click `A`, then `B`. Then turn Bands
+> off.
+> **Should:** A again shows every photograph. `B` while A is on switches to
+> band B. Bands off shows every photograph and hides the letters.
+> **Wrong if:** any click leaves photographs hidden that should show.
+
+> ### Check 44. The controls hold their places with Bands on or off
+> Note where the tick, Back and Refresh sit under one photograph. Switch Bands
+> off, then on.
+> **Should:** the band circles vanish and come back, and the tick, Back and
+> Refresh do not move at all.
+> **Wrong if:** anything on that row slides sideways.
+
+**Clearing and restoring**
+
+> ### Check 45. The job-wide back waits for a clear
+> On a job that has never been cleared, rest the pointer on the small curved
+> arrow to the right of `Clear captions`.
+> **Should:** grey, and it says `Nothing was cleared`. Back on each photograph
+> is grey and says the same.
+> **Wrong if:** either can be pressed before a clear.
+
+> ### Check 46. Clear captions takes the ticks, and Build goes off. **Read this one twice.**
+> On a job where every caption is ticked and `Build photo pages` is solid red,
+> click `Clear captions` and agree.
+> **Should:** every caption and every tick goes. `Build photo pages` switches
+> off, and resting on it says `Tick every caption you have read first.`
+> **Wrong if:** a tick survives under an empty box, or Build stays red for a
+> report with no words in it. **Stop and tell Spenser.**
+
+> ### Check 47. Restore cleared captions brings the words back without the ticks
+> Straight after the clear, rest on the curved arrow, then click it.
+> **Should:** it says `Restore cleared captions`. Every caption comes back word
+> for word, every tick stays empty, and the arrow goes grey again.
+> **Wrong if:** a caption is missing or changed, or the ticks come back.
+
+> ### Check 48. Restore spares what you changed. **Read this one twice.**
+> Clear captions again. Type new words into one photograph and click away. Then
+> click `Restore cleared captions`.
+> **Should:** your new words stay exactly as you typed them. Every other
+> photograph gets its old caption back.
+> **Wrong if:** your words are replaced. That is his work lost without a
+> question. **Stop and tell Spenser.**
+
+> ### Check 49. Back on one photograph works on its own
+> Clear captions once more. Press Back on one photograph only, then rest on it.
+> **Should:** only that photograph gets its words back, with its tick empty,
+> and its Back stays live so it can be used again.
+> **Wrong if:** any other photograph changes, or its tick comes back on.
+
+**Money**
+
+> ### Check 50. The money rounds up to the cent, not the nickel
+> After Check 38 has spent, open a job with photographs still uncaptioned and
+> read the figure at the right end of the widget's bottom row.
+> **Should:** whole cents, rounded up, ending in any digit: `~58¢` or `~$2.88`
+> as readily as `~60¢`. On a computer that has never spent on captions, a
+> multiple of 5 is right too.
+> **Wrong if:** it shows part of a cent, or it is more than the price on the
+> Refresh pill times the number of photographs without a caption.
+
+**Settings and updating**
+
+> ### Check 51. Check now says when it could not check
+> Turn the network off. Open Settings and click **`Check now`**.
+> **Should:** `Could not check for a new version.`
+> **Wrong if:** `You are on the newest version.` The app does not know that.
+
+> ### Check 52. Check now says newest only when it knows
+> Network on, nothing newer published. Click **`Check now`**.
+> **Should:** `You are on the newest version.`
+> **Wrong if:** anything else.
+
+> ### Check 53. Check now offers the update beside it
+> With a newer version published, click **`Check now`**.
+> **Should:** `Version X is available.` and an **`Update available`** button
+> appears beside `Check now`. Clicking it opens the same box as the
+> `Update available` button at the top of the screen.
+> **Wrong if:** the sentence sends you to the top of the screen, no button
+> appears, or it opens something different.
+
+> ### Check 54. The update box says less
+> Open the update box.
+> **Should:** `Update to version X?`, then one paragraph: you are on version Y,
+> the download size, `The app closes itself and opens again as a new version.
+> Your settings remain the same.` Then `Update now` and `Not now`. The words
+> run the full width of the box.
+> **Wrong if:** there is a paragraph about checking the download, or the words
+> stop a third of the way across.
+
+> ### Check 55. A stopped update writes its reason in the log
+> Click `Update now`, and click `Cancel` while it says `Downloading`. Then open
+> Settings and click **`Show what will be sent`**.
+> **Should:** the box says `The update was stopped. Nothing has changed.` Near
+> the end of the log is a line saying `update did not finish` with that same
+> sentence. The app is still on the old version.
+> **Wrong if:** the log has no such line.
+
+> ### Check 56. The loading page says the app is not answering
+> Click `Close the app`. In File Explorer open your user folder, then
+> `.rrf-app-cache`, and double-click `starting.html`. Touch nothing for half a
+> minute.
+> **Should:** after about 20 seconds it says `Roy R. Fisher is not answering.`,
+> `Close this tab and double-click the icon.`, and the line about sending
+> Spenser the window.
+> **Wrong if:** it says the app has probably opened in another tab, or talks
+> about how some computers are set up.

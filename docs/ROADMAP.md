@@ -555,7 +555,7 @@ Counted on 2026-09-08, not estimated.
 | Filled blue | It does work for him, and he can undo it or ignore it |
 | Plain button, red text (`.button.final`) | Cannot be undone, but it is not why he came |
 | Blue text, no box (`.linky`) | Moves him, shows him, or backs him out. Nothing changes |
-| Grey, still labelled, with a reason (`.is-off`) | Cannot be used yet. Never hidden, never silent |
+| Pale fill, edged in its own colour, still labelled, with a reason (`.is-off`) | Cannot be used yet. Never hidden, never silent. The edge is red or blue by the button it belongs to, since 2026-09-18 |
 
 **The whole app carries three filled red buttons**: `Build photo pages`,
 `Make the job`, `Update now`. Each one writes something into a folder Mark

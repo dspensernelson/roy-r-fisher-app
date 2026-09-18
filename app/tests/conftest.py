@@ -1,4 +1,7 @@
+import builtins
+import contextlib
 import os
+import pathlib
 from pathlib import Path
 
 import pytest
@@ -113,6 +116,113 @@ def never_touch_the_real_home(tmp_path_factory, monkeypatch):
     # package without this would write 53 MB into his real home folder, once
     # per run, for ever.
     monkeypatch.setenv("RRF_DOWNLOAD_DIR", str(box / ".rrf-app-download"))
+    # Handed back so `refused_get` below can tell the app's own storage apart
+    # from Mark's folders. Every path above is the app's; none of it is his.
+    return box
+
+
+@contextlib.contextmanager
+def _files_opened():
+    """Every file opened while the block runs, as a list of strings.
+
+    Both doors have to be watched. `Path.read_bytes` and `Path.read_text` go
+    through `Path.open`, which calls `io.open` directly and never looks at
+    `builtins.open`, so patching one of the two records only half the reads.
+    Measured on 2026-09-17: with only `builtins.open` patched, serving a
+    thumbnail recorded the photograph (Pillow opens it) but not the cached
+    file the answer is actually read from.
+    """
+    seen = []
+    real_open = builtins.open
+    real_path_open = pathlib.Path.open
+
+    def spy_open(file, *args, **kwargs):
+        seen.append(str(file))
+        return real_open(file, *args, **kwargs)
+
+    def spy_path_open(self, *args, **kwargs):
+        seen.append(str(self))
+        return real_path_open(self, *args, **kwargs)
+
+    builtins.open = spy_open
+    pathlib.Path.open = spy_path_open
+    try:
+        yield seen
+    finally:
+        builtins.open = real_open
+        pathlib.Path.open = real_path_open
+
+
+@pytest.fixture
+def refused_get(never_touch_the_real_home):
+    """Ask for something the app must not serve, and prove it did not serve it.
+
+    A status code on its own proves that some answer came back, not that the
+    attempt was refused. That gap is not theoretical. Five path-traversal
+    tests asserted `status_code in (400, 404)` and passed for months only
+    because `app/web/dist` happened to be sitting on the machine; with the
+    built folder moved away the same attacks were answered 405 by a route
+    registered for a different method, and the tuple hid it. A guard against
+    reading Mark's files must not depend on whether anybody has run the
+    front-end build.
+
+    So this checks the four things that together mean "refused":
+
+    1. The answer is 404, which is what the app already says for a job name
+       it will not resolve. Nothing was found and nothing is claimed about
+       the path existing.
+    2. The answer is our JSON refusal and carries a `detail`. A served file
+       would come back as bytes with a file's content type.
+    3. No bait file was opened. The caller plants these where the attack is
+       aiming.
+    4. Nothing outside the jobs folder was opened at all, apart from the
+       app's own storage box and this repository. Neither of those is Mark's,
+       and the test would otherwise misfire on the app reading its own log.
+    """
+    box = Path(str(never_touch_the_real_home)).resolve()
+
+    def check(client, url, bait=()):
+        home = Path(os.environ["RRF_JOBS_HOME"]).resolve()
+        bait = [Path(b) for b in bait]
+        planted = {str(b.resolve()): b.read_text() for b in bait}
+
+        with _files_opened() as opened:
+            r = client.get(url)
+
+        assert r.status_code == 404, (
+            "%s should be refused, not answered %d. A 405 in particular is a "
+            "wrong answer even though nothing was served: it tells the caller "
+            "the path exists and the method is wrong, and neither is true."
+            % (url, r.status_code))
+
+        assert r.headers.get("content-type", "").startswith("application/json"), (
+            "%s came back as %s, which is what a served file looks like"
+            % (url, r.headers.get("content-type")))
+        detail = r.json().get("detail")
+        assert isinstance(detail, str) and detail, "%s: no refusal message" % url
+
+        for path, text in planted.items():
+            assert path not in opened, "%s opened the bait file %s" % (url, path)
+            assert text not in r.text, "%s served the contents of %s" % (url, path)
+
+        for path in opened:
+            resolved = Path(path).resolve()
+            if _inside(resolved, home) or _inside(resolved, box) or _inside(resolved, REPO_ROOT):
+                continue
+            raise AssertionError(
+                "%s opened %s, which is outside the jobs folder" % (url, path))
+
+        return r
+
+    return check
+
+
+def _inside(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
 
 
 @pytest.fixture

@@ -83,10 +83,13 @@ def test_upload_rejects_traversal_job_name(client):
     assert not (job.parent.parent / "evil").exists()
 
 
-def test_manifest_get_rejects_traversal_job_name(client):
+def test_manifest_get_rejects_traversal_job_name(client, refused_get):
     c, job = client
-    assert c.get("/api/jobs/..%2F..%2Fevil/manifest").status_code in (400, 404)
-    assert c.get("/api/jobs/..\\evil/manifest").status_code in (400, 404)
+    bait = job.parent.parent / "secret.txt"
+    bait.write_text("do not serve me")
+
+    refused_get(c, "/api/jobs/..%2F..%2Fevil/manifest", bait=[bait])
+    refused_get(c, "/api/jobs/..\\evil/manifest", bait=[bait])
 
 
 def test_manifest_put_rejects_traversal_job_name(client):
@@ -96,27 +99,35 @@ def test_manifest_put_rejects_traversal_job_name(client):
     assert not (job.parent.parent / "evil").exists()
 
 
-def test_thumb_rejects_traversal_job_name(client):
+def test_thumb_rejects_traversal_job_name(client, refused_get):
     c, job = client
-    assert c.get("/api/jobs/..%2F..%2Fevil/thumb/a.jpg").status_code in (400, 404)
+    bait = job.parent.parent / "secret.txt"
+    bait.write_text("do not serve me")
+
+    refused_get(c, "/api/jobs/..%2F..%2Fevil/thumb/a.jpg", bait=[bait])
 
 
-def test_thumb_rejects_traversal_in_file_param(client):
+def test_thumb_rejects_traversal_in_file_param(client, refused_get):
     c, job = client
     c.post("/api/jobs/JOB1/photos", files=[("files", ("a.jpg", jpg_bytes((3, 3, 3)), "image/jpeg"))])
 
-    # Plant a "secret" file one level above the job's Photos dir to confirm
-    # a traversal attempt can't reach it.
-    secret = job / "secret.txt"
-    secret.write_text("do not serve me")
+    # Two baits, because the file param can aim at two different places. One
+    # sits inside the job but outside Photos, which is where "../" lands. The
+    # other sits above the jobs folder entirely, which is where an absolute
+    # path aims. Both are real files with real contents, so "it was refused"
+    # means the bytes never came back and the file was never opened, not
+    # merely that the number was in a tuple.
+    near = job / "secret.txt"
+    near.write_text("do not serve me")
+    far = job.parent.parent / "further-secret.txt"
+    far.write_text("nor me")
 
     for traversal in ("..%2Fsecret.txt", "..\\secret.txt", "%2Fetc%2Fpasswd"):
-        r = c.get(f"/api/jobs/JOB1/thumb/{traversal}")
-        assert r.status_code in (400, 404), f"traversal {traversal!r} should not succeed"
+        refused_get(c, "/api/jobs/JOB1/thumb/%s" % traversal, bait=[near, far])
 
     # And an absolute path passed as the file segment must not escape either.
-    r = c.get("/api/jobs/JOB1/thumb/" + str(secret).replace("/", "%2F"))
-    assert r.status_code in (400, 404)
+    refused_get(c, "/api/jobs/JOB1/thumb/" + str(near).replace("/", "%2F"),
+                bait=[near, far])
 
 
 def test_thumb_missing_file_is_404_not_500(client):
@@ -292,33 +303,39 @@ def test_manifest_drops_entries_for_files_deleted_from_disk(client):
     assert [p["file"] for p in on_disk["photos"]] == ["a.jpg", "b.jpg"]
 
 
-def test_manifest_rejects_absolute_path_job_name(client):
+def test_manifest_rejects_absolute_path_job_name(client, refused_get):
     """Coverage gap called out in review: the file-param traversal tests
     above cover '../', absolute paths, and backslash forms, but the job
     NAME was never attacked with an absolute path specifically.
 
-    Both forms below are blocked, but by different layers, and the
-    assertions say so explicitly rather than lumping them together:
+    Both forms below are blocked, but by different parts of the app, and the
+    assertions say which rather than lumping them together:
 
     - A POSIX-style absolute path ('/etc/passwd') contains '/'. Starlette
       decodes %2F before route matching, so the decoded value no longer
-      matches the single-segment {name} pattern at all -- this 404s at the
-      ROUTER, before our handler runs. The generic {"detail": "Not Found"}
-      body (not our own message) is the proof.
+      matches the single-segment {name} pattern at all and never reaches the
+      manifest handler. The catch-all at the bottom of main.py answers it
+      with our own {"detail": "Not found."}.
     - A Windows-style absolute path ('C:\\evil') has no forward slash, so it
       passes through as one literal path segment and DOES reach our
       handler, where jobs.resolve_job's '\\ in name' check rejects it. Our
       own {"detail": "Job not found."} body is the proof this one actually
       exercised the confinement code, not just routing.
+
+    The first of those used to be answered by whatever sat below the API
+    routes, which is the static file server when `app/web/dist` exists and
+    nothing at all when it does not. That is why the message is now the
+    app's own in both worlds, and why this test asserts the message rather
+    than only the number.
     """
     c, job = client
+    bait = job.parent.parent / "secret.txt"
+    bait.write_text("do not serve me")
 
-    r_posix = c.get("/api/jobs/%2Fetc%2Fpasswd/manifest")
-    assert r_posix.status_code == 404
-    assert r_posix.json()["detail"] == "Not Found"  # router-level, generic
+    r_posix = refused_get(c, "/api/jobs/%2Fetc%2Fpasswd/manifest", bait=[bait])
+    assert r_posix.json()["detail"] == "Not found."   # the API's own catch-all
 
-    r_windows = c.get("/api/jobs/C:\\evil/manifest")
-    assert r_windows.status_code == 404
+    r_windows = refused_get(c, "/api/jobs/C:\\evil/manifest", bait=[bait])
     assert r_windows.json()["detail"] == "Job not found."  # our handler ran
 
 

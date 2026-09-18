@@ -1379,17 +1379,37 @@ def create_app() -> FastAPI:
             raise HTTPException(409, "%s Saved at: %s" % (exc.message, target))
         return {"opened": target.name, "folder": str(target.parent)}
 
-    # Any /api request using a write method (POST/PUT/PATCH/DELETE) that
-    # reaches here matched none of the specific routes above -- e.g. a
-    # traversal attempt like "/api/jobs/..%2F..%2Fevil/photos", whose
-    # decoded "name" contains a "/" and so can never match the
-    # single-segment {name} routes. Without this, such a request would
-    # fall through to the static mount below, which only serves GET/HEAD
-    # and would answer with a misleading 405 instead of a 400/404.
-    # Deliberately excludes GET/HEAD: an unmatched GET under /api is left
-    # to fall through to the static mount's own ordinary "not found"
-    # handling below, unchanged from before this endpoint existed.
-    @app.api_route("/api/{_full_path:path}", methods=["POST", "PUT", "PATCH", "DELETE"])
+    # Any /api request that reaches here matched none of the specific routes
+    # above -- e.g. a traversal attempt like
+    # "/api/jobs/..%2F..%2Fevil/manifest", whose decoded "name" contains a
+    # "/" and so can never match the single-segment {name} routes. It is
+    # refused here, by the API, with the same 404 the app already gives for
+    # a job name it will not resolve.
+    #
+    # Every method, GET and HEAD included. They used to be left out, on the
+    # grounds that an unmatched GET could fall through to the static mount
+    # below and be answered by its ordinary "not found". That made the
+    # refusal depend on whether somebody had run the front-end build:
+    #
+    #   - with app/web/dist present, the static mount claims every path and
+    #     answers 404, so the traversal looked handled
+    #   - with it absent there is no mount, and the request fell to this
+    #     route, which matched the path but not the method, so Starlette
+    #     answered 405
+    #
+    # 405 is a wrong answer even though nothing was served. It tells the
+    # caller the path exists and the method is wrong, and neither is true.
+    # Five traversal tests passed for months only because the built folder
+    # happened to be sitting beside them. Confinement must not rest on that,
+    # so the API refuses the request itself either way.
+    #
+    # This is registered after every real /api route, so nothing the browser
+    # asks for is affected: the only GETs that arrive here are ones that
+    # matched no endpoint, and those were already 404 wherever the app is
+    # actually run (the appraiser's machine always has the built front end).
+    # No screen shows this message.
+    @app.api_route("/api/{_full_path:path}",
+                   methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
     def api_not_found(_full_path: str):
         raise HTTPException(404, "Not found.")
 

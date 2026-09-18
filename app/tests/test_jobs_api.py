@@ -63,10 +63,22 @@ def test_create_rejects_absolute_and_backslash_traversal(client):
     assert not (home.parent / "evil").exists()
 
 
-def test_detail_rejects_traversal_lookup(client):
+def test_detail_rejects_traversal_lookup(client, refused_get):
+    """Both forms are refused, and refused means nothing of his was read.
+
+    `refused_get` plants the bait, watches every file the request opens and
+    insists on a 404 carrying our own refusal message. It used to be enough
+    here to see a status code in a tuple, and that let a 405 from an
+    unrelated route count as a pass whenever the front end had not been
+    built. See the fixture for the whole story.
+    """
     c, home = client
-    assert c.get("/api/jobs/..%2F..%2Fevil").status_code in (400, 404)
-    assert c.get("/api/jobs/..\\evil").status_code in (400, 404)
+    bait = home.parent / "secret.txt"
+    bait.write_text("do not serve me")
+
+    refused_get(c, "/api/jobs/..%2F..%2Fevil", bait=[bait])
+    refused_get(c, "/api/jobs/..\\evil", bait=[bait])
+    assert not (home.parent / "evil").exists()
 
 
 def test_detail_reads_job_brief_context(client):

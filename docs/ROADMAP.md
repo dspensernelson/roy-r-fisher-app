@@ -635,6 +635,37 @@ colour law of 2026-09-08 still reads off both and neither carries a red fill.
 
 Shipped as 0.7.2.
 
+### The photographs screen at 90 per cent, 2026-09-18
+
+**His checklist:** *"The photographs screen must be readable the way it is at
+90 per cent."* He zoomed the browser to 90 to read it. At 100 it now looks the
+way it did at 90. One number does it, `--k: 0.9` on `.frame.is-photos` in
+`app/web/src/brand.css`; every size the screen uses is its design number times
+`--k`, and every other screen falls back to 1. The masthead and the dark bar
+are outside the frame and do not change, so they are the one part of the page
+that is 10 per cent larger than it was at 90.
+
+**The design numbers are now drawn smaller.** The widget approved at 360 by
+110 draws 324 by 99. The source still says 360 and 110.
+
+**Measured**, 1440 wide window, device pixels, old screen at 90 per cent zoom
+against this one at 100:
+
+| | Old, at 90 | New, at 100 |
+|---|---|---|
+| Widget | 324 x 99 | 324 x 99 |
+| Build photo pages | 147.1 x 25.6 | 147.1 x 25.6 |
+| First tile | 194.4 x 232.6 | 194.4 x 232.8 |
+| Tick circle | 23.4 | 23.4 |
+| Title | 17.1px | 17.1px |
+| Figures line, widget buttons | 11.25px | 11.25px |
+| Caption text | 12.6px | 12.6px |
+| Columns | 5 | 5 |
+| Frame | 1080 wide, left 180 | 1080 wide, left 180 |
+
+Everything below the bar sits 14px lower than it did at 90, which is the
+masthead and bar being full size.
+
 ### Settings in two columns, 2026-09-15
 
 **Click 11 of the walk of 2026-09-04, built eleven days late.** His words then:

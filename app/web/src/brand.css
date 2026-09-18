@@ -210,24 +210,24 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 
 /* Cutting a photo takes it out of the report and nothing else. The link sits
    under its own tile so it can never be mistaken for a delete. */
-.cut-link { margin-left: 0; margin-top: 6px; font-size: 12px; }
-.cut-section { margin-top: 34px; border-top: 1px solid var(--line); padding-top: 14px; }
-.cut-head { background: none; border: none; font: inherit; font-size: 15px; font-weight: 700;
-  color: var(--ink); cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.cut-link { margin-left: 0; margin-top: calc(6px * var(--k, 1)); font-size: calc(12px * var(--k, 1)); }
+.cut-section { margin-top: calc(34px * var(--k, 1)); border-top: 1px solid var(--line); padding-top: calc(14px * var(--k, 1)); }
+.cut-head { background: none; border: none; font: inherit; font-size: calc(15px * var(--k, 1)); font-weight: 700;
+  color: var(--ink); cursor: pointer; padding: calc(4px * var(--k, 1)) 0; display: flex; align-items: center; gap: calc(8px * var(--k, 1)); }
 .cut-head:hover { color: var(--brand); }
-.cut-caret { color: var(--ink-muted); font-size: 11px; width: 10px; }
+.cut-caret { color: var(--ink-muted); font-size: calc(11px * var(--k, 1)); width: calc(10px * var(--k, 1)); }
 /* Dimmed, because these are out of the report, but still legible: he has to
    be able to read a caption to decide whether to bring the photo back. */
 .grid figure.is-cut img { opacity: 0.55; }
-.cut-caption { font-size: 12.5px; color: var(--ink); margin: 6px 0 0; line-height: 1.4; }
+.cut-caption { font-size: calc(12.5px * var(--k, 1)); color: var(--ink); margin: calc(6px * var(--k, 1)) 0 0; line-height: 1.4; }
 .cut-caption.empty { color: var(--ink-muted); font-style: italic; }
 
 /* A question asked inside an action, before anything irreversible happens. */
 /* No max-width. Spenser asked for this on 2026-09-03 and again on 2026-09-16:
    the box is not a narrow column on the left, it fills what it is given. The
    page it sits in sets the measure; this does not set a second one. */
-.confirm { background: #FFFFFF; border: 1px solid var(--line); border-left: 3px solid var(--brand);
-  border-radius: 6px; padding: 16px 18px; font-size: 14.5px; }
+.confirm { background: #FFFFFF; border: 1px solid var(--line); border-left: calc(3px * var(--k, 1)) solid var(--brand);
+  border-radius: calc(6px * var(--k, 1)); padding: calc(16px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(14.5px * var(--k, 1)); }
 
 /* Folder names read back off his disk, spelled exactly as they are there. */
 .found-list { margin: 0 0 14px; padding-left: 22px; font-size: 14.5px; line-height: 1.7; }
@@ -261,7 +261,7 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
    stopped a third of the way across. Text fills its box; if a line is too
    long, narrow the box. Spenser, 2026-09-17. */
 .setting-body { font-size: 14.5px; color: var(--ink); line-height: 1.55; margin: 0 0 14px; }
-.setting-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.setting-actions { display: flex; align-items: center; gap: calc(16px * var(--k, 1)); flex-wrap: wrap; margin-top: calc(4px * var(--k, 1)); }
 /* Spenser, 2026-09-15: *"BLUE WORKDS INTHE LOWER RIGH!! ON FUCKING EVERTHING
    ON THIS PAGE!!"*. No exceptions on Settings, and no modifier class anybody
    has to remember to add. `.linky` already carries `margin-left: auto`, and
@@ -270,9 +270,9 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
    of its row without anybody tagging it. Two in one row go right together,
    because the first one's auto margin eats the space and the second follows
    it. Buttons are untouched: they act, so they sit left. */
-.setting-fine { font-size: 12.5px; color: var(--ink-muted); margin: 18px 0 0; }
+.setting-fine { font-size: calc(12.5px * var(--k, 1)); color: var(--ink-muted); margin: calc(18px * var(--k, 1)) 0 0; }
 /* The answer reads directly under the row that asked for it. */
-.setting-actions + .setting-fine { margin: 12px 0 0; }
+.setting-actions + .setting-fine { margin: calc(12px * var(--k, 1)) 0 0; }
 
 /* The log, on screen, exactly as it would be sent. Scrolls in its own box
    rather than pushing the rest of Settings off the page: two days of log is
@@ -297,9 +297,27 @@ body:has(.bar) .picker-head { top: var(--bar-height); }
 /* 1200 rather than 960: the job screen sets what has arrived beside what the
    report needs, and the whole point of that screen is comparing the two. At
    960 the columns get too narrow to read a folder's missing list on one line. */
-.frame { max-width: 1200px; margin: 0 auto; padding: 6px 24px 80px; }
-h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
-.sub { color: var(--ink-muted); margin: 0 0 26px; font-size: 15px; }
+.frame { max-width: calc(1200px * var(--k, 1)); margin: 0 auto;
+  padding: calc(6px * var(--k, 1)) calc(24px * var(--k, 1)) calc(80px * var(--k, 1)); }
+/* The photographs screen, drawn at 90 per cent of its design sizes. Spenser
+   zoomed his browser to 90 to read this screen comfortably, and his checklist
+   asks for it to look that way at 100: *"The photographs screen must be
+   readable the way it is at 90 per cent."* 2026-09-18.
+
+   One number, here. Every size the photographs screen uses is written as its
+   design number times `--k`, falling back to 1, so the design numbers stay
+   readable (the widget is still `360px` and `110px` in the source) and every
+   other screen, where `--k` is not set, is exactly what it was. The masthead
+   and the bar sit outside this frame and do not change.
+
+   Not `zoom` and not a transform: zoom scales the app's own bar with it, and a
+   transform shrinks the picture while leaving the layout full size under it.
+
+   Measured against the old screen at 90 per cent browser zoom, same window,
+   in docs/ROADMAP.md. The widget draws 324 by 99 here, not 360 by 110. */
+.frame.is-photos { --k: 0.9; font-size: calc(16px * var(--k)); }
+h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * var(--k, 1)) 0 calc(4px * var(--k, 1)); }
+.sub { color: var(--ink-muted); margin: 0 0 calc(26px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
 /* Paper, with the firm's 3px line across the top. A card does not lift off
    the page with a shadow; it is separated by a hairline, and it gains the one
@@ -329,8 +347,8 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .chip { margin-left: auto; font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: var(--quiet-bg); color: var(--ink-on-quiet); }
 .row.live .chip { background: var(--brand); color: #fff; }
 .button {
-  background: var(--brand); color: #fff; border: none; border-radius: 6px;
-  font: 700 16px/1 inherit; padding: 15px 28px; cursor: pointer;
+  background: var(--brand); color: #fff; border: none; border-radius: calc(6px * var(--k, 1));
+  font: 700 calc(16px * var(--k, 1))/1 inherit; padding: calc(15px * var(--k, 1)) calc(28px * var(--k, 1)); cursor: pointer;
 }
 .button:hover { background: var(--brand-hover); }
 .button:active { background: var(--brand-press); transform: translateY(1px); }
@@ -360,35 +378,35 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   background: var(--quiet-bg); color: var(--ink-on-quiet); opacity: 1;
   box-shadow: inset 0 0 0 1.5px var(--link);
 }
-.drop { border: 2px dashed var(--link); background: #FFFFFF; border-radius: 6px; padding: 26px; text-align: center; color: var(--ink-muted); margin-bottom: 22px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
-.grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; display: block; }
+.drop { border: calc(2px * var(--k, 1)) dashed var(--link); background: #FFFFFF; border-radius: calc(6px * var(--k, 1)); padding: calc(26px * var(--k, 1)); text-align: center; color: var(--ink-muted); margin-bottom: calc(22px * var(--k, 1)); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(200px * var(--k, 1)), 1fr)); gap: calc(18px * var(--k, 1)); }
+.grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(4px * var(--k, 1)); display: block; }
 /* `font: 14px/1.45 inherit` was invalid: `inherit` is not a family name inside
    the shorthand, so the whole declaration was dropped and the box fell back to
    the browser's default for a textarea, which is monospace. Mark's captions are
    prose and were being typed in a code font. Set as long-hand so each part
    stands on its own. */
 .grid textarea {
-  width: 100%; margin-top: 8px; color: var(--ink);
-  font-family: inherit; font-size: 14px; line-height: 1.45;
+  width: 100%; margin-top: calc(8px * var(--k, 1)); color: var(--ink);
+  font-family: inherit; font-size: calc(14px * var(--k, 1)); line-height: 1.45;
   border: none; border-bottom: 1px solid var(--line); background: none;
-  padding: 4px 2px; resize: vertical; overflow: hidden; min-height: 44px;
+  padding: calc(4px * var(--k, 1)) calc(2px * var(--k, 1)); resize: vertical; overflow: hidden; min-height: calc(44px * var(--k, 1));
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
-.done { margin-top: 18px; background: var(--ok-bg); color: var(--ok-ink); border-radius: 6px; padding: 14px 18px; font-size: 15px; }
+.done { margin-top: calc(18px * var(--k, 1)); background: var(--ok-bg); color: var(--ok-ink); border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 /* A caption run has three endings and they are not all good news. Success
    keeps the green it always had; a run that saved some and not others is a
    warning; a run that saved nothing, and a cost the provider never reported,
    are not dressed as success. */
-.outcome { border-radius: 6px; padding: 14px 18px; font-size: 15px;
+.outcome { border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1));
   background: var(--ok-bg); color: var(--ok-ink); }
 .outcome-partial { background: #FDF6E3; color: #6B5514; border: 1px solid #E8D9A8; }
 /* The same pair `.error` uses, so a failed run and an error look alike. */
 .outcome-failed { background: #FBEAEA; color: var(--brand); border: 1px solid #EBD2D2; }
 .outcome-unknown { background: #F4F3F1; color: var(--ink); border: 1px solid var(--line); }
-.outcome-said { margin: 0 0 8px; font-weight: 700; }
+.outcome-said { margin: 0 0 calc(8px * var(--k, 1)); font-weight: 700; }
 
-.error { margin-top: 18px; background: #FBEAEA; color: var(--brand); border-radius: 6px; padding: 14px 18px; font-size: 15px; white-space: pre-wrap; }
+.error { margin-top: calc(18px * var(--k, 1)); background: #FBEAEA; color: var(--brand); border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); white-space: pre-wrap; }
 
 /* The job screen: what has arrived on the left, the report on the right.
    Side by side because the screen exists to be compared, not scrolled. */
@@ -404,7 +422,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .band-head h2 { font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700; margin: 0; }
 .band-head .note { font-size: 12.5px; color: var(--ink-muted); }
 .band-note { font-size: 12.5px; color: var(--ink-muted); margin: 0 0 9px; }
-.linky { background: none; border: none; color: var(--link); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; margin-left: auto; }
+.linky { background: none; border: none; color: var(--link); font: inherit; font-size: calc(12.5px * var(--k, 1)); cursor: pointer; padding: 0; margin-left: auto; }
 .linky:hover { text-decoration: underline; }
 
 .folder { background: var(--folder-fill); border-radius: 5px; padding: 11px 14px; margin-bottom: 6px; }
@@ -469,19 +487,19 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    title takes the squeeze, and the actions never drop below the title. */
 .screen-head {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 24px; flex-wrap: nowrap; min-height: 76px; margin: 26px 0 12px;
+  gap: calc(24px * var(--k, 1)); flex-wrap: nowrap; min-height: calc(76px * var(--k, 1)); margin: calc(26px * var(--k, 1)) 0 calc(12px * var(--k, 1));
 }
 .screen-head > :first-child { min-width: 0; }
 /* The folder question is asked before any document is in view and holds no
    widget, so it takes no floor. */
-.screen-head.is-asking { min-height: 0; margin-bottom: 20px; }
+.screen-head.is-asking { min-height: 0; margin-bottom: calc(20px * var(--k, 1)); }
 
 /* What is being made. */
 .made { min-width: 0; flex: 1 1 auto; }
-.nameline { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.nameline { display: flex; align-items: baseline; gap: calc(9px * var(--k, 1)); min-width: 0; }
 /* A screen that makes a file is named by that file. */
 .made h1 {
-  margin: 0; font-size: 19px; line-height: 1.2; font-weight: 700;
+  margin: 0; font-size: calc(19px * var(--k, 1)); line-height: 1.2; font-weight: 700;
   letter-spacing: -0.15px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
@@ -491,11 +509,11 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 /* Only the numbers that describe the file, and where its photographs came
    from. One line, never two, so the line below it cannot move. */
 .figures {
-  margin: 2px 0 0; font-size: 12.5px; line-height: 1.3; color: var(--ink-muted);
+  margin: calc(2px * var(--k, 1)) 0 0; font-size: calc(12.5px * var(--k, 1)); line-height: 1.3; color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.figures .linky { margin-left: 8px; }
+.figures .linky { margin-left: calc(8px * var(--k, 1)); }
 
 /* The quiet line. One line, always there, never taller. Everything that is
    only telling him something lands here; everything that needs his answer is
@@ -503,11 +521,11 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    and it still holds its height, so the photographs sit at the same pixel in
    every state. */
 .quiet {
-  display: flex; align-items: center; gap: 7px;
-  height: 20px; margin-top: 5px; font-size: 12.5px; line-height: 20px;
+  display: flex; align-items: center; gap: calc(7px * var(--k, 1));
+  height: calc(20px * var(--k, 1)); margin-top: calc(5px * var(--k, 1)); font-size: calc(12.5px * var(--k, 1)); line-height: calc(20px * var(--k, 1));
   color: var(--ink-on-quiet); white-space: nowrap; overflow: hidden;
 }
-.quiet .mark { flex: none; width: 7px; height: 7px; border-radius: 999px; background: #C2BEB6; }
+.quiet .mark { flex: none; width: calc(7px * var(--k, 1)); height: calc(7px * var(--k, 1)); border-radius: 999px; background: #C2BEB6; }
 .quiet .said { overflow: hidden; text-overflow: ellipsis; }
 .quiet.k-run .mark { background: var(--link); }
 .quiet.k-done .mark { background: var(--ok-ink); }
@@ -517,15 +535,15 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .quiet.k-standing .mark { background: var(--needs-ink); }
 .quiet.k-standing .said { color: var(--needs-ink); }
 /* A run's progress, on the same line rather than in a block of its own. */
-.thread { flex: none; display: inline-block; width: 54px; height: 3px;
-  border-radius: 2px; background: var(--line); overflow: hidden; }
-.thread span { display: block; height: 100%; border-radius: 2px; background: var(--link); }
+.thread { flex: none; display: inline-block; width: calc(54px * var(--k, 1)); height: calc(3px * var(--k, 1));
+  border-radius: calc(2px * var(--k, 1)); background: var(--line); overflow: hidden; }
+.thread span { display: block; height: 100%; border-radius: calc(2px * var(--k, 1)); background: var(--link); }
 .quiet .linky { margin-left: 0; flex: none; }
-.quiet .more { background: none; border: none; font: inherit; font-size: 12.5px;
+.quiet .more { background: none; border: none; font: inherit; font-size: calc(12.5px * var(--k, 1));
   color: var(--ink-muted); cursor: pointer; padding: 0; flex: none; }
 .quiet .more:hover { color: var(--ink); }
 /* The x belongs on the line, not pinned to the corner of a box. */
-.quiet .note-x { position: static; flex: none; font-size: 15px; padding: 0 2px;
+.quiet .note-x { position: static; flex: none; font-size: calc(15px * var(--k, 1)); padding: 0 calc(2px * var(--k, 1));
   color: inherit; opacity: 0.55; }
 .quiet .note-x:hover { opacity: 1; background: none; }
 
@@ -563,19 +581,19 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    photographs down the screen, which is the fault the 76px pin was added for
    in the first place. */
 .screen-actions.control-panel {
-  flex: none; width: 360px; min-width: 0; height: 110px;
+  flex: none; width: calc(360px * var(--k, 1)); min-width: 0; height: calc(110px * var(--k, 1));
   display: flex; flex-direction: column; align-items: stretch;
   justify-content: space-between; gap: 0;
-  padding: 7px 14px;
-  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  padding: calc(7px * var(--k, 1)) calc(14px * var(--k, 1));
+  background: var(--paper); border: 1px solid var(--line); border-radius: calc(6px * var(--k, 1));
   box-shadow: var(--shadow-raised);
 }
 /* Spread, not right. This is what puts Build photo pages hard against the
    left edge, which is what puts the photo button directly underneath it on
    the row below. Right-justifying floats Build inward and the button lands
    under nothing. Got wrong twice on 2026-09-16. */
-.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: 3px;
-  height: 30px; min-width: 0; justify-content: space-between; }
+.screen-actions.control-panel .w-row { display: flex; align-items: center; gap: calc(3px * var(--k, 1));
+  height: calc(30px * var(--k, 1)); min-width: 0; justify-content: space-between; }
 /* The two buttons take half the row each. Spenser, 2026-09-17, looking at the
    widget: *"Why are Build and Generate too far apart? Why don't you make the
    Build photo pages as wide as Generate so that they have the same amount of
@@ -601,29 +619,29 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    always installed there. */
 .screen-actions.control-panel .w-row > .act-wrap { flex: 1 1 0; min-width: 0; }
 .screen-actions.control-panel .w-row > .act-wrap > .button { width: 100%; }
-.screen-actions.control-panel .w-row.two { height: 24px; gap: 8px;
+.screen-actions.control-panel .w-row.two { height: calc(24px * var(--k, 1)); gap: calc(8px * var(--k, 1));
   justify-content: flex-end; }
 .screen-actions.control-panel .linky { margin-left: 0; }
 /* Written at the panel's own specificity so it beats the roomier
    `.screen-actions .button` below, which NewJob still uses. */
 .screen-actions.control-panel .button {
-  border-radius: 5px; font-size: 12.5px; font-weight: 700; line-height: 1;
-  padding: 8px 11px; white-space: nowrap;
+  border-radius: calc(5px * var(--k, 1)); font-size: calc(12.5px * var(--k, 1)); font-weight: 700; line-height: 1;
+  padding: calc(8px * var(--k, 1)) calc(11px * var(--k, 1)); white-space: nowrap;
 }
-.w-add { font-size: 12.5px; white-space: nowrap; }
+.w-add { font-size: calc(12.5px * var(--k, 1)); white-space: nowrap; }
 /* Nothing to clear keeps its place rather than closing the gap, the way the
    band chips do when bands are off. */
 .w-add.is-spare { visibility: hidden; }
-.w-sep { width: 1px; height: 16px; background: var(--line); flex: none; }
-.w-name { font-size: 11px; color: #6B6B6B; }
+.w-sep { width: 1px; height: calc(16px * var(--k, 1)); background: var(--line); flex: none; }
+.w-name { font-size: calc(11px * var(--k, 1)); color: #6B6B6B; }
 
 /* What stops an action is said by the action, not in a line above it. */
 .act-wrap { position: relative; display: inline-block; }
 .why {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
-  background: var(--box); color: var(--box-ink); font-size: 12px; line-height: 1.35;
-  padding: 7px 9px; border-radius: 5px; width: max-content; max-width: 230px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  position: absolute; top: calc(100% + calc(6px * var(--k, 1))); right: 0; z-index: 20;
+  background: var(--box); color: var(--box-ink); font-size: calc(12px * var(--k, 1)); line-height: 1.35;
+  padding: calc(7px * var(--k, 1)) calc(9px * var(--k, 1)); border-radius: calc(5px * var(--k, 1)); width: max-content; max-width: calc(230px * var(--k, 1));
+  box-shadow: 0 calc(6px * var(--k, 1)) calc(20px * var(--k, 1)) rgba(0, 0, 0, 0.28);
   display: none; text-align: left; font-weight: 400; white-space: normal;
 }
 .act-wrap:hover .why[data-has="yes"] { display: block; }
@@ -635,26 +653,26 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    both are completely undoable, and the colour law of 2026-09-08 keeps the
    screen's one red fill for `Build photo pages`. */
 .switch {
-  position: relative; width: 32px; height: 18px; flex: none; padding: 0; cursor: pointer;
+  position: relative; width: calc(32px * var(--k, 1)); height: calc(18px * var(--k, 1)); flex: none; padding: 0; cursor: pointer;
   border-radius: 999px; border: 1px solid var(--line-strong); background: var(--paper-sunk);
   transition: background .12s linear, border-color .12s linear;
 }
 .switch .knob {
-  position: absolute; top: 1px; left: 1px; width: 14px; height: 14px;
+  position: absolute; top: 1px; left: 1px; width: calc(14px * var(--k, 1)); height: calc(14px * var(--k, 1));
   border-radius: 999px; background: var(--paper); box-shadow: var(--shadow-raised);
   transition: left .12s ease;
 }
 .switch[aria-checked="true"] { background: #2F5D33; border-color: #2F5D33; }
-.switch[aria-checked="true"] .knob { left: 15px; }
+.switch[aria-checked="true"] .knob { left: calc(15px * var(--k, 1)); }
 .switch:disabled { opacity: .45; cursor: not-allowed; }
 
 .values {
-  display: inline-flex; gap: 2px; padding: 2px;
-  border: 1px solid var(--line-strong); border-radius: 5px; background: var(--paper-sunk);
+  display: inline-flex; gap: calc(2px * var(--k, 1)); padding: calc(2px * var(--k, 1));
+  border: 1px solid var(--line-strong); border-radius: calc(5px * var(--k, 1)); background: var(--paper-sunk);
 }
 .values button {
-  font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1; padding: 4px 7px;
-  border: none; border-radius: 3px; background: none; color: #6B6B6B; cursor: pointer;
+  font: inherit; font-size: calc(11.5px * var(--k, 1)); font-weight: 600; line-height: 1; padding: calc(4px * var(--k, 1)) calc(7px * var(--k, 1));
+  border: none; border-radius: calc(3px * var(--k, 1)); background: none; color: #6B6B6B; cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
 /* Raised and white out of a sunk track, which is how the style window's
@@ -664,11 +682,11 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 
 /* The bands' own chips, beside the switch. They keep their place when bands
    are off rather than closing the gap. */
-.w-chips { display: flex; gap: 3px; }
+.w-chips { display: flex; gap: calc(3px * var(--k, 1)); }
 .w-chips.off { visibility: hidden; }
 .w-chip {
-  font: inherit; font-size: 10px; font-weight: 600; line-height: 1;
-  width: 18px; height: 18px; padding: 0; border-radius: 999px;
+  font: inherit; font-size: calc(10px * var(--k, 1)); font-weight: 600; line-height: 1;
+  width: calc(18px * var(--k, 1)); height: calc(18px * var(--k, 1)); padding: 0; border-radius: 999px;
   border: 1px solid #D7D4CF; background: var(--paper); color: #4A4A4A; cursor: pointer;
 }
 .w-chip:hover { border-color: #B9B5AE; }
@@ -680,7 +698,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .w-chip.is-on, .w-chip.is-on:hover { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
 
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.screen-actions .button { padding: 11px 20px; font-size: 15px; }
+.screen-actions .button { padding: calc(11px * var(--k, 1)) calc(20px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 .button.secondary { background: var(--link); }
 /* Cannot be undone, and not why he came to this screen. It carries the red so
    he knows it is one-way, and it is not filled, so it never competes with the
@@ -708,17 +726,17 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 
 /* The x that clears a message. The boxes it sits in have to hold it, so they
    get position and room on the right for it. */
-.done, .error { position: relative; padding-right: 44px; }
+.done, .error { position: relative; padding-right: calc(44px * var(--k, 1)); }
 .outcome { position: relative; }
 .note-x {
-  position: absolute; top: 6px; right: 8px;
+  position: absolute; top: calc(6px * var(--k, 1)); right: calc(8px * var(--k, 1));
   background: none; border: none; cursor: pointer;
-  font: inherit; font-size: 20px; line-height: 1;
-  padding: 2px 8px; border-radius: 4px;
+  font: inherit; font-size: calc(20px * var(--k, 1)); line-height: 1;
+  padding: calc(2px * var(--k, 1)) calc(8px * var(--k, 1)); border-radius: calc(4px * var(--k, 1));
   color: var(--ink-muted);
 }
 .note-x:hover { color: var(--ink); background: rgba(35, 31, 32, 0.07); }
-.note-x:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
+.note-x:focus-visible { outline: calc(2px * var(--k, 1)) solid var(--link); outline-offset: 1px; }
 .button.secondary:hover { background: var(--link-hover); }
 
 /* Something moves while the model is looking at the photos. */
@@ -729,88 +747,88 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
   animation: sweep 1.15s ease-in-out infinite; }
 @keyframes sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(370%); } }
 .drag-hint {
-  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
-  background: var(--box); color: var(--box-ink); padding: 12px 22px; border-radius: 999px;
-  font-size: 14px; font-weight: 600; box-shadow: 0 6px 24px rgba(0,0,0,0.25); pointer-events: none;
+  position: fixed; left: 50%; bottom: calc(34px * var(--k, 1)); transform: translateX(-50%);
+  background: var(--box); color: var(--box-ink); padding: calc(12px * var(--k, 1)) calc(22px * var(--k, 1)); border-radius: 999px;
+  font-size: calc(14px * var(--k, 1)); font-weight: 600; box-shadow: 0 calc(6px * var(--k, 1)) calc(24px * var(--k, 1)) rgba(0,0,0,0.25); pointer-events: none;
 }
 
 /* A step, not a parked option. Asked when he clicks the thing it affects. */
 .sheet-back {
   position: fixed; inset: 0; background: rgba(29,29,31,0.55);
-  display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
+  display: flex; align-items: center; justify-content: center; padding: calc(24px * var(--k, 1)); z-index: 50;
 }
 .sheet {
-  background: var(--ground); border-radius: 8px; padding: 26px 26px 20px;
-  max-width: 840px; width: 100%; box-shadow: 0 18px 60px rgba(0,0,0,0.3);
-  max-height: calc(100vh - 48px); overflow-y: auto;
+  background: var(--ground); border-radius: calc(8px * var(--k, 1)); padding: calc(26px * var(--k, 1)) calc(26px * var(--k, 1)) calc(20px * var(--k, 1));
+  max-width: calc(840px * var(--k, 1)); width: 100%; box-shadow: 0 calc(18px * var(--k, 1)) calc(60px * var(--k, 1)) rgba(0,0,0,0.3);
+  max-height: calc(100vh - calc(48px * var(--k, 1))); overflow-y: auto;
 }
-.sheet h2 { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.25; }
+.sheet h2 { font-size: calc(17px * var(--k, 1)); font-weight: 700; margin: 0; line-height: 1.25; }
 /* One window at a time, so the one that carries the money is the widest. */
-.sheet.wide { max-width: 470px; }
-.sheet .fine { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); }
+.sheet.wide { max-width: calc(470px * var(--k, 1)); }
+.sheet .fine { margin: calc(10px * var(--k, 1)) 0 0; font-size: calc(12.5px * var(--k, 1)); line-height: 1.45; color: var(--ink-muted); }
 /* The thing that finishes a window sits at the right-hand end of it, where a
    person expects it, with the way out beside it. */
 .sheet-acts {
   display: flex; align-items: center; justify-content: flex-end;
-  gap: 14px; margin-top: 16px; flex-wrap: wrap;
+  gap: calc(14px * var(--k, 1)); margin-top: calc(16px * var(--k, 1)); flex-wrap: wrap;
 }
 .sheet-acts .linky { margin-left: 0; }
-.sheet-acts .button { white-space: nowrap; padding: 10px 15px; font-size: 13px; }
+.sheet-acts .button { white-space: nowrap; padding: calc(10px * var(--k, 1)) calc(15px * var(--k, 1)); font-size: calc(13px * var(--k, 1)); }
 /* The title on the left, the money on the right. Spenser asked for the cost in
    the upper right twice, on 2026-09-04 and 2026-09-07. */
 .sheet-head {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 20px; margin: 0 0 16px;
+  gap: calc(20px * var(--k, 1)); margin: 0 0 calc(16px * var(--k, 1));
 }
 /* Small on purpose. It is a figure he glances at on the way past, not a
    warning, so it carries no box, no rule and no colour of its own. One line:
    it was three stacked, and three stacked lines is a callout again. */
 .sheet-cost {
   margin: 0; flex: 0 0 auto; text-align: right; white-space: nowrap;
-  font-size: 12.5px; color: var(--ink-muted); line-height: 1.3;
+  font-size: calc(12.5px * var(--k, 1)); color: var(--ink-muted); line-height: 1.3;
 }
 
 /* Said once, quietly, when his own photographs could not be captioned. The
    window still works: the written examples stay and nothing was sent. */
-.sample-trouble { color: var(--ink-muted); font-size: 12.5px; }
+.sample-trouble { color: var(--ink-muted); font-size: calc(12.5px * var(--k, 1)); }
 
 /* A segmented control across the top of the page preview: two equal halves,
    short, the way a control in an app looks rather than a pair of buttons.
    Which half is lit is the only thing that says which style this job is on.
    It used to say so a second time, in a flag reading "suggested". */
-.toggle { display: flex; width: 100%; background: #EDEAE3; border-radius: 6px; padding: 3px; gap: 3px; margin-bottom: 12px; }
+.toggle { display: flex; width: 100%; background: #EDEAE3; border-radius: calc(6px * var(--k, 1)); padding: calc(3px * var(--k, 1)); gap: calc(3px * var(--k, 1)); margin-bottom: calc(12px * var(--k, 1)); }
 .toggle button {
   flex: 1 1 0; min-width: 0;
-  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-muted);
-  background: none; border: none; border-radius: 4px; padding: 7px 10px; cursor: pointer;
-  display: flex; align-items: baseline; justify-content: center; gap: 7px; line-height: 1.2;
+  font: inherit; font-size: calc(13.5px * var(--k, 1)); font-weight: 600; color: var(--ink-muted);
+  background: none; border: none; border-radius: calc(4px * var(--k, 1)); padding: calc(7px * var(--k, 1)) calc(10px * var(--k, 1)); cursor: pointer;
+  display: flex; align-items: baseline; justify-content: center; gap: calc(7px * var(--k, 1)); line-height: 1.2;
 }
 .toggle button:hover { color: var(--ink); }
-.toggle button.on { background: #FFFFFF; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.toggle button.on { background: #FFFFFF; color: var(--brand); box-shadow: 0 1px calc(3px * var(--k, 1)) rgba(0,0,0,0.12); }
 
 /* One printed page as a real table: photo cells, a rule, caption cells. */
 .page-preview {
   /* The printed page's own proportion, not a pixel width. Three-up gives the
      photograph four inches of a 6.70 inch table and the caption the 2.70 that
-     is left, so the photograph is the wider half. This used to be `230px 1fr`,
+     is left, so the photograph is the wider half. This used to be `calc(230px * var(--k, 1)) 1fr`,
      which was the other way round, and it is why one short caption sat alone
      in a wide white field. The four inches live in `THREE_UP.width_in` in
      app/engine/photo_pages.py; a stylesheet cannot read it, so a test holds
      the two in step. */
   display: grid; grid-template-columns: 4fr 2.7fr;
-  background: #FFFFFF; border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+  background: #FFFFFF; border: 1px solid var(--line); border-radius: calc(5px * var(--k, 1)); overflow: hidden;
   /* A page shown at a readable size rather than at the size of a page. The
      window is 840 wide and the sheet of paper is not, so the preview is
      centred and capped: full width made a single short caption sit in the
      middle of an enormous white rectangle, which is what Spenser was looking
      at on 2026-09-14. */
-  max-width: 470px; margin: 0 auto;
+  max-width: calc(470px * var(--k, 1)); margin: 0 auto;
 }
-.cell-photo { padding: 12px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid #F0EDE6; }
+.cell-photo { padding: calc(12px * var(--k, 1)) calc(16px * var(--k, 1)); border-right: 1px solid var(--line); border-bottom: 1px solid #F0EDE6; }
 .cell-caption {
-  padding: 14px 20px; border-bottom: 1px solid #F0EDE6;
+  padding: calc(14px * var(--k, 1)) calc(20px * var(--k, 1)); border-bottom: 1px solid #F0EDE6;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; font-size: 15px; color: var(--ink); line-height: 1.45;
+  text-align: center; font-size: calc(15px * var(--k, 1)); color: var(--ink); line-height: 1.45;
 }
 .page-preview > :nth-last-child(-n+2) { border-bottom: none; }
 /* Six to a page: two equal columns, photographs above their captions, which
@@ -819,7 +837,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
 .page-preview.is-six { grid-template-columns: 1fr 1fr; }
 .page-preview.is-six .cell-photo { border-right: 1px solid var(--line); }
 .page-preview.is-six .cell-photo:nth-child(odd) { border-right: 1px solid var(--line); }
-.cell-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; display: block; }
+.cell-photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(3px * var(--k, 1)); display: block; }
 .cell-caption em { color: var(--ink-muted); font-style: italic; }
 /* An empty frame where a photograph sits on the printed page. Blank on
    purpose: the caption beside it is an example of the writing style, and
@@ -827,7 +845,7 @@ h1 { font-size: 28px; font-weight: 700; margin: 26px 0 4px; }
    that photograph. */
 .cell-photo.is-example::after {
   content: ""; display: block; width: 100%; aspect-ratio: 4 / 3;
-  border: 1px dashed var(--line); border-radius: 3px; background: #FAF8F4;
+  border: 1px dashed var(--line); border-radius: calc(3px * var(--k, 1)); background: #FAF8F4;
 }
 
 /* Two ways into a new job. Pick the road first, then get the form. */
@@ -922,7 +940,7 @@ input::placeholder, textarea::placeholder {
 
 /* The reviewed control sits directly under its caption, is a real target
    rather than a tick in the corner, and says what it is in words. */
-.review-line { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.review-line { display: flex; align-items: center; gap: calc(8px * var(--k, 1)); margin-top: calc(6px * var(--k, 1)); }
 .review-btn {
   font: inherit;
   font-size: 13px;
@@ -950,10 +968,10 @@ input::placeholder, textarea::placeholder {
      26 and they read as ovals. Spenser spotted it on 2026-09-07. */
   flex: none;
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--k, 1));
   line-height: 1;
-  width: 26px;
-  height: 26px;
+  width: calc(26px * var(--k, 1));
+  height: calc(26px * var(--k, 1));
   padding: 0;
   border-radius: 999px;
   border: 1px solid #d7d4cf;
@@ -978,10 +996,10 @@ input::placeholder, textarea::placeholder {
 .photo-frame { position: relative; display: block; }
 .cut-dot {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: calc(8px * var(--k, 1));
+  bottom: calc(8px * var(--k, 1));
   color: var(--brand);
-  font-size: 15px;
+  font-size: calc(15px * var(--k, 1));
   border-color: rgba(255, 255, 255, .75);
   background: rgba(255, 255, 255, .88);
 }
@@ -1035,11 +1053,11 @@ input::placeholder, textarea::placeholder {
    the row folds onto a second line inside the photograph. That is the honest
    answer; running past the picture's edge is not. */
 .review-line {
-  gap: 3px; flex-wrap: wrap;
+  gap: calc(3px * var(--k, 1)); flex-wrap: wrap;
   /* Evenly spaced, edge to edge. Spenser, 2026-09-17: *"Can we space those
      all out so they're evenly spaced? The check, the A, B, and the C refresh
      are all evenly spaced."* Back used to carry `margin-left: auto`, which
-     put every spare pixel into one gap and left the other four at 3px: five
+     put every spare pixel into one gap and left the other four at calc(3px * var(--k, 1)): five
      controls bunched on the left and one stranded on the right.
 
      `space-between` gives the leftovers to every gap equally, so the tick
@@ -1050,7 +1068,7 @@ input::placeholder, textarea::placeholder {
 
      What this used to do with bands OFF was put in front of him, and he said
      no. The row was then three things, not six, and the same spare width
-     shared between two gaps instead of five opened them to 83px with Back
+     shared between two gaps instead of five opened them to calc(83px * var(--k, 1)) with Back
      alone in the middle: evenly spaced, and everything on the row had moved.
      Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
      checkmark, those should remain in the same spot at all times. When the
@@ -1086,7 +1104,7 @@ input::placeholder, textarea::placeholder {
    children either way, which is why: `space-between` is handed the same
    arithmetic whether the band dots are showing or not. */
 .band-dot.off { visibility: hidden; }
-.back-dot svg { display: block; height: 13px; width: auto; margin: 0 auto; }
+.back-dot svg { display: block; height: calc(13px * var(--k, 1)); width: auto; margin: 0 auto; }
 /* The only one that is not a circle. Its skin is the widget's own icon
    button, `.w-icon`: a line-strong edge, the sunk paper behind it, #4A4A4A
    ink. Its height is the row's height and never anything else.
@@ -1103,16 +1121,16 @@ input::placeholder, textarea::placeholder {
    price shrank, and without those two the pill went to 56px and the row
    needed 201px on a 200px tile. */
 .refresh-dot {
-  width: auto; padding: 0 6px; gap: 3px; white-space: nowrap;
+  width: auto; padding: 0 calc(6px * var(--k, 1)); gap: calc(3px * var(--k, 1)); white-space: nowrap;
   display: inline-flex; align-items: center; justify-content: center;
   border-color: var(--line-strong); background: var(--paper-sunk); color: #4A4A4A;
 }
 .refresh-dot:hover { border-color: #B9B5AE; background: var(--paper); }
-.refresh-dot svg { display: block; height: 16px; width: auto; }
+.refresh-dot svg { display: block; height: calc(16px * var(--k, 1)); width: auto; }
 /* The price, in the money's own green and the money's own figures, so the
    green in this app is one thing and not two that nearly match. */
 .refresh-dot .price {
-  font-size: 10.5px; font-weight: 700; color: #2F5D33;
+  font-size: calc(10.5px * var(--k, 1)); font-weight: 700; color: #2F5D33;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1120,8 +1138,8 @@ input::placeholder, textarea::placeholder {
    run used to sit in a boxed callout in the middle of the style window; on
    2026-09-14 that became a small figure in its top right corner, `.sheet-cost`,
    and the rules that drew the box went with it. */
-.cost-after { font-size: 13px; color: #5a5a5a; margin-top: 8px; }
-.cost-after code { background: #f6f4f0; padding: 1px 5px; border-radius: 4px; }
+.cost-after { font-size: calc(13px * var(--k, 1)); color: #5a5a5a; margin-top: calc(8px * var(--k, 1)); }
+.cost-after code { background: #f6f4f0; padding: 1px calc(5px * var(--k, 1)); border-radius: calc(4px * var(--k, 1)); }
 .cost-unavailable { color: #8a5a1a; }
 
 /* Planned workflows: a band, and a row that is plainly not a control. */
@@ -1150,9 +1168,9 @@ input::placeholder, textarea::placeholder {
    orientation, not a label he has to read on every tile, and it only renders
    at all when the photograph came out of a subfolder. */
 .photo-source {
-  font-size: 12px;
+  font-size: calc(12px * var(--k, 1));
   color: var(--ink-muted);
-  margin-top: 4px;
+  margin-top: calc(4px * var(--k, 1));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1163,29 +1181,29 @@ input::placeholder, textarea::placeholder {
    count. The picture is doing the work, because Mark recognises his own
    photographs and does not necessarily recognise a folder name his helper
    invented. */
-.folder-choices { display: flex; flex-direction: column; gap: 10px; }
+.folder-choices { display: flex; flex-direction: column; gap: calc(10px * var(--k, 1)); }
 
 .folder-choice {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: calc(14px * var(--k, 1));
   width: 100%;
-  padding: 10px 12px;
+  padding: calc(10px * var(--k, 1)) calc(12px * var(--k, 1));
   text-align: left;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--k, 1));
   cursor: pointer;
   font: inherit;
   color: inherit;
 }
 .folder-choice:hover { border-color: var(--brand); background: var(--surface-hover, var(--surface)); }
 .folder-choice img {
-  width: 84px; height: 63px; object-fit: cover;
-  border-radius: 4px; flex: 0 0 auto; background: var(--line);
+  width: calc(84px * var(--k, 1)); height: calc(63px * var(--k, 1)); object-fit: cover;
+  border-radius: calc(4px * var(--k, 1)); flex: 0 0 auto; background: var(--line);
 }
 .folder-choice-name { flex: 1 1 auto; font-weight: 600; overflow-wrap: anywhere; }
-.folder-choice-count { flex: 0 0 auto; color: var(--ink-muted); font-size: 13px; }
+.folder-choice-count { flex: 0 0 auto; color: var(--ink-muted); font-size: calc(13px * var(--k, 1)); }
 
 /* Why one file cannot be one label, said on the row he clicked. Never across
    the whole screen: that is for the server having gone away, not for the app
@@ -1276,32 +1294,32 @@ input::placeholder, textarea::placeholder {
    the same edge, radius and sunk fill as the 3-or-6 control next to it. */
 .w-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  height: 32px; padding: 0 5px; margin-right: auto;
-  border: 1px solid var(--line-strong); border-radius: 5px;
+  height: calc(32px * var(--k, 1)); padding: 0 calc(5px * var(--k, 1)); margin-right: auto;
+  border: 1px solid var(--line-strong); border-radius: calc(5px * var(--k, 1));
   background: var(--paper-sunk); color: #4A4A4A; cursor: pointer;
 }
 .w-icon:hover { border-color: #B9B5AE; background: var(--paper); }
-.w-icon svg { display: block; height: 23px; width: auto; }
-.w-icon .plus { transform: translateX(2px); }
+.w-icon svg { display: block; height: calc(23px * var(--k, 1)); width: auto; }
+.w-icon .plus { transform: translateX(calc(2px * var(--k, 1))); }
 
 /* The bar. How she gets to done, joined to the bottom edge of the box.
    Nothing in it wraps or shrinks: if it stops fitting it has to say so
    rather than fold. */
 .control-panel .barline {
-  display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: nowrap;
-  font-size: 11.5px; color: var(--ink-muted);
-  margin: 4px -14px -7px; padding: 4px 14px; height: 24px;
+  display: flex; align-items: center; gap: calc(6px * var(--k, 1)); min-width: 0; flex-wrap: nowrap;
+  font-size: calc(11.5px * var(--k, 1)); color: var(--ink-muted);
+  margin: calc(4px * var(--k, 1)) -14px -7px; padding: calc(4px * var(--k, 1)) calc(14px * var(--k, 1)); height: calc(24px * var(--k, 1));
   background: var(--paper-sunk); border-top: 1px solid var(--line);
-  border-radius: 0 0 5px 5px;
+  border-radius: 0 0 calc(5px * var(--k, 1)) calc(5px * var(--k, 1));
 }
 
 /* One shape for everything in the bar, taken from the money, which was the
    first pill here and set the language. */
 .pill[hidden] { display: none !important; }
 .pill {
-  display: inline-flex; align-items: center; gap: 4px; flex: none;
-  white-space: nowrap; font-size: 11.5px; line-height: 1;
-  padding: 3px 8px; border-radius: 999px; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: calc(4px * var(--k, 1)); flex: none;
+  white-space: nowrap; font-size: calc(11.5px * var(--k, 1)); line-height: 1;
+  padding: calc(3px * var(--k, 1)) calc(8px * var(--k, 1)); border-radius: 999px; font-variant-numeric: tabular-nums;
 }
 .pill b { font-weight: 700; }
 .pill.hold { color: var(--needs-ink); border: 1px solid rgba(138, 82, 0, 0.32);
@@ -1314,8 +1332,8 @@ input::placeholder, textarea::placeholder {
 .pill.act {
   color: #2F5D33; background: rgba(47, 93, 51, 0.06);
   border: 1px solid rgba(47, 93, 51, 0.34); cursor: pointer;
-  font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1;
-  padding: 3px 9px; text-decoration: none;
+  font: inherit; font-size: calc(11.5px * var(--k, 1)); font-weight: 700; line-height: 1;
+  padding: calc(3px * var(--k, 1)) calc(9px * var(--k, 1)); text-decoration: none;
 }
 .pill.act:hover { background: rgba(47, 93, 51, 0.13); border-color: rgba(47, 93, 51, 0.55); }
 .pill.act:disabled { opacity: .45; cursor: not-allowed; }
@@ -1331,16 +1349,16 @@ input::placeholder, textarea::placeholder {
    `margin-left: 0` and outranks a two-class selector. The push-right silently
    did nothing until 2026-09-16, and the money sat 91px short of the edge. */
 .control-panel .barline .clear {
-  font-size: 12.5px; white-space: nowrap; flex: none;
-  color: var(--brand); margin-left: auto; margin-right: 2px;
+  font-size: calc(12.5px * var(--k, 1)); white-space: nowrap; flex: none;
+  color: var(--brand); margin-left: auto; margin-right: calc(2px * var(--k, 1));
 }
 
 /* Money is green, because it is money. The same green as the offer, so the
    quiet green in that bar is one thing and not two that nearly match. */
 .money {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 11.5px; font-weight: 700; color: #2F5D33;
-  font-variant-numeric: tabular-nums; line-height: 1; padding: 3px 8px;
+  font-size: calc(11.5px * var(--k, 1)); font-weight: 700; color: #2F5D33;
+  font-variant-numeric: tabular-nums; line-height: 1; padding: calc(3px * var(--k, 1)) calc(8px * var(--k, 1));
   border: 1px solid rgba(47, 93, 51, 0.34); background: rgba(47, 93, 51, 0.06);
   border-radius: 999px; white-space: nowrap;
   /* It always holds the right edge. `:first-of-type` was tried and does not
@@ -1369,13 +1387,13 @@ input::placeholder, textarea::placeholder {
    is captioned, and Clear captions is not there while nothing is captioned. */
 .control-panel .barline .bar-back {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
-  height: 20px; padding: 0 7px; margin-left: auto; border-radius: 999px;
+  height: calc(20px * var(--k, 1)); padding: 0 calc(7px * var(--k, 1)); margin-left: auto; border-radius: 999px;
   border: 1px solid var(--line-strong); background: var(--paper);
   color: #4A4A4A; cursor: pointer;
 }
 .control-panel .barline .bar-back:hover:not(:disabled) { border-color: #B9B5AE; }
 .control-panel .barline .bar-back:disabled { opacity: .45; cursor: not-allowed; }
-.control-panel .barline .bar-back svg { display: block; height: 11px; width: auto; }
+.control-panel .barline .bar-back svg { display: block; height: calc(11px * var(--k, 1)); width: auto; }
 /* Clear captions and the back travel together, and the money still holds the
    right edge after them. */
 .control-panel .barline .clear + .bar-back { margin-left: 0; }

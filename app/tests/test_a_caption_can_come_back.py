@@ -432,7 +432,11 @@ def rules(selector: str) -> list:
     the very declarations they no longer have, so a test looking for a
     declaration would find it in the sentence saying it was taken away.
     """
-    css = re.sub(r"/\*.*?\*/", "", CSS.read_text(), flags=re.S)
+    # The photographs screen writes every size as its design number times
+    # `--k` (see test_the_photographs_screen_at_ninety.py). These tests are
+    # about the design numbers, so they read them with the scale taken off.
+    css = re.sub(r"calc\((\d+(?:\.\d+)?px) \* var\(--k, 1\)\)", r"\1", CSS.read_text())
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
     found, at = [], 0
     while True:
         try:

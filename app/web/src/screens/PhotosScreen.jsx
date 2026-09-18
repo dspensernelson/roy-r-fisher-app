@@ -4,6 +4,11 @@ import { getManifest, putManifest, uploadPhotos, draftCaptions, build, thumbUrl,
          captionEstimate, captionProgress, captionSamples, markReviewed, markUnreviewed, markAllReviewed, setPhotoBand, putBands, jobFacts, putJobFacts, reveal,
          photoGroups, putPhotoGroup, readingProgress, captionBack, captionsBack, refreshCaption } from "../api.js";
 
+// A size on this screen, in the stylesheet's terms: the design number times
+// `--k`, which the photographs frame sets to 0.9. For the few inline styles;
+// everything else is in brand.css. See `.frame.is-photos` there.
+const k = (n) => `calc(${n}px * var(--k, 1))`;
+
 // The mark on Back, on the tile and in the widget's bar. One drawing at two
 // sizes, so the two read as one idea. Drawn in the language of the app's only
 // other icon, the photograph with a plus below: thin strokes in currentColor,
@@ -548,14 +553,14 @@ export default function PhotosScreen({ job }) {
         <div className="screen-head is-asking">
           <div>
             <h1 style={{ margin: 0 }}>Photos</h1>
-            <p className="sub" style={{ margin: "4px 0 0" }}>
+            <p className="sub" style={{ margin: `${k(4)} 0 0` }}>
               This job keeps photographs in more than one place.
             </p>
           </div>
         </div>
 
         {where.chosen_missing && (
-          <div className="error" style={{ marginTop: 0, marginBottom: 16 }}>
+          <div className="error" style={{ marginTop: 0, marginBottom: k(16) }}>
             The folder you chose, <strong>{where.chosen}</strong>, is not in this
             job any more. Nothing has been built from a different folder. Choose
             again below.
@@ -563,10 +568,10 @@ export default function PhotosScreen({ job }) {
         )}
 
         <div className="confirm" style={{ marginTop: 0 }}>
-          <p style={{ margin: "0 0 4px" }}>
+          <p style={{ margin: `0 0 ${k(4)}` }}>
             <strong>Which folder holds the photographs for this report?</strong>
           </p>
-          <p className="setting-fine" style={{ margin: "0 0 14px" }}>
+          <p className="setting-fine" style={{ margin: `0 0 ${k(14)}` }}>
             Every photograph stays where it is. This only says which ones go in
             the report, and you can change it later.
           </p>
@@ -587,13 +592,13 @@ export default function PhotosScreen({ job }) {
           </div>
 
           {asked && !where.chosen_missing && (
-            <div className="setting-actions" style={{ marginTop: 14 }}>
+            <div className="setting-actions" style={{ marginTop: k(14) }}>
               <button className="linky" onClick={() => setAsked(false)}>Cancel</button>
             </div>
           )}
         </div>
         {error && (
-          <div className="error" style={{ marginTop: 16 }}>
+          <div className="error" style={{ marginTop: k(16) }}>
             <CloseX onClose={() => setError(null)} what="this message" />
             {error}
           </div>
@@ -1231,7 +1236,7 @@ export default function PhotosScreen({ job }) {
           </button>
           {showCut && (
             <>
-              <p className="setting-fine" style={{ margin: "0 0 12px" }}>
+              <p className="setting-fine" style={{ margin: `0 0 ${k(12)}` }}>
                 These are left out of the photo pages and out of caption writing.
                 The files are still in the job's Photos folder, untouched.
               </p>
@@ -1319,7 +1324,7 @@ export default function PhotosScreen({ job }) {
                 the frames stay blank, because a written specimen beside a
                 photograph reads as a caption of that photograph. */}
             {!shownShots && (
-              <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
+              <p className="sub" style={{ margin: `${k(10)} 0 0`, fontSize: k(12.5) }}>
                 {shotsBusy
                   ? "Captioning your photographs..."
                   : "Examples of the style, not your photographs."}
@@ -1327,7 +1332,7 @@ export default function PhotosScreen({ job }) {
             )}
 
             {shotsError && (
-              <p className="sub sample-trouble" style={{ margin: "10px 0 0" }}>{shotsError}</p>
+              <p className="sub sample-trouble" style={{ margin: `${k(10)} 0 0` }}>{shotsError}</p>
             )}
 
             {/* No sentence under the samples. The one that stood here
@@ -1427,12 +1432,12 @@ export default function PhotosScreen({ job }) {
                 job's brief.
               </p>
             )}
-            <div className="setting-actions" style={{ marginTop: 14, gap: 8, flexWrap: "wrap" }}>
+            <div className="setting-actions" style={{ marginTop: k(14), gap: k(8), flexWrap: "wrap" }}>
               <label className="setting-fine" style={{ margin: 0 }}>City
-                <input defaultValue={facts ? facts.city : ""} id="fix-city" style={{ marginLeft: 6 }} />
+                <input defaultValue={facts ? facts.city : ""} id="fix-city" style={{ marginLeft: k(6) }} />
               </label>
               <label className="setting-fine" style={{ margin: 0 }}>Street address
-                <input defaultValue={facts ? facts.address : ""} id="fix-address" style={{ marginLeft: 6 }} />
+                <input defaultValue={facts ? facts.address : ""} id="fix-address" style={{ marginLeft: k(6) }} />
               </label>
             </div>
             <div className="sheet-acts">

@@ -487,3 +487,34 @@ def test_every_control_on_the_row_is_the_same_height():
         for one in rules(selector):
             assert "height:" not in one, \
                 "%s sets a height, so it can stop matching the circles" % selector
+
+
+def test_the_band_slots_are_hidden_and_not_removed():
+    """Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
+    checkmark, those should remain in the same spot at all times. When the
+    bands are gone, the bands are gone, but they should be evenly spaced so
+    the bands are there."*
+
+    `visibility: hidden` holds the slot; `display: none` would close it and
+    every one of the three controls he named would move. The difference is
+    one word, it is invisible in a diff that only says the dots are hidden,
+    and it is the whole of what he asked for.
+    """
+    written = rules(".band-dot.off")
+    assert written, "nothing hides the band dots while keeping their places"
+    for one in written:
+        assert "visibility: hidden" in one, \
+            "the band dots are hidden by something other than visibility"
+        assert "display: none" not in one, \
+            "the band dots close their gap again, so the row moves"
+
+
+def test_the_row_hides_its_band_slots_the_way_the_widget_does():
+    """One mechanism on this screen, not two. The widget's chips already kept
+    their place when bands went off, and the dots under the photographs now do
+    it the same way. A second way of hiding the same thing is how the two
+    drift apart."""
+    chips = rules(".w-chips.off")
+    dots = rules(".band-dot.off")
+    assert chips and dots
+    assert "visibility: hidden" in chips[0] and "visibility: hidden" in dots[0]

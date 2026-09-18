@@ -1022,14 +1022,44 @@ input::placeholder, textarea::placeholder {
      no longer the spacing; it is the floor under it, for the narrowest tile
      where there is nothing spare to share out.
 
-     What this does with bands OFF has not been put in front of him. The row
-     is then three things, not six, and the same spare width shared between
-     two gaps instead of five makes them 83.18px on a 269px tile, with Back
-     alone in the middle. It is evenly spaced, which is what he asked for, and
-     it is sparse. Measured 2026-09-17 and reported rather than quietly
-     capped: a cap would be a number nobody chose. */
+     What this used to do with bands OFF was put in front of him, and he said
+     no. The row was then three things, not six, and the same spare width
+     shared between two gaps instead of five opened them to 83px with Back
+     alone in the middle: evenly spaced, and everything on the row had moved.
+     Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
+     checkmark, those should remain in the same spot at all times. When the
+     bands are gone, the bands are gone, but they should be evenly spaced so
+     the bands are there."*
+
+     So THE ROW KEEPS ITS SLOTS. The band dots are drawn whether bands are on
+     or off, and when they are off they are hidden where they stand. The
+     spacing arithmetic never sees three things: it always sees the same
+     number it saw with bands on, so the tick, Back and refresh land on the
+     same pixel either way. See `.band-dot.off` below. */
   justify-content: space-between;
 }
+/* Bands off. The dots keep their places rather than closing the gap, which is
+   how `.w-chips` does it in the widget above. `visibility: hidden` and not
+   `display: none` is the entire point: the slot is still in the row, so the
+   three controls he named do not move.
+
+   Measured in a browser against this stylesheet on 2026-09-17, three bands, a
+   cleared caption so Back is live, at the real price of one photograph, `~5c`.
+   The left edge of each control, from the picture's left edge:
+
+                     tile 216px            tile 200px
+                     bands on / off        bands on / off
+       tick            0.00 /   0.00         0.00 /   0.00
+       Back          132.02 / 132.02       119.21 / 119.21
+       refresh       165.02 / 165.02       149.02 / 149.02
+       row ends      216.00 / 216.00       200.00 / 200.00
+
+   Identical, to the hundredth of a pixel. The row still starts on the
+   picture's left edge and ends exactly on its right at both widths, so
+   nothing crosses it, and it stays one line 26px tall. The row has six
+   children either way, which is why: `space-between` is handed the same
+   arithmetic whether the band dots are showing or not. */
+.band-dot.off { visibility: hidden; }
 .back-dot svg { display: block; height: 13px; width: auto; margin: 0 auto; }
 /* The only one that is not a circle. Its skin is the widget's own icon
    button, `.w-icon`: a line-strong edge, the sunk paper behind it, #4A4A4A

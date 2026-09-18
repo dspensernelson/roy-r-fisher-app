@@ -1137,10 +1137,25 @@ export default function PhotosScreen({ job }) {
                   <span aria-hidden="true">&#10003;</span>
                 </button>
                 {/* One dot per band, in band order. Clicking the band it is
-                    already in takes it back out. */}
-                {bands.map((b) => (
+                    already in takes it back out.
+
+                    Drawn from the job's whole band list, `chips`, and not
+                    from `bands`, so that with the switch off they are still
+                    here holding their slots, hidden. That is the whole of
+                    what keeps the tick, Back and refresh on the same pixel
+                    whether bands are on or off. It is the widget's own
+                    mechanism for its chips, used again rather than a second
+                    one invented: a class, `visibility: hidden`, no tab stop.
+
+                    Off they are also `disabled` and carry no `is-on`. Hidden
+                    is not gone, and a job that does not use bands must not
+                    be able to have a photograph put into one. */}
+                {chips.map((b) => (
                   <button key={b.letter}
-                          className={`dot band-dot${p.band === b.letter ? " is-on" : ""}`}
+                          className={`dot band-dot${bandsOn ? "" : " off"}${
+                            bandsOn && p.band === b.letter ? " is-on" : ""}`}
+                          disabled={!bandsOn}
+                          tabIndex={bandsOn ? 0 : -1}
                           aria-label={`Put in band ${b.letter}`}
                           title={b.name === b.letter ? `Band ${b.letter}` : b.name}
                           onClick={() => onBand(p.file, p.band === b.letter ? null : b.letter)}>

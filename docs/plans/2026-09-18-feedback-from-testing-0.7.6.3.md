@@ -29,8 +29,16 @@ Delete this file when the batch is fixed and merged. That is the last task.
       new goes in the bar, something has to come out or it goes elsewhere.
       Write this into HOW-WE-WORK.md with the bar's current contents listed.
 
+- [ ] **Back on a photograph does not work.** First find out whether it is a
+      fault or the design: today Back only returns a caption that Clear
+      captions wiped, so after a Refresh it has nothing to return.
+- [ ] **Refresh needs a sign that it is working**, on the photograph itself,
+      while its one caption is being written.
+
 ## Waiting on Spenser
 
+- [ ] Should Back undo a Refresh? Recommendation: Refresh keeps the words it
+      replaced, and Back puts them back, the same way it does after a clear.
 - [ ] A photograph moved to another band leaves the filtered view straight
       away, which feels abrupt. Recommendation: it stays until the filter
       changes.

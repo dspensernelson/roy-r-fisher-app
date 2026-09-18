@@ -645,7 +645,14 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(7px * var(--k, 1)) calc(14px * var(--k, 1));
   background: var(--paper); border: 1px solid var(--line); border-radius: calc(6px * var(--k, 1));
   box-shadow: var(--shadow-raised);
+  /* How far Build photo pages and Generate captions reach into the side
+     padding. Spenser, 2026-09-18: slightly wider, within the widget's size.
+     The widget's width and its padding stay; only the top row, and the photo
+     button that has to stay under Build, reach out by this much. */
+  --w-bleed: calc(5px * var(--k, 1));
 }
+.screen-actions.control-panel .w-row:not(.two) { margin: 0 calc(-1 * var(--w-bleed)); }
+.screen-actions.control-panel .w-row.two .w-icon { margin-left: calc(-1 * var(--w-bleed)); }
 /* Spread, not right. This is what puts Build photo pages hard against the
    left edge, which is what puts the photo button directly underneath it on
    the row below. Right-justifying floats Build inward and the button lands

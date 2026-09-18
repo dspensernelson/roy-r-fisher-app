@@ -38,6 +38,28 @@ def test_the_progress_bar_takes_the_room_its_line_has():
         "a fixed width would make it a stub again"
 
 
+# --- 7. Build photo pages and Generate captions, slightly wider -------------
+PANEL = ".screen-actions.control-panel"
+
+
+def test_the_two_buttons_take_room_from_the_side_padding():
+    """Spenser, 2026-09-18: slightly wider, within the widget's size. The top
+    row reaches into the panel's side padding by one number, `--w-bleed`, and
+    the widget's own width and padding stay as they are."""
+    panel = one(PANEL)
+    assert re.search(r"--w-bleed:\s*calc\(\d+px \* var\(--k, 1\)\)", panel)
+    assert re.search(r"[^-]width:\s*calc\(360px", panel), "the widget's width moved"
+    row = one(PANEL + " .w-row:not(.two)")
+    assert re.search(r"margin:\s*0 calc\(-1 \* var\(--w-bleed\)\)", row)
+
+
+def test_the_photo_button_still_sits_under_build():
+    """Build's left edge moves out, so the photo button below it moves out by
+    the same number and they still share one edge."""
+    icon = one(PANEL + " .w-row.two .w-icon")
+    assert re.search(r"margin-left:\s*calc\(-1 \* var\(--w-bleed\)\)", icon)
+
+
 # --- 4. the title and widget row stays at the top while he scrolls ----------
 HEAD = ".frame.is-photos .screen-head:not(.is-asking)"
 

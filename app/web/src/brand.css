@@ -503,6 +503,46 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   gap: calc(24px * var(--k, 1)); flex-wrap: nowrap; min-height: calc(76px * var(--k, 1)); margin: calc(26px * var(--k, 1)) 0 calc(12px * var(--k, 1));
 }
 .screen-head > :first-child { min-width: 0; }
+/* The photographs screen's header stays at the top while he scrolls, so
+   what is happening is always in view. Spenser, 2026-09-18. It parks under
+   the dark bar, which is stuck to the top of the window already, so it starts
+   at `--bar-height`, the number both share, less one pixel: the bar draws
+   51.69px tall, so without the overlap a third of a pixel of photograph
+   shows between the two. Below the bar in z, never over it, so the overlap
+   is hidden.
+
+   The gap above it is padding rather than margin, so that once it is stuck
+   the title does not touch the bar, and its ground is opaque so nothing
+   scrolling under it shows through. */
+.frame.is-photos .screen-head:not(.is-asking) {
+  position: sticky; top: calc(var(--bar-height) - 1px); z-index: 5;
+  background: var(--ground);
+  margin-top: 0; margin-bottom: calc(14px * var(--k, 1));
+  padding-top: calc(26px * var(--k, 1)); padding-bottom: calc(12px * var(--k, 1));
+}
+/* A plain red line where the fixed part ends, the full width of the screen,
+   in the app's red. Not a progress bar: nothing in it moves. Spenser,
+   2026-09-18.
+
+   The frame is narrower than the screen, so the line is widened with a
+   shadow and cut back to its own height. A shadow never makes the page
+   scroll sideways; `100vw` would, because on Windows it counts the
+   scrollbar. */
+.frame.is-photos .screen-head:not(.is-asking)::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: var(--brand);
+  box-shadow: 0 0 0 100vmax var(--brand);
+  clip-path: inset(0 -100vmax);
+}
+/* Anything that scrolls something into view on this screen, tabbing to a
+   caption box included, stops it below the fixed row rather than under it.
+   Set on the page's own scroller, and only while the photographs screen is
+   showing. The bar, then the row, which measures 133px in a browser at this
+   screen's 90 per cent, and a breath. The row's height is pinned by the
+   widget's, so this number does not move with the photographs. */
+:root:has(.frame.is-photos) {
+  scroll-padding-top: calc(var(--bar-height) + 148px);
+}
 /* The folder question is asked before any document is in view and holds no
    widget, so it takes no floor. */
 .screen-head.is-asking { min-height: 0; margin-bottom: calc(20px * var(--k, 1)); }

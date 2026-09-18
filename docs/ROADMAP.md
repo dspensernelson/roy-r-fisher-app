@@ -851,20 +851,26 @@ here because the checklist lines that asked these questions have come off it.
   below, under its own heading. Re-run the analysis once description of
   improvements has reached Mark, past beta and testing.
 
-- **When the assessor card and the inspection transcript disagree, the card
-  fills the field.** The transcript's different value shows beside it, so Mark
-  can switch to it with one click. It only fires when both sources have a value
-  and the two values differ.
-  - **This reverses rule 3 of the parked plan**,
+- **When the assessor card and the inspection transcript disagree, the app
+  shows both and Mark picks. Neither is filled for him.** Amended in place the
+  same day, 2026-09-17, after a measurement overturned the first answer. The
+  first answer was that the card fills the field and the transcript shows beside
+  it. Across four delivered jobs, twelve fields had both sources speaking and
+  disagreeing. Mark followed the card once, the transcript three times, printed
+  both four times and followed neither four times. The transcript wins on what a
+  thing is made of; the card wins on counts, areas and dates; in eight of twelve
+  he did not choose a source at all. Any rule that picks a source is wrong about
+  two thirds of the time. Spenser, on seeing it: make sure he is the one
+  choosing. On St John Vianney the signed report printed the rectory's roof
+  under the church heading, which is the clearest case for showing the quote
+  beside every value rather than deciding.
+  - **This restores rule 3 of the parked plan**,
     `docs/plans/2026-08-29-description-of-improvements.md` on branch
     `improvements-section`: "The app never settles a disagreement. If the card
     and the transcript differ, show both and let Mark pick."
   - **The parked branch never built that rule.** It kept whichever value the
     model listed first and dropped the other without saying so:
     `app/web/src/screens/ImprovementsScreen.jsx:150-152` on that branch.
-  - Read it beside the 28 August measurement below, which found the transcript
-    the primary source by count of fields. The two do not conflict: this rule
-    decides only the fields where both sources carry a value.
 
 - **A, B and C stay in the box. Clicking one filters the photographs to that
   band.** Not built yet. The unbuilt part of the 7 September plan

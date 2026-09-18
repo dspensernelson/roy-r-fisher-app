@@ -99,6 +99,8 @@ are in its phases.
 
 ## What needs you
 
+- [ ] Two errors found in signed reports: tell Mark, or not · No star
+- [ ] Shorter words for Something else and the notes prompt, so they fit · No star
 - [ ] What a switched-off button looks like: it has no fill and no edge · No star
 - [ ] How far back should the log go · No star
 - [ ] What does Reset put back · No star
@@ -135,9 +137,21 @@ are in its phases.
 
 ## Description of improvements
 
-- [ ] The parked work is 160 versions behind and conflicts in seven files · No star
+- [ ] Bring the parked engine, reader and template forward, and rebuild the screen · No star
+- [ ] Build the approved drawing: sources, pill bar, widget, found and print · No star
 - [ ] The job screen knows one section by name and needs a real list · No star
 - [ ] Name the finished Word file the way the photo file is named · No star
+- [ ] The template holds one building; each needs its own exterior and interior · No star
+- [ ] The app suggests the buildings a PRC lists, and Mark confirms them · No star
+- [ ] The app suggests which building each part of a transcript covers, Mark confirms · No star
+- [ ] When the PRC and the transcript disagree, show both and Mark picks · No star
+- [ ] Never fill his judgement: condition, quality, effective age, remaining life · No star
+- [ ] Learn how Mark writes General and Conclusion from his delivered reports · No star
+- [ ] Write General and Conclusion from approved facts and his notes only · No star
+- [ ] Check that every fact in a written paragraph traces to one he approved · No star
+- [ ] Area, land to building ratio and age rules fail on two buildings or parcels · No star
+- [ ] Prior appraisals decide some fields; out of this slice, decide later · No star
+- [ ] The print side still says Two answers, Pick one · No star
 - [x] Save the 28 August measurement before the parked branch is lost · No star
 
 ## The report, section by section

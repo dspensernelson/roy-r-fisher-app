@@ -44,6 +44,14 @@ def test_the_progress_bar_keeps_its_own_width():
     assert "max-width: 320px" in _rule(".update-bar")
 
 
+def test_the_progress_bar_draws_at_all():
+    """Found 2026-09-18, moving the update into the Settings card. The bar is
+    a `span`, and a span sitting straight in a block is inline, so its width
+    and height do nothing and it drew at zero size: the download showed no
+    bar. It draws only when something makes it a block."""
+    assert re.search(r"\.update-step \.update-bar\s*\{[^}]*display:\s*block", CSS)
+
+
 # Text fills the box it sits in. Spenser, 2026-09-17, looking at the update
 # box: *"Look how big this box is because you randomly wrap the text
 # one-third of the way over."* The box had no cap by then. Its paragraphs

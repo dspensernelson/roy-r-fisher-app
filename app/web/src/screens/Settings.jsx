@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getSettings, saveKey, removeKey, forgetWorkspace, checkForUpdate, logRecent, logSend } from "../api.js";
 import CloseX from "../CloseX.jsx";
 
-export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked, onUpdate }) {
+export default function Settings({ workspace, version, onChangeFolder, onWorkspaceChanged, onUpdateChecked, onUpdate, updateStep }) {
   const [state, setState] = useState(null);
   const [typed, setTyped] = useState("");
   const [replacing, setReplacing] = useState(false);
@@ -84,6 +84,11 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
       <p className="setting-body">
         This computer is running <strong>version {version || "unknown"}</strong>.
       </p>
+      {/* Spenser, 2026-09-18: "I actually think the whole update should take
+          place in the update box, not above the settings." The step is
+          handed in by the app, which holds the run, and it takes the place
+          of the Check now row until it closes: a click leads to a step. */}
+      {updateStep || (
       <div className="setting-actions">
         <button className="button secondary" disabled={looking} onClick={async () => {
           setLooking(true); setLooked(null); setNewer(false);
@@ -131,6 +136,7 @@ export default function Settings({ workspace, version, onChangeFolder, onWorkspa
             buttons. The row wraps, so on a narrow screen it falls under. */}
         {looked && <span className="check-answer">{looked}</span>}
       </div>
+      )}
     </div>
   );
 

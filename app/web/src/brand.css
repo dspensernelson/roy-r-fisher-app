@@ -1419,3 +1419,13 @@ input::placeholder, textarea::placeholder {
    2026-09-18. No cap on its width: text fills the box it sits in. */
 .setting-actions .check-answer { flex: 1 1 120px; min-width: 0;
   font-size: calc(12.5px * var(--k, 1)); color: var(--ink-muted); }
+
+/* The update, inside the version card. Spenser, 2026-09-18: "I actually
+   think the whole update should take place in the update box, not above the
+   settings." In the card it has no box of its own: the card is the box. */
+.setting .update-step.in-card { margin-top: 4px; }
+/* The progress bar is a span, and a span straight inside a block is inline,
+   so the width and height `.loading-bar` gives it did nothing and the bar
+   drew at zero size. Found moving it here, 2026-09-18; the markup is the same
+   as it was in the old box above the cards. */
+.update-step .update-bar { display: block; }

@@ -172,3 +172,44 @@ describe("with bands switched off", () => {
     expect(shown()).toHaveLength(PHOTOS.length);
   });
 });
+
+// Spenser, 2026-09-18, from 0.7.6.3: "When you click it on, that's when the
+// three things appear. I don't like that." The rule he set for the band
+// circles on the photographs on 2026-09-17, used again in the widget: A, B
+// and C are always there. Off, they are greyed and cannot be clicked. On,
+// they are live and filter.
+describe("A, B and C in the widget", () => {
+  const chips = () => Array.from(document.querySelectorAll(".control-panel .w-chip"));
+
+  it("are there and greyed when bands are off", async () => {
+    setUp(manifest({ bands_on: false }));
+    await ready();
+    expect(chips().map((c) => c.textContent)).toEqual(["A", "B", "C"]);
+    for (const l of ["A", "B", "C"]) expect(chip(l)).toBeDisabled();
+  });
+
+  it("filter nothing when clicked while bands are off", async () => {
+    setUp(manifest({ bands_on: false }));
+    await ready();
+    await userEvent.click(chip("B"));
+    expect(shown()).toEqual(PHOTOS.map((p) => p.file));
+    expect(chip("B")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("are there on a job that has never had bands switched on", async () => {
+    // The server gives a job its three bands the first time the switch goes
+    // on (`default_bands` in app/server/photos.py), so before then the list
+    // is empty. The widget still shows the three it will bring.
+    setUp(manifest({ bands_on: false, bands: [],
+                     photos: PHOTOS.map(({ band, ...rest }) => rest) }));
+    await waitFor(() => expect(shown().length).toBe(PHOTOS.length));
+    expect(chips().map((c) => c.textContent)).toEqual(["A", "B", "C"]);
+    for (const c of chips()) expect(c).toBeDisabled();
+  });
+
+  it("are live when bands are on", async () => {
+    setUp();
+    await ready();
+    for (const l of ["A", "B", "C"]) expect(chip(l)).toBeEnabled();
+  });
+});

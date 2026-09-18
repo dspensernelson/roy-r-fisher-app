@@ -642,8 +642,7 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(8px * var(--k, 1)) calc(11px * var(--k, 1)); white-space: nowrap;
 }
 .w-add { font-size: calc(12.5px * var(--k, 1)); white-space: nowrap; }
-/* Nothing to clear keeps its place rather than closing the gap, the way the
-   band chips do when bands are off. */
+/* Nothing to clear keeps its place rather than closing the gap. */
 .w-add.is-spare { visibility: hidden; }
 .w-sep { width: 1px; height: calc(16px * var(--k, 1)); background: var(--line); flex: none; }
 .w-name { font-size: calc(11px * var(--k, 1)); color: #6B6B6B; }
@@ -693,16 +692,19 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .values button.on { background: var(--paper); color: var(--ink); box-shadow: var(--shadow-raised); }
 .values button:disabled { opacity: .45; cursor: not-allowed; }
 
-/* The bands' own chips, beside the switch. They keep their place when bands
-   are off rather than closing the gap. */
+/* The bands' own chips, beside the switch. Always in sight: with bands off
+   they are greyed where they stand, the way every other control in this
+   widget is greyed, and cannot be clicked. They were hidden until
+   2026-09-18, and A, B and C then popped in when the switch went on: "I
+   don't like that." */
 .w-chips { display: flex; gap: calc(3px * var(--k, 1)); }
-.w-chips.off { visibility: hidden; }
 .w-chip {
   font: inherit; font-size: calc(10px * var(--k, 1)); font-weight: 600; line-height: 1;
   width: calc(18px * var(--k, 1)); height: calc(18px * var(--k, 1)); padding: 0; border-radius: 999px;
   border: 1px solid #D7D4CF; background: var(--paper); color: #4A4A4A; cursor: pointer;
 }
-.w-chip:hover { border-color: #B9B5AE; }
+.w-chip:hover:not(:disabled) { border-color: #B9B5AE; }
+.w-chip:disabled { opacity: .45; cursor: not-allowed; }
 /* The chip that is filtering. Filled with ink, not a colour: red, blue and
    green each already answer a question under the colour law of 2026-09-08,
    and a filter answers none of them. It changes nothing and is undone by the
@@ -1096,7 +1098,8 @@ input::placeholder, textarea::placeholder {
   justify-content: space-between;
 }
 /* Bands off. The dots keep their places rather than closing the gap, which is
-   how `.w-chips` does it in the widget above. `visibility: hidden` and not
+   how the widget's chips did it until 2026-09-18, when those became greyed
+   instead of hidden. `visibility: hidden` and not
    `display: none` is the entire point: the slot is still in the row, so the
    three controls he named do not move.
 

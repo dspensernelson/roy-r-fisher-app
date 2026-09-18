@@ -594,21 +594,26 @@ describe("the bands switch", () => {
   // pills reading On and Off, identical to the pair beside it that chose
   // three or six to a page. Two controls doing different jobs do not look the
   // same, so bands is a switch now. What it does has not changed.
-  it("starts off, with no chips, on a job that has never used bands", async () => {
+  // Amended 2026-09-18. This said there were no chips on a job that has never
+  // used bands, and that was what Spenser did not like: A, B and C popped in
+  // when the switch went on. They are there from the start now, greyed.
+  it("starts off, with its chips greyed, on a job that has never used bands", async () => {
     await show();
     expect(await screen.findByRole("switch", { name: "Bands" }))
       .toHaveAttribute("aria-checked", "false");
-    expect(screen.queryAllByRole("button", { name: /^Band [ABC]$/ })).toHaveLength(0);
+    const chips = screen.queryAllByRole("button", { name: /^Band [ABC]$/ });
+    expect(chips).toHaveLength(3);
+    for (const one of chips) expect(one).toBeDisabled();
   });
 
-  it("asks the server to turn them on, and shows what comes back", async () => {
+  it("asks the server to turn them on, and brings the chips to life", async () => {
     const put = vi.spyOn(api, "putBands").mockResolvedValue(banded());
     await show();
     await userEvent.click(await screen.findByRole("switch", { name: "Bands" }));
     expect(put).toHaveBeenCalledWith(JOB, { bands_on: true });
-    expect(await screen.findByRole("button", { name: "Band A" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Band B" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Band C" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Band A" })).toBeEnabled());
+    expect(screen.getByRole("button", { name: "Band B" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Band C" })).toBeEnabled();
   });
 
   // Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
@@ -1176,8 +1181,12 @@ describe("one widget, upper right", () => {
     await show();
     await screen.findAllByPlaceholderText("Caption...");
     expect(document.querySelector(".w-chips")).toHaveClass("off");
-    // The same answer on the tiles as in the bar above them, by the same
-    // mechanism, so turning bands off moves nothing anywhere on this screen.
+    // In the widget the letters stay in sight, greyed: Spenser, 2026-09-18.
+    const letters = document.querySelectorAll(".w-chip");
+    expect(letters).toHaveLength(3);
+    for (const one of letters) expect(one).toBeDisabled();
+    // On the tiles they keep their slots hidden, so turning bands off moves
+    // nothing anywhere on this screen.
     const dots = document.querySelectorAll(".band-dot");
     expect(dots.length).toBeGreaterThan(0);
     for (const dot of dots) expect(dot).toHaveClass("off");

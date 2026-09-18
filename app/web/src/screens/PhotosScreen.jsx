@@ -728,6 +728,16 @@ export default function PhotosScreen({ job }) {
   // The chips keep their place in the widget when the switch is off, rather
   // than closing the gap, so turning bands on and off moves nothing.
   const chips = manifest.bands || [];
+  // The widget's A, B and C are always in sight: greyed while bands are off,
+  // live when they are on. Spenser, 2026-09-18: "When you click it on, that's
+  // when the three things appear. I don't like that." A job that has never
+  // had bands has an empty list until the switch goes on and the server gives
+  // it these three (`default_bands` in app/server/photos.py), so the widget
+  // names them itself until then. A test holds this copy to the server's
+  // `LOCKED_BANDS`.
+  const SWITCH_BRINGS = ["A", "B", "C"];
+  const widgetChips = chips.length ? chips
+    : SWITCH_BRINGS.map((letter) => ({ letter, name: letter }));
   const waiting = bandsOn ? inPhotos.filter((x) => !x.p.band).length : 0;
   // What the grid draws. A third view of the one list, made the same way as
   // `inPhotos` and `cutPhotos`, so every index is still the photograph's own
@@ -1053,11 +1063,14 @@ export default function PhotosScreen({ job }) {
             {/* Each chip is a filter. Click one and only that band's
                 photographs show; click it again and they all do; click
                 another and it switches. Screen only, and the counts do not
-                follow it. Spenser, 2026-09-17. */}
+                follow it. Spenser, 2026-09-17. With bands off they stay where
+                they are, greyed and not clickable, so nothing in the widget
+                moves or appears when the switch changes. 2026-09-18. */}
             <span className={`w-chips${bandsOn ? "" : " off"}`}>
-              {chips.map((b) => (
+              {widgetChips.map((b) => (
                 <button key={b.letter}
                         className={`w-chip${filter === b.letter ? " is-on" : ""}`}
+                        disabled={!bandsOn}
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
                         aria-pressed={filter === b.letter}
                         title={b.name === b.letter ? `Band ${b.letter}` : b.name}
@@ -1212,9 +1225,10 @@ export default function PhotosScreen({ job }) {
                     from `bands`, so that with the switch off they are still
                     here holding their slots, hidden. That is the whole of
                     what keeps the tick, Back and refresh on the same pixel
-                    whether bands are on or off. It is the widget's own
-                    mechanism for its chips, used again rather than a second
-                    one invented: a class, `visibility: hidden`, no tab stop.
+                    whether bands are on or off: a class, `visibility:
+                    hidden`, no tab stop. The widget's chips did the same
+                    until 2026-09-18 and are greyed in sight now; these are
+                    unchanged.
 
                     Off they are also `disabled` and carry no `is-on`. Hidden
                     is not gone, and a job that does not use bands must not

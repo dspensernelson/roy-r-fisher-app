@@ -35,8 +35,16 @@ Delete this file when the batch is fixed and merged. That is the last task.
 - [ ] **Refresh needs a sign that it is working**, on the photograph itself,
       while its one caption is being written.
 
+- [ ] **The title and widget row stays put at the top of the photographs
+      screen while he scrolls**, with a red line under it running the full
+      width of the screen, so what is happening is always in view. His words:
+      "a static kind of progress bar."
+
 ## Waiting on Spenser
 
+- [ ] The red line under the fixed row: does it fill as the job gets done,
+      like a progress bar, or is it a plain line marking where the fixed part
+      ends?
 - [ ] Should Back undo a Refresh? Recommendation: Refresh keeps the words it
       replaced, and Back puts them back, the same way it does after a clear.
 - [ ] A photograph moved to another band leaves the filtered view straight
@@ -45,6 +53,11 @@ Delete this file when the batch is fixed and merged. That is the last task.
 - [ ] Clicking the version badge shows plain-words notes for that version and
       checks for a newer one. Recommendation: the notes are written when each
       version is cut. Drawing to come.
+
+## Later, not this batch
+
+- [ ] The widget now takes more room than the title side on the left. Make the
+      header tighter. Spenser: "let's just leave it for now."
 
 ## When the batch is done
 

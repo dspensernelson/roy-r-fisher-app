@@ -547,8 +547,10 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .quiet.k-wrong .said { color: var(--brand); }
 .quiet.k-standing .mark { background: var(--needs-ink); }
 .quiet.k-standing .said { color: var(--needs-ink); }
-/* A run's progress, on the same line rather than in a block of its own. */
-.thread { flex: none; display: inline-block; width: calc(54px * var(--k, 1)); height: calc(3px * var(--k, 1));
+/* A run's progress, on the same line rather than in a block of its own. It
+   runs the width the line has, after the words. It was a 54px stub until
+   Spenser, 2026-09-18: "make its progress bar longer". */
+.thread { flex: 1 1 0; min-width: calc(54px * var(--k, 1)); display: inline-block; height: calc(3px * var(--k, 1));
   border-radius: calc(2px * var(--k, 1)); background: var(--line); overflow: hidden; }
 .thread span { display: block; height: 100%; border-radius: calc(2px * var(--k, 1)); background: var(--link); }
 .quiet .linky { margin-left: 0; flex: none; }

@@ -292,3 +292,31 @@ def test_the_money_holds_the_right_edge_of_the_bar():
     assert ".money:first-of-type" not in css, "that selector matches on type, not class"
     assert ".control-panel .barline .clear + .money { margin-left: 0; }" in css, \
         "Clear captions no longer pushes the pair right as one"
+
+
+# The reviewed pill, from 0.7.6.3 on Spenser's virtual machine, 2026-09-18.
+# A tick on that pill means one thing, everything is reviewed, and done is not
+# a solid dark green: "I don't like the dark green."
+
+def test_the_tick_green_is_one_token():
+    """The light green he chose for every tick on 2026-09-17, in the
+    Description of Improvements drawing (`--tick` there). Written once, in the
+    root, and pointed at from everywhere else."""
+    css = CSS.read_text()
+    assert len(re.findall(r"--tick:\s*#3A8F52;", css)) == 1
+    assert css.count("#3A8F52") == 1, "the tick green is written out a second time"
+
+
+def test_done_is_the_pale_tint_and_not_a_dark_fill():
+    done = block(".pill.done")
+    assert "var(--tick)" in done
+    assert "#2F5D33" not in done, "done is the dark green he does not like"
+    assert "#FFFFFF" not in done, "white on a fill is the solid pill again"
+
+
+def test_the_offer_to_tick_all_is_amber_and_not_green():
+    """The offer wore the money's green and a tick, and read as done."""
+    offer = block(".pill.act")
+    assert "47, 93, 51" not in offer and "#2F5D33" not in offer
+    hover = block(".pill.act:hover")
+    assert "138, 82, 0" in hover, "the hover leaves the amber family"

@@ -24,6 +24,10 @@
   --link-on-dark: #248CC8;    /* only on the charcoal bar */
   --ok-bg: #E8F5EC;
   --ok-ink: #1E7A3C;
+  --tick: #3A8F52;            /* the tick green, lighter than --ok-ink. Chosen by
+                                 Spenser on 2026-09-17 for the Description of
+                                 Improvements drawing, where it is `--tick`
+                                 too. The done state of the reviewed pill. */
 
   /* Paper. Two surfaces and only two: eggshell is the page, white is
      everything sitting on it. Charcoal survives in one place, the nav bar,
@@ -1334,22 +1338,28 @@ input::placeholder, textarea::placeholder {
 .pill.hold { color: var(--needs-ink); border: 1px solid rgba(138, 82, 0, 0.32);
   background: rgba(138, 82, 0, 0.06); }
 
-/* Light green until it is pressed. It is an offer, not a result, and a filled
-   pill reads as something that already happened. `font: inherit` is a
-   shorthand and resets line-height with everything else, so line-height is
-   set again after it, on purpose. */
+/* The reviewed pill when it can be pressed to tick the lot. It wears the
+   amber of `.pill.hold`, because nothing is finished yet, and it carries no
+   tick: the tick means everything is reviewed and nothing else. It was green
+   with a tick until 2026-09-18, and "✓ 11 of 12 reviewed" read as done.
+   What a press does is said by its hover, and the hover deepens the amber.
+   `font: inherit` is a shorthand and resets line-height with everything else,
+   so line-height is set again after it, on purpose. */
 .pill.act {
-  color: #2F5D33; background: rgba(47, 93, 51, 0.06);
-  border: 1px solid rgba(47, 93, 51, 0.34); cursor: pointer;
-  font: inherit; font-size: calc(11.5px * var(--k, 1)); font-weight: 700; line-height: 1;
-  padding: calc(3px * var(--k, 1)) calc(9px * var(--k, 1)); text-decoration: none;
+  cursor: pointer;
+  font: inherit; font-size: calc(11.5px * var(--k, 1)); line-height: 1;
+  padding: calc(3px * var(--k, 1)) calc(8px * var(--k, 1)); text-decoration: none;
 }
-.pill.act:hover { background: rgba(47, 93, 51, 0.13); border-color: rgba(47, 93, 51, 0.55); }
+.pill.act:hover { background: rgba(138, 82, 0, 0.13); border-color: rgba(138, 82, 0, 0.55); }
 .pill.act:disabled { opacity: .45; cursor: not-allowed; }
 
-/* Filled, because this is the only moment in the job where every caption is
-   written and every one has been looked at. */
-.pill.done { color: #FFFFFF; background: #2F5D33; border: 1px solid #2F5D33; }
+/* Done. Every caption is written and every one has been looked at, and this
+   is the only state that carries the tick. The pale tint and edge of the
+   bar's other pills in the tick green, not a solid fill: "I don't like the
+   dark green", Spenser, 2026-09-18. The same tint and edge as the done pill
+   in the Description of Improvements drawing. */
+.pill.done { color: var(--tick); background: rgba(58, 143, 82, 0.07);
+  border: 1px solid rgba(58, 143, 82, 0.36); }
 
 /* Red, and a link rather than a button: "the same exact thing, just red." The
    gap to the money is pushed by this, so when there is nothing to clear the
@@ -1362,8 +1372,7 @@ input::placeholder, textarea::placeholder {
   color: var(--brand); margin-left: auto; margin-right: calc(2px * var(--k, 1));
 }
 
-/* Money is green, because it is money. The same green as the offer, so the
-   quiet green in that bar is one thing and not two that nearly match. */
+/* Money is green, because it is money. */
 .money {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   font-size: calc(11.5px * var(--k, 1)); font-weight: 700; color: #2F5D33;

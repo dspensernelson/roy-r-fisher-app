@@ -255,7 +255,7 @@ describe("build is gated on review", () => {
     // line. It used to read "0 of 3 reviewed" on the left; it is two pills in
     // the bar now, because written and reviewed are two facts.
     const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
-    expect(bar.textContent).toMatch(/0\s*reviewed/);
+    expect(bar.textContent).toMatch(/0\sof\s3\sreviewed/);
     expect(screen.getByRole("button", { name: "Build photo pages" })).toBeDisabled();
   });
 
@@ -1363,7 +1363,7 @@ describe("clearing the captions", () => {
   it("says nothing is written and nothing is reviewed", async () => {
     await clearThem();
     const bar = await waitFor(() => document.querySelector(".control-panel .barline"));
-    expect(bar.textContent).toMatch(/0\sof\s0\sreviewed/);
+    expect(bar.textContent).toMatch(/0\sof\s3\sreviewed/);
     expect(bar.querySelector(".pill.done")).toBeNull();
   });
 

@@ -6,7 +6,7 @@ at once instead of one agent per remark.
 
 Delete this file when the batch is fixed and merged. That is the last task.
 
-## Done on branch `the-widget-says-what-it-means`, not merged
+## Done on branch `the-widget-says-what-it-means`, merged 18 September
 
 - [x] "11 of 12 reviewed" shows a tick although not everything is reviewed.
 - [x] A, B and C appear only when Bands is switched on. They should always
@@ -20,36 +20,36 @@ Delete this file when the batch is fixed and merged. That is the last task.
 - [x] Check that typing a caption drops the count on Generate captions.
 - [x] Found on the way: the done pill sat 6.7px below the bar. Fixed.
 
-## Batched, not yet sent
+## Batched, built and merged into `working` 18 September
 
-- [ ] The "Writing captions · 0 of 12 written" line under the title: make its
+- [x] The "Writing captions · 0 of 12 written" line under the title: make its
       progress bar longer. It is a short stub today.
 
-- [ ] **A rule for the widget's bottom bar.** Spenser: "We need to be careful
+- [x] **A rule for the widget's bottom bar.** Spenser: "We need to be careful
       with this box because I think it's becoming a catch-all." Before anything
       new goes in the bar, something has to come out or it goes elsewhere.
       Write this into HOW-WE-WORK.md with the bar's current contents listed.
 
-- [ ] **Back on a photograph does not work.** First find out whether it is a
+- [x] **Back on a photograph does not work.** First find out whether it is a
       fault or the design: today Back only returns a caption that Clear
       captions wiped, so after a Refresh it has nothing to return.
-- [ ] **Refresh needs a sign that it is working**, on the photograph itself,
+- [x] **Refresh needs a sign that it is working**, on the photograph itself,
       while its one caption is being written.
 
-- [ ] **The title and widget row stays put at the top of the photographs
+- [x] **The title and widget row stays put at the top of the photographs
       screen while he scrolls**, with a red line under it running the full
       width of the screen, so what is happening is always in view. His words:
       "a static kind of progress bar."
 
 ## Decided by Spenser, 18 September, to build in this batch
 
-- [ ] **Back undoes a Refresh too.** Refresh keeps the words it replaced, and
+- [x] **Back undoes a Refresh too.** Refresh keeps the words it replaced, and
       Back puts them back, the same way it does after Clear captions.
-- [ ] **The red line under the fixed row is a plain line**, in the app's red,
+- [x] **The red line under the fixed row is a plain line**, in the app's red,
       full width, marking where the fixed part ends. Not a progress bar.
-- [ ] **A photograph moved to another band stays in the filtered view** until
+- [x] **A photograph moved to another band stays in the filtered view** until
       the filter changes or clears.
-- [ ] **The tick green goes a shade darker**, enough to read as small text on
+- [x] **The tick green goes a shade darker**, enough to read as small text on
       its pale background.
 
 ## From his check results, 18 September, to build in this batch
@@ -58,16 +58,16 @@ All 28 checks passed. The two he could not run, a stopped update writing its
 reason to the log and the loading page when the app does not answer, stay
 unverified on Windows.
 
-- [ ] Build photo pages and Generate captions slightly wider.
-- [ ] **A switched-off button: same colour, faded.** Build stays red and
+- [x] Build photo pages and Generate captions slightly wider.
+- [x] **A switched-off button: same colour, faded.** Build stays red and
       Generate stays blue, faded, and resting on it still says why. Replaces
       the pale fill with a coloured edge.
-- [ ] **Refresh shows "Refreshing caption" on the photograph** while its
+- [x] **Refresh shows "Refreshing caption" on the photograph** while its
       caption is written, and it goes away when done. His words.
-- [ ] **AI or Typed moves to the upper left corner of the photograph.** On
+- [x] **AI or Typed moves to the upper left corner of the photograph.** On
       the caption line it pushes everything down.
-- [ ] **Check now's answer sits to the right of the button**, not under it.
-- [ ] **The whole update happens inside the version card in Settings**, not
+- [x] **Check now's answer sits to the right of the button**, not under it.
+- [x] **The whole update happens inside the version card in Settings**, not
       in a box above everything.
 
 ## Waiting on Spenser

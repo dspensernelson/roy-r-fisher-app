@@ -52,6 +52,7 @@ are in its phases.
 
 ## Press Update: the new app opens, the old one closes, nothing else happens
 
+- [ ] The loading bar on the cover may never show, the same fault the update bar had · Star 1
 - [x] Confirm the fixed port is how we get to one tab · Star 1
 - [x] An update must leave one tab: unproven until an update starts from 0.7.6.1 · Star 1
 - [x] Prove an update Spenser can take himself, end to end · Star 1
@@ -103,11 +104,11 @@ are in its phases.
 
 - [ ] Errors found in signed reports, five so far: tell Mark, or not · No star
 - [ ] Shorter words for Something else and the notes prompt, so they fit · No star
-- [ ] What a switched-off button looks like: it has no fill and no edge · No star
 - [ ] How far back should the log go · No star
 - [ ] What does Reset put back · No star
 - [ ] Which job produced the 700 KB photographs · No star
 - [ ] Did the photographs widget replace the short list in the upper right · No star
+- [x] What a switched-off button looks like: it has no fill and no edge · No star
 
 ## Get the office a working update
 

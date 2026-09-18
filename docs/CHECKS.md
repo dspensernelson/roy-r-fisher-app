@@ -486,3 +486,48 @@ Do not carry on to the next one.
 > Spenser the window.
 > **Wrong if:** it says the app has probably opened in another tab, or talks
 > about how some computers are set up.
+
+## The photographs batch, 0.7.6.4, 18 September 2026
+
+What changed after his 0.7.6.3 results. Checks 57 and 58 each refresh one
+caption, which spends a few cents on the key in Settings. The rest are free.
+
+> ### Check 57. Refresh says Refreshing caption on the photograph
+> On one captioned photograph, click the refresh button, the one with the price on it.
+> **Should:** `Refreshing caption` sits over that picture while it works, and goes away when the new caption arrives.
+
+> ### Check 58. Back undoes a Refresh
+> Straight after Check 57, click the back arrow on the same photograph.
+> **Should:** the caption from before the Refresh comes back.
+
+> ### Check 59. The Writing captions bar runs the length of its line
+> Look at `Writing captions · N of N written` under the title.
+> **Should:** its bar runs to the end of that line, not a short stub.
+
+> ### Check 60. The title row stays at the top
+> Scroll down a long page of photographs.
+> **Should:** the title and the widget stay at the top, with a thin red line under them across the whole screen.
+
+> ### Check 61. A moved photograph stays in the filtered view
+> Switch Bands on, click **`A`** in the widget, then click **`B`** on one of the photographs showing.
+> **Should:** it stays on screen, now in B, until you click A again or pick another letter.
+
+> ### Check 62. The done tick is a darker green
+> Mark every photograph reviewed.
+> **Should:** the `reviewed` pill turns a darker green than before, easy to read.
+
+> ### Check 63. A switched-off button keeps its colour, faded
+> Open a job where `Build photo pages` or `Generate captions` is switched off, and rest the pointer on it.
+> **Should:** Build is a faded red, Generate a faded blue, and resting on it says why it is off.
+
+> ### Check 64. AI or Typed sits in the photograph's upper left corner
+> Look at any captioned photograph.
+> **Should:** `AI` or `Typed` sits in the upper left of the picture, and the caption line under it is not pushed down.
+
+> ### Check 65. Check now answers to the right
+> In Settings, click **`Check now`**.
+> **Should:** the answer appears on the same row, to the right of the button, not under it.
+
+> ### Check 66. The whole update happens in the version card
+> Needs a version newer than 0.7.6.4 on offer. Click **`Update available`** at the top, then `Update now`.
+> **Should:** Settings opens and the question, the progress and `Starting...` all appear inside `The version you are running`, with nothing above the cards. The version is said once, not twice.

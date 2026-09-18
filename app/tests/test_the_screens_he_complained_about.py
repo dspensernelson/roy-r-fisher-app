@@ -314,6 +314,14 @@ def test_done_is_the_pale_tint_and_not_a_dark_fill():
     assert "#FFFFFF" not in done, "white on a fill is the solid pill again"
 
 
+def test_the_done_pill_sits_in_the_bar():
+    """`.done` is also the app's old finished-message box, and its 18px top
+    margin reached the pill through the shared class name. The done pill hung
+    6.7px below the bar in 0.7.6.3, measured in a browser on 2026-09-18. The
+    pill's own rule takes the margin back off."""
+    assert re.search(r"margin:\s*0", block(".pill.done"))
+
+
 def test_the_offer_to_tick_all_is_amber_and_not_green():
     """The offer wore the money's green and a tick, and read as done."""
     offer = block(".pill.act")

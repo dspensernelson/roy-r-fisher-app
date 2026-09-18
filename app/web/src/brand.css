@@ -1360,9 +1360,13 @@ input::placeholder, textarea::placeholder {
    is the only state that carries the tick. The pale tint and edge of the
    bar's other pills in the tick green, not a solid fill: "I don't like the
    dark green", Spenser, 2026-09-18. The same tint and edge as the done pill
-   in the Description of Improvements drawing. */
+   in the Description of Improvements drawing.
+
+   `margin: 0` because `.done` is also the app's finished-message box and its
+   18px top margin reached this pill through the shared name. It hung 6.7px
+   below the bar in 0.7.6.3. */
 .pill.done { color: var(--tick); background: rgba(58, 143, 82, 0.07);
-  border: 1px solid rgba(58, 143, 82, 0.36); }
+  border: 1px solid rgba(58, 143, 82, 0.36); margin: 0; }
 
 /* Red, and a link rather than a button: "the same exact thing, just red." The
    gap to the money is pushed by this, so when there is nothing to clear the

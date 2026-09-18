@@ -260,10 +260,6 @@ cents, before you agree to anything.
 **If a check marked "Read this one twice" fails, stop there and tell Spenser.**
 Do not carry on to the next one.
 
-Checks 40 and 41 are written from Spenser's decision of 18 September, before
-the build was finished. Confirm them against the build first: if the screen
-does something else, say so rather than marking it failed.
-
 **Opening a job**
 
 > ### Check 29. The photographs screen reads at normal zoom
@@ -355,7 +351,7 @@ does something else, say so rather than marking it failed.
 > rule about AI in this app: a person reads everything it writes. **Stop and
 > tell Spenser.**
 
-> ### Check 40. The bar counts reviewed, and nothing else. **Confirm against the build.**
+> ### Check 40. The bar counts reviewed, and nothing else.
 > With some captions ticked and some not, read the bottom row of the widget.
 > Tick one more.
 > **Should:** it reads `N of M reviewed`, where M is the photographs in the
@@ -363,11 +359,11 @@ does something else, say so rather than marking it failed.
 > **Wrong if:** it shows separate counts for the AI and for you, or N does not
 > move.
 
-> ### Check 41. Who wrote each caption shows quietly on the photograph. **Confirm against the build.**
+> ### Check 41. Who wrote each caption shows quietly on the photograph.
 > Look at a caption you typed in Check 36 and the one Refresh wrote in
 > Check 38.
-> **Should:** each photograph says, small and grey, whether you or the AI wrote
-> its caption. Editing an AI caption changes it to you.
+> **Should:** under each caption, small and grey, it says `AI` or `Typed`.
+> Editing an AI caption changes it to `Typed`.
 > **Wrong if:** nothing says who wrote it, it says the wrong one, or it shouts:
 > colour, a box, or anything that competes with the caption.
 
@@ -399,9 +395,10 @@ does something else, say so rather than marking it failed.
 > ### Check 45. The job-wide back waits for a clear
 > On a job that has never been cleared, rest the pointer on the small curved
 > arrow to the right of `Clear captions`.
-> **Should:** grey, and it says `Nothing was cleared`. Back on each photograph
-> is grey and says the same.
-> **Wrong if:** either can be pressed before a clear.
+> **Should:** grey, and resting on it shows nothing. Back on each photograph
+> is grey and shows nothing either.
+> **Wrong if:** either can be pressed before a clear, or either shows a
+> message when greyed.
 
 > ### Check 46. Clear captions takes the ticks, and Build goes off. **Read this one twice.**
 > On a job where every caption is ticked and `Build photo pages` is solid red,
@@ -438,7 +435,8 @@ does something else, say so rather than marking it failed.
 > read the figure at the right end of the widget's bottom row.
 > **Should:** whole cents, rounded up, ending in any digit: `~58¢` or `~$2.88`
 > as readily as `~60¢`. On a computer that has never spent on captions, a
-> multiple of 5 is right too.
+> multiple of 5 is right too. From $10 up it shows whole dollars, rounded up:
+> `$13`, not `$12.34`.
 > **Wrong if:** it shows part of a cent, or it is more than the price on the
 > Refresh pill times the number of photographs without a caption.
 

@@ -130,8 +130,7 @@ describe("what the filter never touches", () => {
     expect(shown()).toHaveLength(2);
     expect([figures(), bar()]).toEqual(before);
     expect(figures()).toMatch(/6 photographs · 2 pages/);
-    expect(bar()).toMatch(/2\s*AI/);
-    expect(bar()).toMatch(/1\s*reviewed/);
+    expect(bar()).toMatch(/1\sof\s2\sreviewed/);
   });
 });
 

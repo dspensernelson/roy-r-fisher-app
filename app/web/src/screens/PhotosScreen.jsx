@@ -638,12 +638,9 @@ export default function PhotosScreen({ job }) {
   const cutPhotos = manifest.photos.map((p, i) => ({ p, i })).filter((x) => x.p.cut);
   // Written, counted the way every other count here is: only photographs
   // still in the report. It counted every caption until 2026-09-17, so it
-  // could say more was written than the report holds. Since 2026-09-18 it is
-  // two counts, by who wrote them: the AI, or him. Read from `author`, which the server puts
-  // on every caption it sends (`author_of` in app/server/photos.py holds the
-  // one default, for manifests older than the field). Spenser, 2026-09-18.
-  const byAi = inPhotos.filter((x) => (x.p.caption || "").trim() && x.p.author === "ai").length;
-  const typed = inPhotos.filter((x) => (x.p.caption || "").trim() && x.p.author === "person").length;
+  // could say more was written than the report holds. It is the M of the
+  // bar's "N of M reviewed": Spenser, 2026-09-18.
+  const written = inPhotos.filter((x) => (x.p.caption || "").trim()).length;
   // How many photographs share a page. The server normalises this on the way
   // out of the manifest route, so it is 3 or 6 and never absent. The `|| 3` is
   // a guard for a manifest that never came from the server, not a second copy
@@ -666,6 +663,9 @@ export default function PhotosScreen({ job }) {
   // "9 of 12 reviewed" while the box said everything was done. 2026-09-16.
   const allWritten = inPhotos.length > 0
                      && inPhotos.every((x) => (x.p.caption || "").trim());
+  // Every caption there is has been read. The bar's done state; not the
+  // build gate, which still wants every photograph written and read.
+  const captionsRead = written > 0 && reviewedCount >= written;
 
   // What it costs, in the smallest true form. An estimate until money has
   // actually been spent, and then what was spent. Cents while it is pennies,
@@ -1074,27 +1074,31 @@ export default function PhotosScreen({ job }) {
               written, writing has nothing left to say, so it starts offering
               the tick instead. */}
           <div className="barline">
-            {allWritten ? (
-              allReviewed ? (
-                <span className="pill done">&#10003;&nbsp;All reviewed</span>
-              ) : (
-                <button className="pill act" disabled={!!busy}
-                        aria-label="Mark every caption as reviewed"
-                        onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
-                  &#10003;&nbsp;all
-                </button>
-              )
+            {/* One pill: reviewed, out of the captions there are. Spenser,
+                2026-09-18. Who wrote each one is on the photograph, not
+                here; three pills did not fit the box.
+
+                It has three faces and never two pills. Amber while captions
+                are still being written. Once every photograph in the report
+                has words and some are unread, the count itself is the offer
+                to tick the lot: the glyph in front, the money's light green,
+                and pressing it asks the same warning `✓ all` asked. That
+                offer used to be a pill of its own, and with it the bar did
+                not fit at three digits. Filled green once every caption has
+                been read, blanks or not: a blank still holds Build back, and
+                Build's own hover says so. */}
+            {allWritten && !captionsRead ? (
+              <button className="pill act" disabled={!!busy}
+                      aria-label="Mark every caption as reviewed"
+                      title="Mark every caption as reviewed"
+                      onClick={() => { setMarkingAll(true); setError(null); setDone(null); }}>
+                &#10003;&nbsp;<b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+              </button>
             ) : (
-              <>
-                {/* Three counts while captions are still being written: the
-                    AI's, the ones he typed, then reviewed. The words on these
-                    pills are Spenser's to change. 2026-09-18. */}
-                <span className="pill hold"><b>{byAi}</b>&nbsp;AI</span>
-                <span className="pill hold"><b>{typed}</b>&nbsp;typed</span>
-              </>
-            )}
-            {!allReviewed && (
-              <span className="pill hold"><b>{reviewedCount}</b>&nbsp;reviewed</span>
+              <span className={`pill ${captionsRead ? "done" : "hold"}`}>
+                {captionsRead && <>&#10003;&nbsp;</>}
+                <b>{reviewedCount}</b>&nbsp;of&nbsp;<b>{written}</b>&nbsp;reviewed
+              </span>
             )}
             {/* Red, and a link rather than a button: "the same exact thing,
                 just red". It is not here at all until there is something to
@@ -1111,10 +1115,13 @@ export default function PhotosScreen({ job }) {
                 only the photographs still empty since the clear come back, so
                 it is safe to press twice and it greys itself the moment there
                 is nothing left for it to do. Spenser, 2026-09-17. Its words,
-                "Restore cleared captions", are his, 2026-09-18. */}
+                "Restore cleared captions", are his, 2026-09-18. Grey says
+                nothing: no hover text, only the screen-reader name, so it is
+                never a nameless button. His words, 2026-09-17: "I don't
+                think you need to say anything in the grey." */}
             <button className="bar-back" disabled={!canPutBackAll || !!busy}
-                    aria-label={canPutBackAll ? "Restore cleared captions" : "Nothing was cleared"}
-                    title={canPutBackAll ? "Restore cleared captions" : "Nothing was cleared"}
+                    aria-label="Restore cleared captions"
+                    title={canPutBackAll ? "Restore cleared captions" : undefined}
                     onClick={onCaptionsBack}>
               <BackMark />
             </button>
@@ -1174,6 +1181,18 @@ export default function PhotosScreen({ job }) {
                 value={p.file in typing ? typing[p.file] : p.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
                 onBlur={() => commitCaption(i)} />
+              {/* Who wrote the caption, quietly, under it. Information, not a
+                  control, and never in the row below, which is exactly full.
+                  Always here so every tile's row sits at the same height;
+                  empty when there is no caption. Read from `author`, which
+                  the server puts on every caption (`author_of` in
+                  app/server/photos.py). The words are Spenser's to change.
+                  2026-09-18. */}
+              <div className="who">
+                {(p.caption || "").trim()
+                  ? (p.author === "person" ? "Typed" : p.author === "ai" ? "AI" : "")
+                  : ""}
+              </div>
               {/* The tick is the first thing in the row and stays there,
                   however many bands the job grows. Spenser, 2026-09-07. It
                   is one photograph at a time, with the all-at-once shortcut
@@ -1218,13 +1237,13 @@ export default function PhotosScreen({ job }) {
                     the tick and the bands are: Spenser, 2026-09-17, *"The
                     actual app is circles, and you gave me little ovals."* It
                     is live exactly when this photograph has words waiting,
-                    and it needs nothing else to have happened first. */}
+                    and it needs nothing else to have happened first. Grey
+                    says nothing: no hover text, only its name. */}
                 <button className="dot back-dot"
                         disabled={!(p.cleared_caption || "").trim() || !!busy}
-                        aria-label={(p.cleared_caption || "").trim()
-                                    ? "Put the old caption back" : "Nothing was cleared"}
+                        aria-label="Put the old caption back"
                         title={(p.cleared_caption || "").trim()
-                               ? "Put the old caption back" : "Nothing was cleared"}
+                               ? "Put the old caption back" : undefined}
                         onClick={() => onCaptionBack(p.file)}>
                   <BackMark />
                 </button>

@@ -393,6 +393,15 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
   padding: calc(4px * var(--k, 1)) calc(2px * var(--k, 1)); resize: vertical; overflow: hidden; min-height: calc(44px * var(--k, 1));
 }
 .grid textarea:focus { outline: none; border-bottom-color: var(--link); }
+/* Who wrote the caption above it: AI, or Typed. Spenser, 2026-09-18. Quiet on
+   purpose, it is information and not a control. A fixed height, so a tile
+   with no caption keeps its row at the same pixel as its neighbours. */
+.grid .who {
+  height: calc(14px * var(--k, 1)); margin-top: calc(2px * var(--k, 1));
+  font-size: calc(10.5px * var(--k, 1)); line-height: calc(14px * var(--k, 1));
+  color: var(--ink-muted); letter-spacing: 0.02em;
+  white-space: nowrap; overflow: hidden;
+}
 .done { margin-top: calc(18px * var(--k, 1)); background: var(--ok-bg); color: var(--ok-ink); border-radius: calc(6px * var(--k, 1)); padding: calc(14px * var(--k, 1)) calc(18px * var(--k, 1)); font-size: calc(15px * var(--k, 1)); }
 /* A caption run has three endings and they are not all good news. Success
    keeps the green it always had; a run that saved some and not others is a
@@ -810,7 +819,7 @@ h1 { font-size: calc(28px * var(--k, 1)); font-weight: 700; margin: calc(26px * 
 .page-preview {
   /* The printed page's own proportion, not a pixel width. Three-up gives the
      photograph four inches of a 6.70 inch table and the caption the 2.70 that
-     is left, so the photograph is the wider half. This used to be `calc(230px * var(--k, 1)) 1fr`,
+     is left, so the photograph is the wider half. This used to be `230px 1fr`,
      which was the other way round, and it is why one short caption sat alone
      in a wide white field. The four inches live in `THREE_UP.width_in` in
      app/engine/photo_pages.py; a stylesheet cannot read it, so a test holds
@@ -1057,7 +1066,7 @@ input::placeholder, textarea::placeholder {
   /* Evenly spaced, edge to edge. Spenser, 2026-09-17: *"Can we space those
      all out so they're evenly spaced? The check, the A, B, and the C refresh
      are all evenly spaced."* Back used to carry `margin-left: auto`, which
-     put every spare pixel into one gap and left the other four at calc(3px * var(--k, 1)): five
+     put every spare pixel into one gap and left the other four at 3px: five
      controls bunched on the left and one stranded on the right.
 
      `space-between` gives the leftovers to every gap equally, so the tick
@@ -1068,7 +1077,7 @@ input::placeholder, textarea::placeholder {
 
      What this used to do with bands OFF was put in front of him, and he said
      no. The row was then three things, not six, and the same spare width
-     shared between two gaps instead of five opened them to calc(83px * var(--k, 1)) with Back
+     shared between two gaps instead of five opened them to 83px with Back
      alone in the middle: evenly spaced, and everything on the row had moved.
      Spenser, 2026-09-17: *"For the refresh or the put-back-and-refresh and
      checkmark, those should remain in the same spot at all times. When the

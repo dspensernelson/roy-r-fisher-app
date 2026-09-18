@@ -4,8 +4,8 @@
  * whether it is ticked (app/server/photos.py, `record_typed_captions`); the
  * screen shows what it is told and never works either out itself.
  *
- * The bar shows three counts while captions are being written: by the AI,
- * typed by him, and reviewed.
+ * Who wrote it shows on the photograph, under its caption, not in the bar.
+ * The bar counts only "N of M reviewed". Spenser, 2026-09-18.
  */
 import React from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -52,22 +52,36 @@ const bar = () => document.querySelector(".control-panel .barline");
 const tiles = () => Array.from(document.querySelectorAll(".grid figure"));
 const tick = (tile) => tile.querySelector(".tick-dot");
 
-describe("three counts in the bar", () => {
-  it("counts the AI's, his, and the reviewed ones apart", async () => {
+const who = (tile) => tile.querySelector(".who");
+
+describe("who wrote it, on the photograph", () => {
+  it("marks an AI caption and a typed one under the caption", async () => {
     setUp();
-    await waitFor(() => expect(bar()).toBeTruthy());
-    const text = bar().textContent.replace(/ /g, " ");
-    expect(text).toMatch(/(?<!\d)2 AI/);
-    expect(text).toMatch(/(?<!\d)1 typed/);
-    expect(text).toMatch(/(?<!\d)2 reviewed/);
+    await waitFor(() => expect(tiles()).toHaveLength(5));
+    expect(who(tiles()[0]).textContent).toBe("AI");
+    expect(who(tiles()[1]).textContent).toBe("AI");
+    expect(who(tiles()[2]).textContent).toBe("Typed");
   });
 
-  it("uses the bar's pill for each", async () => {
+  it("says nothing when there is no caption, and keeps its place", async () => {
+    setUp();
+    await waitFor(() => expect(tiles()).toHaveLength(5));
+    expect(who(tiles()[3])).toBeTruthy();
+    expect(who(tiles()[3]).textContent).toBe("");
+  });
+
+  it("sits with the caption, not in the row of controls", async () => {
+    setUp();
+    await waitFor(() => expect(tiles()).toHaveLength(5));
+    expect(who(tiles()[0]).closest(".review-line")).toBeNull();
+    expect(who(tiles()[0]).tagName).not.toBe("BUTTON");
+  });
+
+  it("is not in the bar", async () => {
     setUp();
     await waitFor(() => expect(bar()).toBeTruthy());
-    const pills = Array.from(bar().querySelectorAll(".pill")).map((p) => p.textContent);
-    expect(pills.some((t) => /AI/.test(t))).toBe(true);
-    expect(pills.some((t) => /typed/.test(t))).toBe(true);
+    expect(bar().textContent).not.toMatch(/\bAI\b|typed/);
+    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/2 of 3 reviewed/);
   });
 });
 
@@ -95,8 +109,8 @@ describe("a caption he types", () => {
     await userEvent.type(box, "Side yard");
     await userEvent.tab();
     await waitFor(() => expect(tick(tiles()[3])).toHaveClass("is-reviewed"));
-    const text = bar().textContent.replace(/ /g, " ");
-    expect(text).toMatch(/(?<!\d)2 typed/);
+    expect(who(tiles()[3]).textContent).toBe("Typed");
+    expect(bar().textContent.replace(/\u00A0/g, " ")).toMatch(/3 of 4 reviewed/);
   });
 
   it("does not tick an AI caption on its own", async () => {

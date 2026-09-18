@@ -240,6 +240,16 @@ describe("the job-wide back, in the bar", () => {
     expect(barBack().disabled).toBe(false);
   });
 
+  it("says Spenser's words when it is live, and only those", async () => {
+    // Spenser's wording, exactly, 2026-09-18. It replaced "Put every caption
+    // back" in both the hover text and what a screen reader hears.
+    setUp(CLEARED);
+    await waitFor(() => expect(bar()).toBeTruthy());
+    expect(barBack().getAttribute("title")).toBe("Restore cleared captions");
+    expect(barBack().getAttribute("aria-label")).toBe("Restore cleared captions");
+    expect(document.body.innerHTML).not.toContain("Put every caption back");
+  });
+
   it("sits to the right of Clear captions", async () => {
     setUp(WRITTEN);
     await waitFor(() => expect(bar()).toBeTruthy());

@@ -1059,10 +1059,11 @@ export default function PhotosScreen({ job }) {
                 clear has happened, then live. It spares what he changed:
                 only the photographs still empty since the clear come back, so
                 it is safe to press twice and it greys itself the moment there
-                is nothing left for it to do. Spenser, 2026-09-17. */}
+                is nothing left for it to do. Spenser, 2026-09-17. Its words,
+                "Restore cleared captions", are his, 2026-09-18. */}
             <button className="bar-back" disabled={!canPutBackAll || !!busy}
-                    aria-label={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
-                    title={canPutBackAll ? "Put every caption back" : "Nothing was cleared"}
+                    aria-label={canPutBackAll ? "Restore cleared captions" : "Nothing was cleared"}
+                    title={canPutBackAll ? "Restore cleared captions" : "Nothing was cleared"}
                     onClick={onCaptionsBack}>
               <BackMark />
             </button>

@@ -129,6 +129,12 @@ export default function PhotosScreen({ job }) {
   // them. The screen's own business: never sent, never saved, and it never
   // changes the report's order. Spenser, 2026-09-17.
   const [onlyBand, setOnlyBand] = useState(null);
+  // Photographs he moved out of the band being shown, kept in view until the
+  // filter changes or clears, so one does not vanish from under his pointer
+  // the moment he clicks its new letter. Spenser, 2026-09-18. Screen only,
+  // like the filter itself.
+  const [stayed, setStayed] = useState([]);
+  function showBand(letter) { setOnlyBand(letter); setStayed([]); }
   // What he is typing right now, by file name, before it is saved. It is
   // deliberately not in the manifest. Everything that watches the manifest
   // reacts to every change of it, including the price question, which opens
@@ -155,7 +161,7 @@ export default function PhotosScreen({ job }) {
     // A different job's photographs, so what was bought for the last one is
     // not his any more.
     setShots(null); setShotsError(""); bought.current = false;
-    setSaid({});
+    setSaid({}); setStayed([]);
     // Polls alongside the call rather than after it. Nothing was watching at
     // mount, which is exactly when the waiting happens.
     let alive = true;
@@ -391,6 +397,7 @@ export default function PhotosScreen({ job }) {
   // takes it back out, so the same click is never a trap.
   async function onBand(file, letter) {
     setError(null);
+    if (onlyBand) setStayed((now) => (now.includes(file) ? now : [...now, file]));
     try { setManifest(await setPhotoBand(job, file, letter)); }
     catch (e) { setError(e.message); }
   }
@@ -766,7 +773,9 @@ export default function PhotosScreen({ job }) {
   // Every count above reads `inPhotos`, never this, so the numbers keep
   // counting the whole job. With bands off there is no filter at all.
   const filter = bandsOn && chips.some((b) => b.letter === onlyBand) ? onlyBand : null;
-  const gridPhotos = filter ? inPhotos.filter((x) => x.p.band === filter) : inPhotos;
+  const gridPhotos = filter
+    ? inPhotos.filter((x) => x.p.band === filter || stayed.includes(x.p.file))
+    : inPhotos;
   const waitingText = `${waiting} photograph${waiting === 1 ? " is" : "s are"} waiting for a band`;
 
   const buildReady = inPhotos.length > 0 && allReviewed && waiting === 0
@@ -1090,7 +1099,7 @@ export default function PhotosScreen({ job }) {
             <span className="w-name">Bands</span>
             <button className="switch" role="switch" aria-checked={bandsOn}
                     aria-label="Bands" disabled={!!busy}
-                    onClick={() => { setOnlyBand(null); onBands({ bands_on: !bandsOn }); }}>
+                    onClick={() => { showBand(null); onBands({ bands_on: !bandsOn }); }}>
               <span className="knob" />
             </button>
             {/* Each chip is a filter. Click one and only that band's
@@ -1107,7 +1116,7 @@ export default function PhotosScreen({ job }) {
                         aria-label={`Band ${b.letter}`} tabIndex={bandsOn ? 0 : -1}
                         aria-pressed={filter === b.letter}
                         title={b.name === b.letter ? `Band ${b.letter}` : b.name}
-                        onClick={() => setOnlyBand(filter === b.letter ? null : b.letter)}>
+                        onClick={() => showBand(filter === b.letter ? null : b.letter)}>
                   {b.letter}
                 </button>
               ))}

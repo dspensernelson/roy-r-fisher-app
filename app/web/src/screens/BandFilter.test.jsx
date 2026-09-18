@@ -134,17 +134,62 @@ describe("what the filter never touches", () => {
   });
 });
 
+// Spenser, 2026-09-18: a photograph moved to another band stays in the
+// filtered view until the filter changes or clears. It used to vanish from
+// under his pointer the moment he clicked its new letter.
 describe("a photograph moved while a filter is on", () => {
-  it("leaves the view when it goes to another band", async () => {
+  const MOVED = () => manifest({ photos: PHOTOS.map((p) =>
+    (p.file === "a2.jpg" ? { ...p, band: "B" } : p)) });
+
+  async function moveA2ToB() {
+    api.setPhotoBand.mockResolvedValue(MOVED());
+    const a2 = document.querySelectorAll(".grid figure")[1];
+    await userEvent.click(a2.querySelector('[aria-label="Put in band B"]'));
+    await waitFor(() => expect(
+      document.querySelectorAll(".grid figure")[1]
+        .querySelector('[aria-label="Put in band B"]')).toHaveClass("is-on"));
+  }
+
+  it("stays in view when it goes to another band", async () => {
     setUp();
     await ready();
     await userEvent.click(chip("A"));
-    const moved = manifest({ photos: PHOTOS.map((p) =>
-      (p.file === "a2.jpg" ? { ...p, band: "B" } : p)) });
-    api.setPhotoBand.mockResolvedValue(moved);
+    await moveA2ToB();
+    expect(shown()).toEqual(["a1.jpg", "a2.jpg"]);
+  });
+
+  it("stays in view when it is taken out of every band", async () => {
+    setUp();
+    await ready();
+    await userEvent.click(chip("A"));
+    api.setPhotoBand.mockResolvedValue(manifest({ photos: PHOTOS.map((p) =>
+      (p.file === "a2.jpg" ? { ...p, band: null } : p)) }));
     const a2 = document.querySelectorAll(".grid figure")[1];
-    await userEvent.click(a2.querySelector('[aria-label="Put in band B"]'));
-    await waitFor(() => expect(shown()).toEqual(["a1.jpg"]));
+    await userEvent.click(a2.querySelector('[aria-label="Put in band A"]'));
+    await waitFor(() => expect(api.setPhotoBand).toHaveBeenCalled());
+    expect(shown()).toEqual(["a1.jpg", "a2.jpg"]);
+  });
+
+  it("goes when the filter is cleared and set again", async () => {
+    setUp();
+    await ready();
+    await userEvent.click(chip("A"));
+    await moveA2ToB();
+    await userEvent.click(chip("A"));
+    expect(shown()).toHaveLength(PHOTOS.length);
+    await userEvent.click(chip("A"));
+    expect(shown()).toEqual(["a1.jpg"]);
+  });
+
+  it("goes when the filter changes to another band, and shows there", async () => {
+    setUp();
+    await ready();
+    await userEvent.click(chip("A"));
+    await moveA2ToB();
+    await userEvent.click(chip("C"));
+    expect(shown()).toEqual([]);
+    await userEvent.click(chip("B"));
+    expect(shown()).toEqual(["a2.jpg", "b1.jpg", "b2.jpg", "b3.jpg"]);
   });
 });
 

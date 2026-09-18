@@ -99,7 +99,7 @@ are in its phases.
 
 ## What needs you
 
-- [ ] Two errors found in signed reports: tell Mark, or not · No star
+- [ ] Errors found in signed reports, five so far: tell Mark, or not · No star
 - [ ] Shorter words for Something else and the notes prompt, so they fit · No star
 - [ ] What a switched-off button looks like: it has no fill and no edge · No star
 - [ ] How far back should the log go · No star

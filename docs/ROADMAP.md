@@ -1442,3 +1442,67 @@ only. Read-only. Take copies, adapt freely, never write back.
   mechanical scan, Claude read, Spenser glance. No shortcut.
 - **Mark is hard to manage and setup is remote.** Anything that needs two
   steps on his machine is a defect.
+
+## How Mark writes General and Conclusion, and what a PRC says about buildings (measured 2026-09-17)
+
+Read-only measurement across the delivered reports in `../RRF/Report Examples/`,
+including the three sections in `Description of Improvement Examples 8.17.26/`.
+Four scanned cards were read by OCR and some lines came out garbled.
+
+**General and Conclusion.** Eight delivered reports carry both, under some
+name. Three others use labelled fields instead (St. John Vianney, Elmore,
+Utica) and one has neither.
+- **General** almost always says what the building is, its size and when it
+  was built, then lists its parts. Big box reports open "The site is improved
+  with a [size] [stories] [construction] building ... built as [use]" and close
+  with a fixed paragraph on the inspection date against the value date.
+- **Conclusion** almost always gives the layout against typical, condition,
+  effective age and remaining economic life. The order is not fixed. The big
+  box recipe (Walmart Mason City, Mills Fleet Farm, Iowa City Walmart, the
+  Hy-Vee drafts) is nearly word for word, sentence by sentence. Other property
+  types vary.
+- **Mark's judgement, which the app never writes:** effective age, remaining
+  economic life and the total life chosen, condition, quality, market appeal,
+  functional utility and obsolescence, every comparison to "typical" or
+  "competing", parking adequacy, effect on value ("adds only nominally"),
+  deferred maintenance conclusions, strengths, weaknesses, highest and best use.
+- **Safe to compute:** actual age, weighted year built, land to building
+  ratio, office ratio, area totals. A CoreLogic life figure is a document fact;
+  the life Mark chooses from it is his.
+- **Facts from outside the PRC and transcript are common.** Blaul's history and
+  renovation year came from another appraiser's report and CoStar; 215 E 37th
+  reuses Mark's 2019 report; Walmart and Mills take building life from
+  CoreLogic.
+- **Signed sections contradict themselves.** Utica says "Good" and "below
+  average" in the same section; Mills says "Average+" then "average"; the
+  delivered Kinze PDF still contains "(Check this)". The strongest argument yet
+  for an app that shows every value's source and leaves judgement to Mark.
+
+**What follows for the app.** Draft only the fact sentences, in Mark's own
+reused wording where a recipe exists, and leave marked slots for every
+judgement. Do not force one order on property types that do not have one.
+
+**What a PRC says about buildings.** Two formats: Beacon (Scott, Iowa and
+Cerro Gordo counties) and Vanguard (Des Moines County, and detailed cards
+elsewhere).
+- Every readable card states each section's use in words, but it is the
+  assessor's cost class, not the real use: "School" for a meeting space,
+  "Wrhse - General / Storage" for an entryway, "Metal Light Mfg" for Kinze's
+  Innovation Center, "Bank - Branch" for a multi-tenant office.
+- **The name line is the best plain-word clue** ("PARSONAGE - ST JOHN VIANNEY
+  CATHOLIC CHURCH", "AT&T CALL CENTER"). Present on every readable improved
+  parcel but one.
+- Plain code can read Beacon cards with a text layer reliably, Vanguard cards
+  moderately, scanned cards poorly.
+- **Grouping sections into Mark's buildings and naming their real use needs
+  the model and then Mark.** Kinze's 51 card sections became four groups in his
+  report; Walmart's one building became three use rows. 7 of 10 cards split a
+  building into additions, up to 38, so additions are parts, not buildings.
+- Three of ten jobs span more than one parcel. One building can cross a parcel
+  line (Kinze's office).
+
+**What follows for the app.** Suggest buildings from the card's building and
+addition lines plus its name line, show the assessor's class beside a proposed
+plain-word use, group additions under their building, and ask Mark to confirm.
+Flag scanned cards, multi-parcel jobs and notes that point at another parcel,
+and ask him directly there.

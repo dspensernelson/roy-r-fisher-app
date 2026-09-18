@@ -463,7 +463,8 @@ export default function PhotosScreen({ job }) {
 
   // Refresh, on one photograph. One model call, and it spends the figure
   // printed inside the control, so pressing it is the agreement and no window
-  // opens in front of it.
+  // opens in front of it. The server keeps the words it replaces as this
+  // photograph's spare, so Back on the tile undoes it. Spenser, 2026-09-18.
   async function onRefreshCaption(file) {
     setError(null); setDone(null); setAt(0);
     setBusy("Writing captions...");

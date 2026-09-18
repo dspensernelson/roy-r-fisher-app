@@ -210,6 +210,36 @@ describe("refresh, on one photograph", () => {
       tickOn(tiles()[0]).className).not.toMatch(/is-reviewed/));
   });
 
+  it("leaves Back live, and Back puts the replaced words back", async () => {
+    // Spenser, 2026-09-18: Back undoes a Refresh. The server keeps the words
+    // Refresh replaced as the photograph's spare, the way a clear does.
+    setUp(WRITTEN);
+    vi.spyOn(api, "refreshCaption").mockResolvedValue(manifest([
+      { file: "photo-01.jpg", caption: "A different set of words",
+        cleared_caption: "View east from Brady Street" },
+      WRITTEN[1],
+    ]));
+    const back = vi.spyOn(api, "captionBack").mockResolvedValue(manifest([
+      { file: "photo-01.jpg", caption: "View east from Brady Street",
+        cleared_caption: "View east from Brady Street" },
+      WRITTEN[1],
+    ]));
+    await waitFor(() => expect(tiles().length).toBe(2));
+    expect(backOn(tiles()[0]).disabled).toBe(true);
+
+    await userEvent.click(refreshOn(tiles()[0]));
+    await waitFor(() => expect(backOn(tiles()[0]).disabled).toBe(false));
+    // The job-wide back is for what a clear emptied. Nothing is empty here.
+    expect(barBack().disabled).toBe(true);
+
+    await userEvent.click(backOn(tiles()[0]));
+    expect(back).toHaveBeenCalledWith(JOB, "photo-01.jpg");
+    await waitFor(() => expect(
+      within(tiles()[0]).getByRole("textbox").value).toBe("View east from Brady Street"));
+    // Put back without its tick: it was ticked before the refresh.
+    expect(tickOn(tiles()[0]).className).not.toMatch(/is-reviewed/);
+  });
+
   it("is grey when there is no key on this computer", async () => {
     setUp(WRITTEN, { quote: { blocked_because: "no_key", ai_available: false } });
     await waitFor(() => expect(tiles().length).toBe(2));
